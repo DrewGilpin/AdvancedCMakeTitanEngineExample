@@ -1,21 +1,17 @@
 # .github/workflows/linux-build.yml
-name: Build (Ubuntu)
+name: Build & Test (ubuntu-22.04)
 
-on:
-  push:            # run on every push to any branch
-  pull_request:    # and on every PR
+on: [push, pull_request]
 
 jobs:
   build-linux:
-    runs-on: ubuntu-22.04        # same distro you use locally
+    runs-on: ubuntu-22.04
     steps:
-      # 1.  Get the sources
-      - name: Checkout
-        uses: actions/checkout@v4
+      # 1. Checkout sources ------------------------------------------------------
+      - uses: actions/checkout@v4
 
-      # 2.  Install system-level libs Titan Engine requires
-      #     (mirrors the apt list from the tutorial / our CMakeLists)
-      - name: Install dependencies
+      # 2. OS-level deps (clang, Mesa, X11, OpenAL …) ----------------------------
+      - name: Install packages
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -24,24 +20,28 @@ jobs:
             libxcursor-dev libudev-dev libopenal-dev unixodbc-dev \
             libgl1-mesa-dev libxxf86vm-dev zlib1g-dev
 
-      # 3.  Unpack the large engine archives that were zipped to dodge
-      #     GitHub’s 100 MB limit (see README) :contentReference[oaicite:0]{index=0}
-      - name: Unzip Esenthel/Titan Engine files
+      # 3. Unpack the zipped engine artefacts ------------------------------------
+      - name: Unzip Esenthel / Titan Engine
         run: |
-          unzip -q Assets/Engine.zip    -d Assets
-          unzip -q Lib/EsenthelEngine.zip -d Lib
+          unzip -q Assets/Engine.zip        -d Assets
+          unzip -q Lib/EsenthelEngine.zip   -d Lib
 
-      # 4.  Configure + build with the same options as in CMakeLists.txt
-      #     (clang, x64, Debug/Release via matrix possible). :contentReference[oaicite:1]{index=1}
+      # 4. Configure + build everything (game + tests) ---------------------------
       - name: Configure (CMake + Ninja)
-        run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: |
-          cmake --build build --target BasicAppCmake --config Release -j$(nproc)
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build all targets
+        run: cmake --build build --config Release -j$(nproc)
 
-      # 5.  (Optional) Archive the binary so you can download it
-      - name: Upload artifact
+      # 5. Run Google-Tests via CTest --------------------------------------------
+      - name: Run unit tests
+        working-directory: build
+        run: |
+          ctest --output-on-failure -C Release        # coloured gtest output shows up in the log
+                                                      # and each failing test makes the job red ♥
+                                                      # (thanks to gtest_discover_tests)
+
+      # 6. (optional) Upload the game binary artefact ----------------------------
+      - name: Upload artefact
         uses: actions/upload-artifact@v4
         with:
           name: BasicAppCmake-linux

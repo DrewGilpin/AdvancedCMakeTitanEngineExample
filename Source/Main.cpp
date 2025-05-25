@@ -26,7 +26,7 @@ bool Init() // initialize after engine is ready
 /******************************************************************************/
 void Shut() // shut down at exit
 {
-   LogN(S+"Shut()");
+   LogN(S+"Shut()1");
 }
 /******************************************************************************/
 bool Update() // main updating
