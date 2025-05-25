@@ -11,7 +11,7 @@ add_compile_definitions(__linux__)
 
 add_executable (BasicAppCmake "stdafx.cpp" "stdafx.h" 
 "Source/Main.cpp" "Source/Auto.cpp" "Source/Shared/Commands.cpp" "Source/Shared/Commands.h"
-"Source/@@headers.h" "Source/@ClientInfo.h" "Source/Auto.h" "Source/Main.h")
+"Source/@@headers.h" "Source/@ClientInfo.h" "Source/Auto.h" "Source/MyClass.h" "Source/MyClass.cpp" "Source/Main.h" )
 
 set_property(TARGET BasicAppCmake PROPERTY CXX_STANDARD 17)
 set_property(TARGET BasicAppCmake PROPERTY C_STANDARD 17)
