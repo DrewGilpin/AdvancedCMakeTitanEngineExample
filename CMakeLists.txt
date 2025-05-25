@@ -12,11 +12,17 @@ add_compile_definitions(__linux__)
 # ─────────────────────────────────────────────────────────────────────
 add_library(GameCore INTERFACE)
 
+# Your own headers – keep with normal -I
 target_include_directories(GameCore INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}          # e.g. "stdafx.h"
+        ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/Source
+)
+
+# Third-party headers – mark as system , suppresses warnings
+target_include_directories(GameCore SYSTEM INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/Engine
 )
+
 
 target_compile_options(GameCore INTERFACE
         -fms-extensions

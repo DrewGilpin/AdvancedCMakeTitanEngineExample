@@ -14,5 +14,5 @@ TEST(MyClass, GetSetValue) {
     std::cout << "[MyClass] after setValue = " << c.getValue() << '\n';
 
     EXPECT_EQ(c.getValue(), 99)
-        << "value didn’t update correctly";     // message only if it fails
+        << "value didn’t update correctly ";     // message only if it fails
 }
