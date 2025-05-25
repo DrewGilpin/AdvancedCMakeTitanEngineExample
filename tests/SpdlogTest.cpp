@@ -20,5 +20,5 @@ TEST(MyClass, GetSetValueSpdlog)
     c.setValue(99);
     spdlog::warn("after setValue = {}", c.getValue());
 
-    EXPECT_EQ(c.getValue(), 99) << "value didn’t update correctly";
+    EXPECT_EQ(c.getValue(), 99) << "value didn’t update correctly2";
 }
