@@ -1,0 +1,48 @@
+# .github/workflows/linux-build.yml
+name: Build (Ubuntu)
+
+on:
+  push:            # run on every push to any branch
+  pull_request:    # and on every PR
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04        # same distro you use locally
+    steps:
+      # 1.  Get the sources
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2.  Install system-level libs Titan Engine requires
+      #     (mirrors the apt list from the tutorial / our CMakeLists)
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang ninja-build cmake build-essential \
+            libxmu-dev libxi-dev libxinerama-dev libxrandr-dev \
+            libxcursor-dev libudev-dev libopenal-dev unixodbc-dev \
+            libgl1-mesa-dev libxxf86vm-dev zlib1g-dev
+
+      # 3.  Unpack the large engine archives that were zipped to dodge
+      #     GitHub’s 100 MB limit (see README) :contentReference[oaicite:0]{index=0}
+      - name: Unzip Esenthel/Titan Engine files
+        run: |
+          unzip -q Assets/Engine.zip    -d Assets
+          unzip -q Lib/EsenthelEngine.zip -d Lib
+
+      # 4.  Configure + build with the same options as in CMakeLists.txt
+      #     (clang, x64, Debug/Release via matrix possible). :contentReference[oaicite:1]{index=1}
+      - name: Configure (CMake + Ninja)
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: |
+          cmake --build build --target BasicAppCmake --config Release -j$(nproc)
+
+      # 5.  (Optional) Archive the binary so you can download it
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BasicAppCmake-linux
+          path: build/BasicAppCmake
