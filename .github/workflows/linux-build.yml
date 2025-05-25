@@ -28,7 +28,12 @@ jobs:
 
       # 4. Configure + build everything (game + tests) ---------------------------
       - name: Configure (CMake + Ninja)
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        env:                      # ← tell CMake which compiler to use
+          CC:  clang
+          CXX: clang++
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
       - name: Build all targets
         run: cmake --build build --config Release -j$(nproc)
 
