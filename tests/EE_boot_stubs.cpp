@@ -4,7 +4,7 @@
 // Important:  NO  'extern "C"'  here – Esenthel expects normal C++ linkage.
 
 // (Including the header is optional but guarantees the exact prototypes.)
-//#include "../Engine/EsenthelEngine.h"
+//#include "../Engine/EsenthelEngine.h" //dont use this path, caused warning spam didn't abide by SYSTEM
 #include "EsenthelEngine.h"
 
 void  InitPre()                         {}          // prepare options
