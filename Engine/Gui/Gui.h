@@ -1,21 +1,20 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct GUI // Graphical User Interface
 {
-   Bool allow_window_fade    , // if allow Window fading (smooth transparency), default=true
-        window_fade          ; // if use fade when closing windows or displaying message boxes, default=false
-   Flt  window_fade_in_speed , // speed of Window fading in     , 0..Inf, default=9
-        window_fade_out_speed, // speed of Window fading out    , 0..Inf, default=6
-        window_fade_scale    , // scale of Window when faded out, 0..2  , default=0.85
-        dialog_padd          , // Dialog Window        padding  , 0..Inf, default=0.03
-        dialog_button_height , // Dialog Window Button height   , 0..Inf, default=0.06
-        dialog_button_padd   , // Dialog Window Button padding  , 0..Inf, default=dialog_button_height*2
-        dialog_button_margin , // Dialog Window Button margin   , 0..Inf, default=dialog_button_height
-        resize_radius        , // radius used for detection of resizing windows, 0..Inf, default=0.022
-        desc_delay           ; // time after which gui object descriptions should be displayed, default=0.3
-   UID  click_sound_id       ; // click sound id, default=UIDZero, if specified then it will be always played when a Button, CheckBox or a Tab is clicked
+   Bool allow_window_fade     , // if allow Window fading (smooth transparency), default=true
+        window_fade           ; // if use fade when closing windows or displaying message boxes, default=false
+   Flt  window_fade_in_speed  , // speed of Window fading in       , 0..Inf, default=9
+        window_fade_out_speed , // speed of Window fading out      , 0..Inf, default=6
+        window_fade_scale     , // scale of Window when faded out  , 0..2  , default=0.85
+        dialog_padd           , // Dialog Window        padding    , 0..Inf, default=0.03
+        dialog_button_height  , // Dialog Window Button height     , 0..Inf, default=0.06
+        dialog_button_padd    , // Dialog Window Button padding    , 0..Inf, default=dialog_button_height*2
+        dialog_button_margin  , // Dialog Window Button margin     , 0..Inf, default=dialog_button_height
+        dialog_button_margin_y, // Dialog Window Button margin Y   , 0..Inf, default=dialog_button_height*0.3
+        text_menu_height      , // Screen Keyboard Text Menu height, 0..Inf, default=0.08, this menu shows when editing text using touch
+        resize_radius         , // radius used for detection of resizing windows, 0..Inf, default=0.022
+        desc_delay            ; // time after which gui object descriptions should be displayed, default=0.3
+   UID  click_sound_id        ; // click sound id, default=UIDZero, if specified then it will be always played when a Button, CheckBox or a Tab is clicked
 
    ImagePtr image_shadow   , // shadow            image, default=ImagePtr().get("Gui/shadow.img"   )
             image_drag     , // drag              image, default=ImagePtr().get("Gui/drag.img"     )
@@ -26,7 +25,8 @@ struct GUI // Graphical User Interface
             image_resize_ru, // resize right up   image, default=ImagePtr().get("Gui/resize_ru.img")
             image_resize_rd; // resize right down image, default=ImagePtr().get("Gui/resize_rd.img")
 
-   GuiSkinPtr skin        ; // active Gui Skin
+   GuiSkinPtr         skin, // active Gui Skin
+            text_menu_skin; // skin used for Screen Keyboard Text Menu
    UID        default_skin; // ID of the Gui Skin to be loaded during engine initialization, this can be modified in 'InitPre'
 
    void (*draw_keyboard_highlight)(GuiObj *obj, C Rect &rect, C GuiSkin *skin       ); // pointer to custom function responsible for drawing keyboard highlight    , 'obj'=pointer to gui object for the highlight , 'rect'=screen rectangle of the object, 'skin'=Gui Skin of the object, default='DrawKeyboardHighlight'
@@ -42,6 +42,9 @@ struct GUI // Graphical User Interface
    Desktop* desktop()C {return _desktop;} // current desktop
    Window * window ()C {return _window ;} // current window with focus
    Menu   * menu   ()C {return _menu   ;} // current menu
+#if EE_PRIVATE
+   Window * windowLit()C {return _window_lit;} // current window under mouse cursor
+#endif
 
    GuiObj* objAtPos  (C Vec2 &pos                            )C; // get         gui object at            'pos' screen position
    GuiObj* objNearest(C Vec2 &pos, C Vec2 &dir, Vec2 &out_pos)C; // get nearest gui object starting from 'pos' screen position towards 'dir' direction
@@ -84,6 +87,10 @@ struct GUI // Graphical User Interface
             void drag(void finish(Ptr   user, GuiObj *obj, C Vec2 &screen_pos), Ptr   user=null, Touch *touch=null, void start(Ptr   user)=null, void cancel(Ptr   user)=null);                                                                                                         // start dragging and call 'finish' function when finished, 'start' when started, 'cancel' when canceled, 'touch'=touch used to initiate the dragging (null for mouse)
    T1(TYPE) void drag(void finish(TYPE *user, GuiObj *obj, C Vec2 &screen_pos), TYPE *user     , Touch *touch=null, void start(TYPE *user)=null, void cancel(TYPE *user)=null) {drag((void(*)(Ptr, GuiObj*, C Vec2&))finish,  user, touch, (void(*)(Ptr))start, (void(*)(Ptr))cancel);} // start dragging and call 'finish' function when finished, 'start' when started, 'cancel' when canceled, 'touch'=touch used to initiate the dragging (null for mouse)
    T1(TYPE) void drag(void finish(TYPE &user, GuiObj *obj, C Vec2 &screen_pos), TYPE &user     , Touch *touch=null, void start(TYPE &user)=null, void cancel(TYPE &user)=null) {drag((void(*)(Ptr, GuiObj*, C Vec2&))finish, &user, touch, (void(*)(Ptr))start, (void(*)(Ptr))cancel);} // start dragging and call 'finish' function when finished, 'start' when started, 'cancel' when canceled, 'touch'=touch used to initiate the dragging (null for mouse)
+#if EE_PRIVATE
+   Bool dragWant()C {return _drag_want;} // if dragging is possible
+   void dragDraw();
+#endif
 
    // function callbacks
             void addFuncCall(void func(          )            ) {_callbacks.add(func      );}             // add custom function to the gui function callback list to be automatically called at the end of the 'Gui.update'
@@ -95,13 +102,16 @@ struct GUI // Graphical User Interface
    void update(); // update gui
    void draw  (); // draw   gui
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool          _drag_want, _dragging, _window_buttons_right;
    Char          _pass_char;
-   GuiObj       *_kb, *_ms, *_ms_src, *_ms_lit, *_wheel, *_desc, *_touch_desc, *_overlay_textline;
+   GuiObj       *_kb, *_ms, *_ms_src, *_ms_lit, *_wheel, *_desc, *_touch_desc;
    Menu         *_menu;
    Window       *_window, *_window_lit;
    Desktop      *_desktop;
+   TextLine     *_overlay_textline;
    Flt           _update_time, _time_d_fade_out;
    Dbl           _desc_time, _touch_desc_time;
    UInt          _drag_touch_id;
@@ -115,10 +125,32 @@ private:
    SyncLock      _lock;
    Memx<Desktop> _desktops;
 
+#if EE_PRIVATE
+   void del   ();
+   void create();
+
+   void screenChanged(Flt old_width, Flt old_height);
+   Bool Switch       (                             );
+   void kbLit        (GuiObj *obj, C Rect &rect, C GuiSkin *skin) {if(draw_keyboard_highlight)draw_keyboard_highlight(obj, rect, skin);}
+   void setText      ();
+   Bool visibleTextMenu()C;
+   void    hideTextMenu();
+   void    showTextMenu();
+   void  updateTextMenu();
+
+ C Str& passTemp(Int length); // Warning: this is not thread-safe
+
+   TextLine* overlayTextLine(Vec2 &offset);
+
+   friend struct DisplayClass;
+#endif
    GUI();
 }extern
    Gui; // Main GUI
 /******************************************************************************/
+#if EE_PRIVATE
+void DrawPanelText(C Panel *panel, C Color &panel_color, Flt padding, C TextStyleParams &ts, C Vec2 &pos, CChar *text, Bool mouse);
+#endif
 void DrawKeyboardHighlight(GuiObj *obj, C Rect &rect, C GuiSkin *skin       ); // default Keyboard Highlight                 drawing function
 void DrawDescription      (GuiObj *obj, C Vec2 &pos, CChar *text, Bool mouse); // default Gui Object Description             drawing function
 void DrawIMM              (GuiObj *obj                                      ); // default IMM (Windows Input Method Manager) drawing function

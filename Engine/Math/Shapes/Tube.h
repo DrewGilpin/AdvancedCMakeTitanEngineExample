@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Tube' to handle tube shapes.
@@ -16,11 +13,12 @@ struct Tube // Tube Shape
    Tube& set(Flt r, Flt h, C Vec &pos=VecZero, C Vec &up=Vec(0,1,0)) {T.r=r; T.h=h; T.pos=pos; T.up=up; return T;}
 
    // get
-   Flt  area  ()C {return PI2*r  *(h+r)        ;} // get surface area
-   Flt  volume()C {return PI *r*r* h           ;} // get volume
-   Vec  top   ()C {return pos+up*(h*0.5f)      ;} // upper circle center
-   Vec  bottom()C {return pos-up*(h*0.5f)      ;} // lower circle center
-   Edge edge  ()C {return Edge(bottom(), top());} // get edge between lower and upper points
+   Flt  perimeter()C {return PI2*r                ;} // get perimeter
+   Flt  area     ()C {return PI2*r  *(h+r)        ;} // get surface area
+   Flt  volume   ()C {return PI *r*r* h           ;} // get volume
+   Vec  top      ()C {return pos+up*(h*0.5f)      ;} // upper circle center
+   Vec  bottom   ()C {return pos-up*(h*0.5f)      ;} // lower circle center
+   Edge edge     ()C {return Edge(bottom(), top());} // get edge between lower and upper points
 
    Str asText()C {return S+"Radius: "+r+", Height: "+h+", Pos: "+pos+", Up: "+up;} // get text description
 
@@ -47,6 +45,9 @@ struct Tube // Tube Shape
    Tube& extend(Flt e) {r+=e; h+=e+e; return T;} // extend
 
    // draw
+#if EE_PRIVATE
+   void drawVI(                    Bool fill=false, Int resolution=-1)C; // this relies on active object matrix which can be set using 'SetMatrix' function
+#endif
    void draw(C Color &color=WHITE, Bool fill=false, Int resolution=-1)C; // this relies on active object matrix which can be set using 'SetMatrix' function
 
    Tube() {}

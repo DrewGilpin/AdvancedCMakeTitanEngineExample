@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Cloth' to simulate realistic cloth behavior.
@@ -25,22 +22,41 @@ const_mem_addr struct ClothMesh // Physical Cloth Mesh, it is created from MeshB
  C MaterialPtr& material()C {return _material;} // get ClothMesh material
 
    // operations
-   void boneRemap(C CMemPtr<Byte, 256> &old_to_new, Bool remap_names=true); // remap vertex bone/matrix indexes according to bone 'old_to_new' remap, 'remap_names'=if remap the bone names as well
+   void boneRemap(C CMemPtrN<BoneType, 256> &old_to_new, Bool remap_names=true); // remap vertex bone/matrix indexes according to bone 'old_to_new' remap, 'remap_names'=if remap the bone names as well
 
    // io
    Bool save(C Str &name)C; // save, false on fail
    Bool load(C Str &name) ; // load, false on fail
    Bool save(File &f, CChar *path=null)C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    Bool load(File &f, CChar *path=null) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+#if EE_PRIVATE
+   Bool saveData(File &f, CChar *path=null)C; // save, false on fail
+   Bool loadData(File &f, CChar *path=null) ; // load, false on fail
+#endif
 
   ~ClothMesh() {del();}
    ClothMesh();
 
+#if EE_PRIVATE
+   void setShader();
+#if PHYSX
+   PxClothFabric* scaledMesh(Flt scale);
+#endif
+ C Material& getMaterial      (                  )C {return GetMaterial      (_material());}
+ C Material& getShadowMaterial(Bool reuse_default)C {return GetShadowMaterial(_material(), reuse_default);}
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    struct Scale
    {
       Flt scale;
+   #if EE_PRIVATE
+      PHYS_API(PxClothFabric, void) *mesh;
+   #else
       Ptr mesh;
+   #endif
    };
    MeshBase    _phys;
    MeshRender  _skin;
@@ -49,7 +65,11 @@ private:
    IndBuf      _ind_buf;
    Shader     *_skin_shader[RM_SHADER_NUM],
               *_phys_shader[RM_SHADER_NUM];
+#if EE_PRIVATE
+   FRST       *_skin_frst, *_phys_frst;
+#else
    Ptr         _skin_frst, _phys_frst;
+#endif
    Skeleton   *_skeleton;
    BoneMap     _bone_map;
 
@@ -106,7 +126,9 @@ struct Cloth // Physical Cloth
   ~Cloth() {del();}
    Cloth();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Vtx // Cloth Vertex
    {
       Vec  pos, // position
@@ -118,8 +140,17 @@ private:
    ClothMesh *_cloth_mesh;
    UInt      *_vtxs;
    Vtx       *_vtx;
+#if EE_PRIVATE
+   PHYS_API(PxCloth            , void) *_cloth;
+   PHYS_API(PxClothParticleData, void) *_lock;
+#else
    Ptr        _cloth, _lock;
+#endif
    VtxBuf     _vtx_buf;
+#if EE_PRIVATE
+   void  update      () ;
+   void _drawPhysical()C;
+#endif
 
    NO_COPY_CONSTRUCTOR(Cloth);
 };

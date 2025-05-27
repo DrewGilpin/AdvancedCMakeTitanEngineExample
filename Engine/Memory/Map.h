@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Map' to quickly access custom data by creating it from specified key.
@@ -31,6 +28,8 @@ T2(KEY, DATA) struct Map : _Map // Map - container for dynamically created eleme
    // manage
    Map& clear(); // remove all elements
    Map& del  (); // remove all elements and free helper memory
+
+   Map& cleanup(); // release unused memory
 
    // get
    Int elms    ()C; // get number of elements in container

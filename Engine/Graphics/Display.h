@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Display' to handle all display related functions.
@@ -67,14 +64,6 @@ enum DOF_MODE : Byte // Depth of Field Mode
    DOF_GAUSSIAN, // based on Gaussian Blur, fast but not realistic
    DOF_NUM     , // number of Depth of Field modes
 };
-enum TONE_MAP_MODE : Byte // Tone Mapping Mode
-{
-   TONE_MAP_OFF     , // disabled
-   TONE_MAP_DEFAULT , // default
-   TONE_MAP_ACES_LDR, // ACES 0 ..  1.0 (  80 nits) for use on  Low Dynamic Range Monitors
-   TONE_MAP_ACES_HDR, // ACES 0 .. 12.5 (1000 nits) for use on High Dynamic Range Monitors
-   TONE_MAP_NUM     , // number of Tone Mapping Modes
-};
 enum EDGE_DETECT_MODE : Byte // Edge Detect Mode
 {
    EDGE_DETECT_NONE, // disabled
@@ -104,6 +93,18 @@ enum FOV_MODE : Byte // Field of View mode, determines calculating actual fov va
    FOV_Y , // vertical   fov will be taken from given value, horizontal fov will be calculated proportionally 
    FOV_X , // horizontal fov will be taken from given value, vertical   fov will be calculated proportionally
    FOV_XY, // both horizontal and vertical fov's will be taken from given value
+#if EE_PRIVATE
+   FOV_ORTHO_Y, // orthogonal, vertical   fov will be taken from 'fov', horizontal will be calculated proportionally
+   FOV_ORTHO_X, // orthogonal, horizontal fov will be taken from 'fov', vertical   will be calculated proportionally
+   FOV_ORTHO  , // orthogonal, custom     fov will be taken from 'fov'
+#endif
+};
+enum SUN_RAYS_MODE : Byte
+{
+   SUN_RAYS_OFF         , // disabled
+   SUN_RAYS_OPAQUE      , // enabled with opaque       occlusion detection
+   SUN_RAYS_OPAQUE_BLEND, // enabled with opaque+blend occlusion detection
+   SUN_RAYS_NUM         , // number of sun ray modes
 };
 enum SHADER_MODEL : Byte
 {
@@ -121,6 +122,11 @@ enum SHADER_MODEL : Byte
    SM_6        , // Model 6.0 (DirectX 12        )
    SM_6_2      , // Model 6.2 (DirectX 12        )
 };
+#if EE_PRIVATE
+inline Bool FovPerspective(FOV_MODE mode) {return mode< FOV_ORTHO_Y               ;} // if fov mode is perspective
+inline Bool FovOrthogonal (FOV_MODE mode) {return mode>=FOV_ORTHO_Y               ;} // if fov mode is orthogonal
+inline Bool FovHorizontal (FOV_MODE mode) {return mode==FOV_X || mode==FOV_ORTHO_X;} // if fov mode is horizontal
+#endif
 struct ViewSettings
 {
    FOV_MODE fov_mode;
@@ -171,13 +177,36 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    Flt             browserZoom    ()C;                          // get current browser zoom level (1.0=100%, 2.0=200%, etc), this is valid only for the WEB platform (other platforms always return 1.0)
 
    // settings
-   DisplayClass& mode  (Int w=-1, Int h=-1, Int  full=-1, Bool auto_full  =true );                 // set    Display Resolution  Mode, 'w'=width in pixels, 'h'=height in pixels, 'full'=if fullscreen (true/false), 'auto_full'=if allow forcing fullscreen when mode covers entire screen, -1=keep current value, if the method fails then previous mode is restored, if previous mode can't be restored then Exit is called
+   DisplayClass& mode  (Int w=-1, Int h=-1, Int  full=-1, Bool auto_full  =true );                 // set    Display Resolution  Mode, 'w'=width in pixels, 'h'=height in pixels, 'full'=if fullscreen (true/false), 'auto_full'=if allow forcing fullscreen when mode covers entire screen. Specifying -1 for any parameter means keep current value, if the method fails then previous mode is restored, if previous mode can't be restored then 'Exit' is called
    DisplayClass& toggle(                                  Bool window_size=false);                 // toggle Fullscreen/Windowed Mode, 'window_size'=if when switching to fullscreen want to set resolution from current window size instead of desktop size
    DisplayClass& full  (                    Bool full   , Bool window_size=false);                 // set    Fullscreen Mode         , 'window_size'=if when switching to fullscreen want to set resolution from current window size instead of desktop size
    Bool          full  (                                                        )C {return _full;} // if in  Fullscreen Mode (true/false, default=false)
 
+#if EE_PRIVATE
+   void          setSync          (                             );
+   void          gammaSet         (                             );
+   Bool          densityFast      (Byte             density     );
+   void          densityFast1     (                             ) {densityFast(127);}
+   void          densityUpdate    (                             );
+   Bool          ambientResFast   (Byte             scale       );
+   void          ambientResFast1  (                             ) {ambientResFast(255);}
+   void          setColorLUT      (                             );
+   void          getScreenInfo    (                             );
+                                                                     Bool             densityUsed       ()C {return _density!=127     ;} // get if Density is != 1.0
+                                                                     Bool             densityUpsample   ()C {return _density> 127     ;} // get if Density is >  1.0
+                                                                     Byte             densityFast       ()C {return _density          ;} // get    Density
+                                                                     Byte             ambientResFast    ()C {return _amb_res          ;} // get    Ambient Resolution
+                                                                     Bool             multiSample       ()C {return _samples>1        ;} // get if Multi Sampling is used
+                                                                     void             aspectRatioEx     (Bool force=true, Bool quiet=false);
+                                                           constexpr Bool             signedNrmRT       ()C {return false             ;} // if Normal   Render Target is signed #SIGNED_NRM_RT
+                                                           constexpr Bool             signedVelRT       ()C {return true              ;} // if Velocity Render Target is signed
+                                                                     Flt              eyeDistance_2     ()C {return _eye_dist_2       ;}
+                                                                     Bool             exclusiveFull     ()C;                             // if actually in exclusive full-screen mode
+                                                                     Bool             colorManaged      ()C {return _color_lut.is()   ;} // if need to perform any color transformations
+#endif
                                                                    C Rect&            rect              ()C {return _rect             ;} // get     full screen rectangle Rect(-w(), -h(), w(), h())
                                                                    C Rect&            rectUI            ()C {return _rect_ui          ;} // get     full screen rectangle that's safe for UI placement, normally it's equal to 'rect' however it may be smaller due to system controls, rounded corners, notch, etc.
+                                                                     Rect             rectUIKB          ()C;                             // get     full screen rectangle that's safe for UI placement, excluding Screen Keyboard
    DisplayClass& exclusive        (Bool             exclusive   );   Bool             exclusive         ()C {return _exclusive        ;} // get/set if fullscreen mode should be exclusive (true/false                         , default=            false                             ), this affects only Windows DirectX fullscreen mode, exclusive offers better performance, non-exclusive offers faster Alt+Tab switching
    DisplayClass& colorSpace       (COLOR_SPACE      color_space );   COLOR_SPACE      colorSpace        ()C {return _color_space      ;} // get/set if App should be color managed         (COLOR_SPACE                        , default= COLOR_SPACE_NONE                             ), if enabled then Application will convert colors from specified color space into monitor color space, based on selected monitor color profile in the Operating System. If there's no monitor color profile selected in the Operating System, then this option will have no effect. Using COLOR_SPACE_NONE disables color management, while other modes enable it. Warning: enabling color management reduces performance.
    DisplayClass& density          (Flt              density     );   Flt              density           ()C;                             // get/set Rendering Pixel Density                (0..2                               , default=                1                             ), density affects the number of pixels used during rendering, density=2 makes the rendering use 2x bigger render targets (super sampling) but slower performance, density=0.5 makes the rendering use 2x smaller render targets making the result more blurry but with faster performance, the change is NOT instant, avoid calling real-time
@@ -205,7 +234,9 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& texFilter        (Byte             filter      );   Byte             texFilter         ()C {return _tex_filter       ;} // set/get Texture Filtering Quality              (0..maxTexFilter()                  , default=               16 (4               for Mobile)), 0=no filtering, 1=linear filtering, 2 and more=anisotropic filtering, the change is NOT instant, avoid calling real-time
    DisplayClass& texMipFilter     (Bool             on          );   Bool             texMipFilter      ()C {return _tex_mip_filter   ;} // set/get Texture MipMap Filtering               (true/false                         , default=             true                             ), enables or disables filtering between different mip map levels, the change is NOT instant, avoid calling real-time
    DisplayClass& texMipMin        (Byte             min         );   Byte             texMipMin         ()C {return _tex_mip_min      ;} // set/get Texture Minimum MipMap                 (0..16                              , default=                0                             ), values bigger than zero indicate lower texture quality (smaller mip maps will be used), but faster rendering, the change is NOT instant, avoid calling real-time
-   DisplayClass& texMacro         (Bool             use         );   Bool             texMacro          ()C {return _tex_macro        ;} // set/get Macro  Textures usage                  (true/false                         , default=             true                             ), determines usage of additional Macro  Textures in Materials, using this method during application runtime requires setting 'D.set_shader' (please check comments on 'D.set_shader' for more info), the change is NOT instant, avoid calling real-time
+#if EE_PRIVATE
+   DisplayClass& texMipBias       (Flt              bias        );   Flt              texMipBias        ()C {return _tex_mip_bias     ;} // set/get Texture MipMap Bias                    (-Inf..Inf                          , default=                0                             ), value >0 decreases sharpness (smaller mip maps will be used), value==0 doesn't change sharpness, value<0 increases sharpness (bigger mip maps will be used), the change is NOT instant, avoid calling real-time
+#endif
    DisplayClass& texDetail        (TEXTURE_USAGE    usage       );   TEXTURE_USAGE    texDetail         ()C {return _tex_detail       ;} // set/get Detail Textures usage                  (TEXTURE_USAGE                      , default=    TEX_USE_MULTI (TEX_USE_DISABLE for Mobile)), determines usage of additional Detail Textures in Materials, using this method during application runtime requires setting 'D.set_shader' (please check comments on 'D.set_shader' for more info), the change is NOT instant, avoid calling real-time
    DisplayClass& texDetailLOD     (Bool             on          );   Bool             texDetailLOD      ()C {return _tex_detail_lod   ;} // set/get Detail Textures on all Mesh LODs       (true/false                         , default=            false                             ), determines usage of additional Detail Textures in Materials, using this method during application runtime requires setting 'D.set_shader' (please check comments on 'D.set_shader' for more info), the change is NOT instant, avoid calling real-time, if this option is enabled then all LODs in a Mesh will use detail (if available), if disabled then only first LOD will use it
    DisplayClass& imageMipBias     (Flt              bias        );   Flt              imageMipBias      ()C {return _image_mip_bias   ;} // set/get Image MipMap Bias                      (-Inf..Inf                          , default=            -0.50                             ), specifies Mip Map Texture Bias for regular Images, value >0 decreases sharpness (smaller mip maps will be used), value==0 doesn't change sharpness, value<0 increases sharpness (bigger mip maps will be used), the change is NOT instant, avoid calling real-time
@@ -241,8 +272,15 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& temporalAntiAlias(Bool on);   Bool temporalAntiAlias()C {return _temp_anti_alias;} // set/get Temporal Anti-Aliasing    (true/false, default=false), this is  Anti-Aliasing that jitters projection matrix per-frame, moving it slightly with every frame and accumulating rendering results over time
    DisplayClass& temporalSuperRes (Bool on);   Bool temporalSuperRes ()C {return _temp_super_res ;} // set/get Temporal Super Resolution (true/false, default=false), this is Super-Sampling that jitters projection matrix per-frame, moving it slightly with every frame and accumulating rendering results over time. This option Lowers Quality but Increases Performance. It works by rendering to a lower resolution and then upscaling back to original resolution.
    DisplayClass& temporalReset    (       );                                                        // reset   Temporal history                                     , call this method if you want to clear the history of previous rendering results
+#if EE_PRIVATE
+   Bool temporal()C {return temporalAntiAlias() || temporalSuperRes();}
+#endif
 
    // Bloom, setting 'original' value to 1 and 'scale' to 0 disables bloom and increases rendering performance, optionally you can disable it with "bloomAllow(false)"
+#if EE_PRIVATE
+   void bloomScaleCut(Flt scale, Flt cut);
+   Flt  bloomAdd     ()C {return _bloom_add;}
+#endif
    DisplayClass&  glowAllow   (Bool allow   );   Bool  glowAllow   ()C {return  _glow_allow   ;} // set/get Allow Glow Effect     (true/false, default=true (false for Mobile)), this can work only if 'bloomAllow' is enabled, the change is instant, you can call it real-time
    DisplayClass& bloomAllow   (Bool allow   );   Bool bloomAllow   ()C {return _bloom_allow   ;} // set/get Allow Bloom           (true/false, default=true (false for Mobile)), the change is instant, you can call it real-time
    DisplayClass& bloomOriginal(Flt  original);   Flt  bloomOriginal()C {return _bloom_original;} // set/get Bloom Original Color  (   0..Inf , default=1.0                    ), the change is instant, you can call it real-time
@@ -251,7 +289,27 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& bloomGlow    (Flt  glow    );   Flt  bloomGlow    ()C {return _bloom_glow    ;} // set/get Bloom from Glow       (   0..Inf , default=1.0                    ), the change is instant, you can call it real-time
                                                  Bool bloomUsed    ()C;                          //     if  Bloom post process is going to be used
 
+   // Contrast
+   DisplayClass& contrast(Flt contrast);   Flt contrast()C {return _contrast;} // set/get contrast (0..Inf, 0=disabled, default=1.0), the change is instant, you can call it real-time
+#if EE_PRIVATE
+   Bool useContrast()C {return _contrast>=HALF_MIN;}
+   void setContrast()C;
+#endif
+
    // Ambient Light
+#if EE_PRIVATE
+   Bool aoWant()C;
+   Bool aoAll ()C {return _ao_all;}
+   void ambientSet()C;
+   void ambientSetRange()C;
+#if LINEAR_GAMMA
+   INLINE C Vec&    ambientColorD()C {return    ambientColorL();}
+   INLINE C Vec& nightShadeColorD()C {return nightShadeColorL();}
+#else
+   INLINE   Vec     ambientColorD()C {return    ambientColorS();}
+   INLINE   Vec  nightShadeColorD()C {return nightShadeColorS();}
+#endif
+#endif
    DisplayClass& ambientMode    (AMBIENT_MODE mode      );   AMBIENT_MODE ambientMode    ()C {return _amb_mode         ;} // set/get Ambient Mode               (AMBIENT_MODE         , default=AMBIENT_LOW), the change is instant, you can call it real-time
    DisplayClass& ambientSoft    (  Byte       soft      );   Byte         ambientSoft    ()C {return _amb_soft         ;} // set/get Ambient Softing            (0..AMBIENT_SOFT_NUM-1, default=          1), if soften the AO result, the change is instant, you can call it real-time
    DisplayClass& ambientJitter  (  Bool       jitter    );   Bool         ambientJitter  ()C {return _amb_jitter       ;} // set/get Ambient Jittering          (true/false           , default=       true), jittering enables per pixel randomization of the AO samples, the change is instant, you can call it real-time
@@ -270,8 +328,15 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& nightShadeColorS(C Vec &srgb_color);     Vec  nightShadeColorS()C;                      // set/get Night Shade color sRGB   Gamma (0..1, default=0), the change is instant, you can call it real-time, setting color to 0 disables Night Shade effect
 
    // Environment
-   DisplayClass& envColor(C Vec      &color); C Vec     & envColor()C {return _env_color;} // set/get Environment color (0..1, default=1), the change is         instant, you can call it real-time
-   DisplayClass& envMap  (C ImagePtr &cube ); C ImagePtr& envMap  ()C {return _env_map  ;} // set/get Environment map                    , the change may not be instant, avoid   calling real-time, default=ImagePtr().get("Img/Environment.img"), images passed to this method must be created with IC_ENV_CUBE flag enabled in the 'Image.copy*' functions or have "Environment" mode selected in the "Engine Editor \ Image Editor"
+   DisplayClass& envColor (C Vec      &color, C Vec &color_add=VecZero); C Vec     & envColor   ()C {return _env_color    ;} // set/get Environment color     (0..1, default=1), the change is         instant, you can call it real-time
+                                                                         C Vec     & envColorAdd()C {return _env_color_add;} // set/get Environment color add (0..1, default=0), the change is         instant, you can call it real-time
+   DisplayClass& envMap   (C ImagePtr &cube                           ); C ImagePtr& envMap     ()C {return _env_map      ;} // set/get Environment map                        , the change may not be instant, avoid   calling real-time, default=ImagePtr().get("Img/Environment.img"), images passed to this method must be created with IC_ENV_CUBE flag enabled in the 'Image.copy*' functions or have "Environment" mode selected in the "Engine Editor \ Image Editor"
+   DisplayClass& envMatrix(C Matrix3  &matrix                         ); C Matrix3 & envMatrix  ()C {return _env_matrix   ;} // set/get Environment matrix                     , the change is         instant, you can call it real-time
+#if EE_PRIVATE
+   static void SetEnvMap(C Image *env);
+   static Bool HasEnvMap(C Image *env, C Vec &col, C Vec &col_add);
+   void envMatrixSet()C;
+#endif
 
    // Shadowing
    DisplayClass& shadowMode         (SHADOW_MODE mode    );   SHADOW_MODE shadowMode         ()C {return _shd_mode      ;} // set/get Shadow Mode                                  (SHADOW_MODE         , default=SHADOW_MAP (SHADOW_NONE for Mobile)), the change is instant, you can call it real-time
@@ -286,6 +351,13 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& shadowMapNum       (Byte        map_num );   Byte        shadowMapNum       ()C {return _shd_map_num   ;} // set/get Number of Shadow Maps for Directional Lights (  1..6              , default=         6                         ), this option specifies the number of shadow maps used when rendering directional lights, the more shadow maps are used the better quality but smaller performance, RT_FORWARD renderer supports only even numbers of maps, the change is instant, you can call it real-time
    DisplayClass& shadowMapSplit     (C Vec2     &factor  ); C Vec2&       shadowMapSplit     ()C {return _shd_map_split ;} // set/get Split Factor used for calculating Map Ranges (                    , default=    Vec2(2, 1)                     ), this option affects calculation of shadow map split ranges from the formula "Pow(x, factor.x + factor.y*x)". Ideal value is Vec2(2, 0) - "Pow(x, 2 + 0*x)" which gives equal distribution among near/far splits. However games may prefer better quality closer to the camera, while sacrificing the far quality, in that case it is beneficial to pass bigger values than Vec2(2, 0).
    DisplayClass& cloudsMapSize      (Int         map_size);   Int         cloudsMapSize      ()C {return _cld_map_size  ;} // set/get Clouds Shadow Map Size                       (  1..Inf            , default=       128                         ), the change is NOT instant, avoid calling real-time
+#if EE_PRIVATE
+   void shadowJitterSet    ();
+   void shadowRangeSet     ();
+   Int  shadowMapNumActual ()C;
+   Int  shadowMapSizeActual()C {return _shd_map_size_actual;}
+   Bool shadowSupported    ()C;
+#endif
 
    // Motion Blur
    DisplayClass& motionMode  (MOTION_MODE mode );   MOTION_MODE motionMode  ()C {return _mtn_mode  ;} // set/get Motion Blur Mode           (MOTION_MODE, default=MOTION_NONE), the change is instant, you can call it real-time
@@ -294,6 +366,10 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& motionJitter(Bool        on   );   Bool        motionJitter()C {return _mtn_jitter;} // set/get Motion Blur Jitter         (true/false , default=       true), the change is instant, you can call it real-time
 
    // Depth of Field
+#if EE_PRIVATE
+   #define EPS_DOF (1.0f/1024)
+   Bool dofWant()C {return dofMode()!=DOF_NONE && dofIntensity()>EPS_DOF;}
+#endif
    DisplayClass& dofMode     (DOF_MODE mode     );   DOF_MODE dofMode     ()C {return _dof_mode     ;} // set/get Depth of Field Mode                 ( DOF_MODE , default=DOF_NONE), the change is instant, you can call it real-time
    DisplayClass& dofFocusMode(Bool     realistic);   Bool     dofFocusMode()C {return _dof_foc_mode ;} // set/get Depth of Field Focus Mode           (true/false, default=   false), this affects how the focus is calculated based on depth, simple mode (realistic=false) operates on 'dofFocus' and 'dofRange' only, while realistic mode (realistic=true) operates on 'dofFocus' only
    DisplayClass& dofFocus    (Flt      z        );   Flt      dofFocus    ()C {return _dof_focus    ;} // set/get Depth of Field Focus Depth Position (   0..Inf , default=       0), this is the distance from camera which should be completely focused and not blurred, the change is instant, you can call it real-time
@@ -301,22 +377,29 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& dofIntensity(Flt      intensity);   Flt      dofIntensity()C {return _dof_intensity;} // set/get Depth of Field Intensity            (   0..Inf , default=       1), intensity of the depth of field effect, the change is instant, you can call it real-time
 
    // Eye Adaptation
-   DisplayClass& eyeAdaptation          (  Bool on          );   Bool eyeAdaptation          ()C {return _eye_adapt           ;} // set/get Eye Adaptation usage                (                true/false                  , default=false        ), enables automatic screen brightness adjustment, the change is instant, you can call it real-time
-   DisplayClass& eyeAdaptationBrightness(  Flt  brightness  );   Flt  eyeAdaptationBrightness()C {return _eye_adapt_brightness;} // set/get Eye Adaptation brightness           (                   0..Inf                   , default= 0.7         ), total scale of lighting, the change is instant, you can call it real-time
-   DisplayClass& eyeAdaptationExp       (  Flt  exp         );   Flt  eyeAdaptationExp       ()C {return _eye_adapt_exp       ;} // set/get Eye Adaptation exponent             (                   0..1                     , default= 0.5         ), affects how much brightness can change towards desired 'eyeAdaptationBrightness', value of 1 means that all targets can be reached, value of 0.5 means that the actual brightness scale will be a square root of full brightness scale, brightness scale is calculated based on following formula: "actual_scale = Pow(desired_scale, exp)", where 'desired_scale' is the scale needed to exactly reach target brightness, making exponent smaller results in making the 'actual_scale' closer to 1.0, which means smaller brightness scales are performed. You can call this method real-time
-   DisplayClass& eyeAdaptationMaxDark   (  Flt  max_dark    );   Flt  eyeAdaptationMaxDark   ()C {return _eye_adapt_max_dark  ;} // set/get Eye Adaptation maximum   darkening  (                   0..eyeAdaptationMaxBright, default= 0.5         ), this is a hard limit for maximum   darkening, the change is instant, you can call it real-time
-   DisplayClass& eyeAdaptationMaxBright (  Flt  max_bright  );   Flt  eyeAdaptationMaxBright ()C {return _eye_adapt_max_bright;} // set/get Eye Adaptation maximum brightening  (eyeAdaptationMaxDark..Inf                   , default= 2.0         ), this is a hard limit for maximum brightening, the change is instant, you can call it real-time
-   DisplayClass& eyeAdaptationSpeed     (  Flt  speed       );   Flt  eyeAdaptationSpeed     ()C {return _eye_adapt_speed     ;} // set/get Eye Adaptation speed                (                   1..Inf                   , default= 6.5         ), the change is instant, you can call it real-time
-   DisplayClass& eyeAdaptationWeight    (C Vec &weight      ); C Vec& eyeAdaptationWeight    ()C {return _eye_adapt_weight    ;} // set/get Eye Adaptation color weight         (           (0, 0, 0)..(1, 1, 1)             , default=(0.9, 1, 0.7)), the change is instant, you can call it real-time
+   DisplayClass& eyeAdaptation          (  Bool on          );   Bool eyeAdaptation          ()C {return _eye_adapt           ;} // set/get Eye Adaptation usage                (                true/false                  , default=false            ), enables automatic screen brightness adjustment, the change is instant, you can call it real-time
+   DisplayClass& eyeAdaptationBrightness(  Flt  brightness  );   Flt  eyeAdaptationBrightness()C {return _eye_adapt_brightness;} // set/get Eye Adaptation brightness           (                   0..Inf                   , default= 0.1             ), total scale of lighting, the change is instant, you can call it real-time
+   DisplayClass& eyeAdaptationExp       (  Flt  exp         );   Flt  eyeAdaptationExp       ()C {return _eye_adapt_exp       ;} // set/get Eye Adaptation exponent             (                   0..1                     , default= 0.333           ), affects how much brightness can change towards desired 'eyeAdaptationBrightness', value of 1 means that all targets can be reached, value of 0.5 means that the actual brightness scale will be a square root of full brightness scale, brightness scale is calculated based on following formula: "actual_scale = Pow(desired_scale, exp)", where 'desired_scale' is the scale needed to exactly reach target brightness, making exponent smaller results in making the 'actual_scale' closer to 1.0, which means smaller brightness scales are performed, the change is instant, you can call it real-time
+   DisplayClass& eyeAdaptationIntensity (  Flt  intensity   );   Flt  eyeAdaptationIntensity ()C {return _eye_adapt_intensity ;} // set/get Eye Adaptation intensity            (                   0..1                     , default= 1.0             ), the change is instant, you can call it real-time
+   DisplayClass& eyeAdaptationMaxDark   (  Flt  max_dark    );   Flt  eyeAdaptationMaxDark   ()C {return _eye_adapt_max_dark  ;} // set/get Eye Adaptation maximum   darkening  (                   0..eyeAdaptationMaxBright, default= 0.5             ), this is a hard limit for maximum   darkening, the change is instant, you can call it real-time
+   DisplayClass& eyeAdaptationMaxBright (  Flt  max_bright  );   Flt  eyeAdaptationMaxBright ()C {return _eye_adapt_max_bright;} // set/get Eye Adaptation maximum brightening  (eyeAdaptationMaxDark..Inf                   , default= 2.0             ), this is a hard limit for maximum brightening, the change is instant, you can call it real-time
+   DisplayClass& eyeAdaptationSpeed     (  Flt  speed       );   Flt  eyeAdaptationSpeed     ()C {return _eye_adapt_speed     ;} // set/get Eye Adaptation speed                (                   1..Inf                   , default= 6.5             ), the change is instant, you can call it real-time
+   DisplayClass& eyeAdaptationWeight    (C Vec &weight      ); C Vec& eyeAdaptationWeight    ()C {return _eye_adapt_weight    ;} // set/get Eye Adaptation color weight         (           (0, 0, 0)..(1, 1, 1)             , default=(0.509, 1, 0.194)), the change is instant, you can call it real-time
    DisplayClass& resetEyeAdaptation     (  Flt  brightness=1);                                                                   // reset   Eye Adaptation value, eye adaptation changes over time according to screen colors, this method resets the adaptation to its original state, 'brightness'=initial brightness (0..Inf), the change is NOT instant, avoid calling real-time
 
    // Tone Mapping
-   DisplayClass& toneMap           (TONE_MAP_MODE mode);   TONE_MAP_MODE toneMap           ()C {return _tone_map_mode      ;} // set/get Tone Mapping Mode                       (TONE_MAP_MODE, default=TONE_MAP_OFF), the change is instant, you can call it real-time
-   DisplayClass& toneMapTopRange   (Flt          range);   Flt           toneMapTopRange   ()C {return _tone_map_top_range ;} // set/get Tone Mapping Top    (Shoulder) Range    (0..1         , default=0.7         ), the change is instant, you can call it real-time, this is the range used for fitting too bright colors, too bright colors will be compressed into "max_lum-top_range .. max_lum" range. So for example with top_range=0.82 and monitor_max_lum=1.0, bright colors will be compressed into "1.0-0.82 .. 1.0" range, which is "0.18 .. 1.0", which makes colors in "0 .. 0.18" unaffected, and all colors >0.18 compressed into "0.18 .. 1.0" range.
-   DisplayClass& toneMapDarkenRange(Flt          range);   Flt           toneMapDarkenRange()C {return _tone_map_dark_range;} // set/get Tone Mapping Darken (Toe     ) Range    (0..1         , default=0.123       ), the change is instant, you can call it real-time, this is the luminance range for darkening dark colors, affected colors are in range [0..toneMapDarkenRange)
-   DisplayClass& toneMapDarkenExp  (Flt            exp);   Flt           toneMapDarkenExp  ()C {return _tone_map_dark_exp  ;} // set/get Tone Mapping Darken (Toe     ) Exponent (1..2         , default=1.3         ), the change is instant, you can call it real-time, this is the power exponent  for darkening dark colors, colors are darkened using function "Pow(color, exp)", using 1.0 exponent disables darkening
+   DisplayClass& toneMap(Bool on);   Bool toneMap()C {return _tone_map;} // set/get Tone Mapping (true/false, default=false), the change is instant, you can call it real-time
+#if EE_PRIVATE
+   void          setToneMap();
+   void          toneMapMonitorMaxLumAuto(); // automatically set
+   DisplayClass& toneMapMonitorMaxLum(Flt max_lum);   Flt toneMapMonitorMaxLum()C {return _tone_map_max_lum;} // set/get Tone Mapping Monitor Max Luminance (0..Inf, default=1), the change is instant, you can call it real-time, this is the maximum luminance supported by your monitor, LDR monitors have 1, while HDR monitors can be higher
+#endif
 
    // Level of Detail
+#if EE_PRIVATE
+   void lodSetCurrentFactor();
+   void lodUpdateFactors   ();
+#endif
    DisplayClass& lod            (Flt general, Flt mirror);                                          // set     Level of Detail factors, the change is instant, you can call it real-time
    DisplayClass& lodFactor      (Flt factor);   Flt lodFactor      ()C {return _lod_factor       ;} // set/get Level of Detail general factor which determines                                    Lod selection, 0..Inf, default=1, it's a scaling factor: values from 0..1 increase details and values from 1..Inf decrease details, the change is instant, you can call it real-time
    DisplayClass& lodFactorMirror(Flt factor);   Flt lodFactorMirror()C {return _lod_factor_mirror;} // set/get Level of Detail mirror  factor which is also applied to meshes rendered in mirrors Lod selection, 0..Inf, defailt=2, it's a scaling factor: values from 0..1 increase details and values from 1..Inf decrease details, the change is instant, you can call it real-time
@@ -325,13 +408,20 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& tesselation         (Bool on     );   Bool tesselation         ()C {return _tesselation          ;} // set/get Tesselation               (true/false, default=false), Tesselation smoothes the mesh polygons, it is available only on Shader Model>=5.0, the change is NOT instant, avoid calling real-time
    DisplayClass& tesselationHeightmap(Bool on     );   Bool tesselationHeightmap()C {return _tesselation_heightmap;} // set/get Tesselation of Heightmaps (true/false, default=false), the change is NOT instant, avoid calling real-time
    DisplayClass& tesselationDensity  (Flt  density);   Flt  tesselationDensity  ()C {return _tesselation_density  ;} // set/get Tesselation Density       (  0..Inf  , default=60   ), the change is instant, you can call it real-time
+#if EE_PRIVATE
+   DisplayClass& tesselationAllow    (Bool on     );   Bool tesselationAllow    ()C {return _tesselation_allow    ;} // set/get Tesselation Allow         (true/false, default=true ), the change is instant, you can call it real-time
+#endif
 
    // Grass
-   DisplayClass& grassRange  (Flt  range  );   Flt  grassRange  ()C {return _grass_range  ;} // set/get Grass Range             (  0..Inf  , default=50                ), grass objects above specified range will not be rendered, the change is instant, you can call it real-time
-   DisplayClass& grassDensity(Flt  density);   Flt  grassDensity()C {return _grass_density;} // set/get Grass Density           (  0..1    , default=1 (0.5 for Mobile)), controls the amount of grass objects rendered, the change is instant, you can call it real-time
-   DisplayClass& grassShadow (Bool on     );   Bool grassShadow ()C {return _grass_shadow ;} // set/get Grass Shadow Casting    (true/false, default=false             ), if grass objects should cast shadows, the change is instant, you can call it real-time
-   DisplayClass& grassMirror (Bool on     );   Bool grassMirror ()C {return _grass_mirror ;} // set/get Grass Drawing in Mirror (true/false, default=false             ), if grass objects should be drawn in mirrors, the change is instant, you can call it real-time
-   DisplayClass& grassUpdate (            );                                                 // update  Grass and Leafs bending animation, call this each frame to update the animation, the change is instant, you can call it real-time
+   DisplayClass& grassRange     (Flt  start, Flt end); C Vec2& grassRange  ()C {return _grass_range  ;} // set/get Grass Range             (  0..Inf  , default=50, 60            ), set grass fade start/end ranges, the change is instant, you can call it real-time
+   DisplayClass& grassFocus     (C VecD &pos        ); C VecD& grassFocus  ()C {return _grass_focus  ;} // set/get Grass Focus Position                                            , the change is instant, you can call it real-time, !! THIS SHOULD BE CALLED BEFORE 'Camera.set' !!
+#if EE_PRIVATE
+   DisplayClass& grassFocusClear(                   );                                                  // clear   Grass Focus Position and use default                            , the change is instant, you can call it real-time, !! THIS SHOULD BE CALLED BEFORE 'Camera.set' !!
+#endif
+   DisplayClass& grassDensity   (Flt  density       );   Flt   grassDensity()C {return _grass_density;} // set/get Grass Density           (  0..1    , default=1 (0.5 for Mobile)), controls the amount of grass objects rendered, the change is instant, you can call it real-time
+   DisplayClass& grassShadow    (Bool on            );   Bool  grassShadow ()C {return _grass_shadow ;} // set/get Grass Shadow Casting    (true/false, default=false             ), if grass objects should cast shadows, the change is instant, you can call it real-time
+   DisplayClass& grassMirror    (Bool on            );   Bool  grassMirror ()C {return _grass_mirror ;} // set/get Grass Drawing in Mirror (true/false, default=false             ), if grass objects should be drawn in mirrors, the change is instant, you can call it real-time
+   DisplayClass& grassUpdate    (                   );                                                  // update  Grass and Leafs bending animation, call this each frame to update the animation, the change is instant, you can call it real-time
 
    // Fur
    DisplayClass& furStaticGravity (Flt gravity  );   Flt furStaticGravity ()C {return _fur_gravity  ;} //                     gravity affecting fur on non-animated meshes which aren't controlled by AnimatedSkeleton (AnimatedSkeleton.fur_* parameters), -Inf..Inf, default=-1   , the change is instant, you can call it real-time
@@ -342,7 +432,24 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& volAdd  (Bool on );   Bool volAdd  ()C {return _vol_add  ;} // set/get Volumetric Apply Mode     (true/false, default=false), when true is set, Volumetric Light will be added to the scene, if false is set, Lerp to 1 will be performed, the change is instant, you can call it real-time
    DisplayClass& volMax  (Flt  max);   Flt  volMax  ()C {return _vol_max  ;} // set/get Volumetric Global Maximum (   0..Inf , default=1.0  ), the change is instant, you can call it real-time
 
+   // Sun Rays
+   DisplayClass& sunRaysRes   (Flt           scale );                                       Flt           sunRaysRes   ()C;                           // set/get sun rays resolution,     0..1     , default=1/4, this determines the size of the buffers used for calculating the Sun Rays effect, 1=full size, 0.5=half size, 0.25=quarter size, .., smaller sizes offer faster performance but worse quality, the change is NOT instant, avoid calling real-time
+   DisplayClass& sunRaysMode  (SUN_RAYS_MODE mode  ) {_sun_rays_mode  =mode  ; return T;}   SUN_RAYS_MODE sunRaysMode  ()C {return _sun_rays_mode  ;} // set/get sun rays mode      , SUN_RAYS_MODE, default=SUN_RAYS_OPAQUE_BLEND
+   DisplayClass& sunRaysJitter(SByte         jitter) {_sun_rays_jitter=jitter; return T;}   SByte         sunRaysJitter()C {return _sun_rays_jitter;} // set/get sun rays jitter    , -1/false/true, default=-1, false=always disabled, true=always enabled, -1=auto
+
    // Viewport Settings
+#if EE_PRIVATE
+   void          setViewFovTan();
+   void          viewUpdate();
+   void          viewReset ();
+   DisplayClass& view      (C RectI &rect, Flt from, Flt range, C Vec2 &fov, FOV_MODE fov_mode);
+   DisplayClass& view      (C Rect  &rect, Flt from, Flt range, C Vec2 &fov, FOV_MODE fov_mode);
+                                                            Flt      viewFromActual    ()C {return _view_from                         ;} // get actual viewport near clip plane (this depends on FovMode)
+                                                          C Vec2 &   viewCenter        ()C {return _view_center                       ;} // get viewport center
+                                                          C Vec2 &   viewFovTanGui     ()C {return _view_fov_tan_gui                  ;} // get viewport fov tan, used for point transformation between 3D and VR 'GuiTexture'
+                                                          C Vec2 &   viewFovTanFull    ()C {return _view_fov_tan_full                 ;} // get viewport fov tan, used for point transformation between 3D and Full Screen
+                                                            Bool     viewFovPerspective()C {return FovPerspective(_view_main.fov_mode);} // if  viewport fov mode is perspective
+#endif
    DisplayClass& viewRect (C RectI *rect               ); C RectI&   viewRectI   ()C {return _view_main.recti   ;} // set/get viewport rectangle (null for fullscreen), custom viewport rectangle is reset at start of each frame to fullscreen, that's why when used it must be set manually in each frame
    DisplayClass& viewRect (C Rect  &rect               ); C Rect &   viewRect    ()C {return _view_rect         ;} // set/get viewport rectangle                      , custom viewport rectangle is reset at start of each frame to fullscreen, that's why when used it must be set manually in each frame
    DisplayClass& viewFrom (Flt from                    );   Flt      viewFrom    ()C {return _view_main.from    ;} // set/get viewport near clip plane       , default=0.05
@@ -351,6 +458,7 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    DisplayClass& viewFov  (C Vec2 &fov                 ); C Vec2 &   viewFovXY   ()C {return _view_main.fov     ;} // set/get viewport          field of view from both horizontal and vertical values
                                                             Flt      viewFovX    ()C {return _view_main.fov.x   ;} //     get actual horizontal field of view
                                                             Flt      viewFovY    ()C {return _view_main.fov.y   ;} //     get actual vertical   field of view
+                                                          C Vec2 &   viewFovTan  ()C {return _view_main.fov_tan ;} //     get actual vertical   field of view tangent
                                                             FOV_MODE viewFovMode ()C {return _view_main.fov_mode;} //     get viewport          field of view mode, default=FOV_Y
                                                             Flt      viewQuadDist()C;                              //     get viewport quad max distance from camera
    DisplayClass& viewForceSquarePixel(Bool square=false);                                                          //   force pixel aspect ratio to 1, this may be needed for rendering to textures, default rendering should have this disabled, default=false
@@ -376,19 +484,40 @@ struct DisplayClass : DisplayState, DisplayDraw // Display Control
    static void  alignScreenToPixel      (  Vec2  &screen); // align screen space position  to nearest pixel
    static void  alignScreenToPixel      (  Rect  &screen); // align screen space rectangle so its top-left corner will be aligned to nearest pixel while preserving the rectangle size
         C Vec2& pixelToScreenSize       (               )C {return _pixel_size;} // get screen size of a single pixel
+#if EE_PRIVATE
+   static void  alignScreenXToPixel     (  Flt   &screen_x); // align screen space x position to nearest pixel
+   static void  alignScreenYToPixel     (  Flt   &screen_y); // align screen space y position to nearest pixel
+   static Vec2  windowPixelToScreen     (C Vec2  &pixel   ); // from pixel       (   0 .. D.resW,    0 .. D.resH) to screen      (-D.w .. D.w   , -D.h .. D.h   ) taking into account System Window -> VR Gui
+   static Vec2  windowPixelToScreen     (C VecI2 &pixel   ); // from pixel       (   0 .. D.resW,    0 .. D.resH) to screen      (-D.w .. D.w   , -D.h .. D.h   ) taking into account System Window -> VR Gui
+   static Vec2  windowPixelToScreenSize (C Vec2  &pixel   ); // from pixel  size (   0 .. D.resW,    0 .. D.resH) to screen size (   0 .. D.w*2 ,    0 .. D.h*2 ) taking into account System Window -> VR Gui, use this function for widths and heights
+   static Vec2  windowPixelToScreenSize (C VecI2 &pixel   ); // from pixel  size (   0 .. D.resW,    0 .. D.resH) to screen size (   0 .. D.w*2 ,    0 .. D.h*2 ) taking into account System Window -> VR Gui, use this function for widths and heights
+   static Vec2  screenToWindowPixel     (C Vec2  &screen  ); // from screen      (-D.w .. D.w   , -D.h .. D.h   ) to pixel       (   0 .. D.resW,    0 .. D.resH) taking into account System Window -> VR Gui
+   static Vec2  screenToWindowPixelSize (C Vec2  &screen  ); // from screen size (   0 .. D.w*2 ,    0 .. D.h*2 ) to pixel  size (   0 .. D.resW,    0 .. D.resH) taking into account System Window -> VR Gui, use this function for widths and heights
+   static VecI2 screenToWindowPixelI    (C Vec2  &screen  ); // from screen      (-D.w .. D.w   , -D.h .. D.h   ) to pixel       (   0 .. D.resW,    0 .. D.resH) taking into account System Window -> VR Gui
+   static RectI screenToWindowPixelI    (C Rect  &screen  ); // from screen      (-D.w .. D.w   , -D.h .. D.h   ) to pixel       (   0 .. D.resW,    0 .. D.resH) taking into account System Window -> VR Gui
+#endif
 
    // Clear Screen
    static void clear     (C Color &srgb_color=TRANSPARENT); // clear screen viewport to 'srgb_color' and clear depth buffer
    static void clearCol  (C Color &srgb_color            ); // clear screen viewport to 'srgb_color'
    static void clearCol  (C Vec4  &     color=Vec4Zero   ); // clear screen viewport to      'color'
    static void clearDepth(                               ); // clear                                           depth buffer
+#if EE_PRIVATE
+   static void clearDS     (Byte s=0            ); // clear depth buffer and stencil (if available)
+   static void clearStencil(Byte s=0            ); // clear                  stencil
+   static void clearCol    (Int i, C Vec4 &color); // clear i-th full (not viewport) RT to 'color'
+
+   Bool mergedClear()C {return _view_main.full || TILE_BASED_GPU;} // use only when having full viewport ("clearCol(Int i" ignores viewport), or when having a tile-based GPU to avoid overhead of RT transfers. Don't enable in other cases, because on Intel GPU Windows it made things much slower, on GeForce 1050 Ti it made no difference.
+#endif
 
    // operations
    void setShader(C Material *material=null); // manually trigger resetting shaders for all meshes, 'material'=if reset shaders only for meshes having specified material (use null for all meshes)
 
    static void flush(); // flush queued commands to the GPU
 
+#if !EE_PRIVATE
 private:
+#endif
    struct ViewportSettings : ViewSettings
    {
       Rect rect;
@@ -406,6 +535,19 @@ private:
       FOV_MODE fov_mode;
       Flt      from, range;
       Vec2     fov, fov_sin, fov_cos, fov_tan;
+
+   #if EE_PRIVATE
+      Viewport& set3DFrom    (C Viewport &src);
+      Viewport& setRect      (C RectI &recti);
+      Viewport& setFrom      (Flt from);
+      Viewport& setRange     (Flt range);
+      Viewport& setFov       (); // this needs to be called after 'setRect'
+      Viewport& setFov       (                                     C Vec2 &fov, FOV_MODE fov_mode);
+      Viewport& set          (C RectI &recti, Flt from, Flt range, C Vec2 &fov, FOV_MODE fov_mode);
+      Viewport& setViewport  ();
+      Viewport& setShader    (Flt *offset=null);
+      Viewport& setProjMatrix(); // 'Frustum' may have to be reset after calling this method
+   #endif
    };
    struct Monitor
    {
@@ -416,6 +558,17 @@ private:
    #if WINDOWS_OLD
       Char        device_name[32], device_key[128];
    #endif
+
+   #if EE_PRIVATE
+      Bool  is  ()C {return full.w()>0;} // if initialized
+      VecI2 mode()C; // get current mode
+      Str           colorProfilePath()C;
+      Str   standardColorProfilePath()C;
+   #if WINDOWS_OLD
+      Bool set(HMONITOR monitor);
+   #endif
+      Monitor();
+   #endif
    };
 
    ASPECT_MODE       _aspect_mode;
@@ -425,7 +578,6 @@ private:
    SHADOW_MODE       _shd_mode;
    MOTION_MODE       _mtn_mode;
    DOF_MODE          _dof_mode;
-   TONE_MAP_MODE     _tone_map_mode;
    EDGE_DETECT_MODE  _edge_detect, _outline_mode;
    EDGE_SOFTEN_MODE  _edge_soften;
    TEXTURE_USAGE     _tex_detail;
@@ -433,10 +585,11 @@ private:
    IMAGE_PRECISION   _output_prec, _lit_col_rt_prec, _color_prec;
    FILTER_TYPE       _density_filter;
    COLOR_SPACE       _color_space;
+   SUN_RAYS_MODE     _sun_rays_mode;
    Bool              _full, _sync, _exclusive, _hdr,
                      _hp_col_rt, _hp_nrm_rt, _hp_lum_rt, _hp_pal_rt,
                      _particles_soft, _particles_smooth,
-                     _tex_mip_filter, _tex_macro, _tex_detail_lod,
+                     _tex_mip_filter, _tex_detail_lod,
                      _bloom_allow,
                      _tesselation, _tesselation_heightmap, _tesselation_allow,
                      _ao_all, _amb_jitter, _amb_normal,
@@ -446,12 +599,14 @@ private:
                      _vol_light, _vol_add,
                      _temp_anti_alias, _temp_super_res,
                      _glow_allow, _dither, _bend_leafs, _eye_adapt, _dof_foc_mode, _color_palette_allow, _gamma_all, _fade_get, _fade_auto_draw, _mtrl_blend, _draw_null_mtrl, _view_square_pixel, _allow_stereo, _max_lights_soft, _sharpen,
+                     _tone_map, _tone_map_allow, _tone_map_use,
                      _initialized, _resetting, _no_gpu;
-  SByte              _half_supported;
+  SByte              _half_supported, _sun_rays_jitter;
    Byte              _density, _samples, _max_tex_filter, _max_rt,
                      _amb_soft, _amb_res,
                      _shd_soft, _shd_map_num,
                      _mtn_res,
+                     _sun_rays_res,
                      _max_lights,
                      _tex_filter, _tex_mip_min;
    VecB2             _gl_ver;
@@ -461,14 +616,15 @@ private:
    VecI2             _res, _render_res;
    Flt               _app_aspect_ratio, _disp_aspect_ratio, _disp_aspect_ratio_want, _pixel_aspect, _gamma, _tex_mip_bias, _image_mip_bias, _font_mip_bias, _scale,
                      _amb_range, _amb_contrast, _amb_min,
-                     _eye_adapt_brightness, _eye_adapt_exp, _eye_adapt_max_dark, _eye_adapt_max_bright, _eye_adapt_speed,
+                     _eye_adapt_brightness, _eye_adapt_exp, _eye_adapt_intensity, _eye_adapt_max_dark, _eye_adapt_max_bright, _eye_adapt_speed,
                      _eye_dist, _eye_dist_2,
                      _shd_frac, _shd_fade, _shd_range, _shd_map_size_l, _shd_map_size_c, _shd_bias,
                      _bloom_original, _bloom_mul, _bloom_add, _bloom_glow, _bloom_cut,
+                     _contrast,
                      _mtn_scale,
                      _dof_focus, _dof_range, _dof_intensity,
                      _vol_max,
-                     _grass_range, _grass_range_sqr, _grass_density,
+                     _grass_density,
                      _lod_factor, _lod_factor_mirror, _lod_factors[2], _lod_factors_fov[2], _lod_fov2, _lod_current_factor,
                      _tesselation_density,
                      _fur_gravity, _fur_vel_scale,
@@ -477,13 +633,16 @@ private:
                      _sharpen_intensity,
                      _smaa_threshold,
                      _white_lum, _screen_max_lum, _screen_nits,
-                     _tone_map_max_lum, _tone_map_top_range, _tone_map_dark_range, _tone_map_dark_exp;
+                     _tone_map_max_lum;
    Vec2              _unscaled_size, _size2, _pixel_size, _pixel_size_2, _pixel_size_inv,
                      _window_pixel_to_screen_mul, _window_pixel_to_screen_add, _window_pixel_to_screen_scale,
-                     _shd_map_split;
-   Vec               _amb_color_l, _ns_color_l, _env_color, _eye_adapt_weight;
+                     _shd_map_split,
+                     _grass_range, _grass_range_sqr, _grass_range_mul_add;
+   Vec               _amb_color_l, _ns_color_l, _env_color, _env_color_add, _eye_adapt_weight;
+   VecD              _grass_focus;
    Vec2              _view_center, _view_fov_tan_gui, _view_fov_tan_full;
    Rect              _rect, _rect_ui, _view_rect, _view_eye_rect[2];
+   Matrix3           _env_matrix;
    Viewport          _view_main, _view_active;
    Str8              _device_name;
    ImagePtr          _color_palette[2], _env_map;
@@ -494,10 +653,168 @@ private:
    Map<Ptr, Monitor> _monitors;
    ImageRTPtr        _flip;
 
+#if EE_PRIVATE
+   // manage
+   void init        ();
+   void del         ();
+   Bool create      ();
+   void createDevice();
+   void androidClose();
+   void androidOpen ();
+
+   // operations
+   enum RESET_RESULT
+   {
+      RESET_OK,
+      RESET_ERROR_NOT_CREATED,
+      RESET_ERROR_SET_DISPLAY_MODE,
+      RESET_ERROR_SET_FULLSCREEN_STATE,
+      RESET_ERROR_RESIZE_TARGET,
+      RESET_ERROR_RESIZE_BUFFERS,
+      RESET_ERROR_RENDER_TARGET_CREATE,
+   };
+   static CChar8*      AsText     (RESET_RESULT result);
+   static void         ResetFailed(RESET_RESULT New, RESET_RESULT old);
+          RESET_RESULT ResetTry   (Bool set=false);
+          void         Reset      ();
+          RESET_RESULT modeTry    (Int w=-1, Int h=-1, Int full=-1, Bool auto_full=true, Bool set=false); // try setting Display Mode, specifying -1 for any parameter means keep current value, 'auto_full'=if allow forcing fullscreen when mode covers entire screen
+          void         modeSet    (Int w=-1, Int h=-1, Int full=-1                                     ); //     set     Display Mode, specifying -1 for any parameter means keep current value
+
+          Bool findMode      (Bool auto_full=true); // 'auto_full'=if allow forcing fullscreen when mode covers entire screen
+          void getGamma      ();
+          void getCaps       ();
+          void after         (Bool resize_callback);
+          Bool initialized   ()C {return _initialized;}
+   static void flip          ();
+   static void finish        ();
+          void screenChanged (Flt old_width, Flt old_height);
+          void   sizeChanged ();
+          void setRectUI     ();
+          void validateCoords(Int eye=-1);
+          void fadeUpdate    ();
+          void fadeDraw      ();
+
+#if GL
+   static VecI2 glVer();
+   static Ptr   glGetProcAddress(CChar8 *name);
+#endif
+   Bool gatherAvailable           ()C;
+   Bool gatherChannelAvailable    ()C;
+   Bool conservativeDepthAvailable()C;
+   Bool packHalf2x16Available     ()C;
+   Bool computeAvailable          ()C;
+   Bool filterMinMaxAvailable     ()C;
+   Bool independentBlendAvailable ()C;
+   Bool deferredUnavailable       ()C;
+   Bool deferredMSUnavailable     ()C;
+   Bool SpirVAvailable            ()C;
+   Bool canSwapSRGB               ()C;
+
+#if WINDOWS_OLD
+   Monitor* getMonitor(HMONITOR hmonitor);
+#endif
+#if DX11
+   Monitor* getMonitor(IDXGIOutput &output);
+#endif
+ C Monitor* mainMonitor()C;
+ C Monitor*  curMonitor(); // current monitor (null if none)
+ C Monitor*  getMonitor(); // current monitor (main if none)
+
+   void getMonitor(RectI &full, RectI &work, VecI2 &max_normal_win_client_size, VecI2 &maximized_win_client_size);
+#endif
+
    DisplayClass();
 }extern
    D; // Main Display Control
 inline DisplayClass &Display=D; // 'Display' alias ('Display' can be used the same way as 'D')
 /******************************************************************************/
+#if EE_PRIVATE
+
+#if DX11
+   extern ID3D11Device         *D3D;
+   extern ID3D11DeviceContext  *D3DC;
+   extern ID3D11DeviceContext1 *D3DC1;
+   #if WINDOWS_OLD
+      extern IDXGISwapChain       *SwapChain;
+      extern DXGI_SWAP_CHAIN_DESC  SwapChainDesc;
+   #else
+      extern IDXGISwapChain1      *SwapChain;
+      extern DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
+   #endif
+   extern D3D_FEATURE_LEVEL FeatureLevel;
+#elif GL
+   struct GLContext
+   {
+      Bool locked;
+   #if WINDOWS
+      HGLRC         context;
+   #elif MAC
+      CGLContextObj context;
+   #elif LINUX
+      GLXContext    context;
+   #elif ANDROID || SWITCH
+      EGLSurface    surface;
+      EGLContext    context;
+   #elif IOS
+      EAGLContext  *context;
+   #elif WEB
+      EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context;
+   #endif
+
+      Bool is()C;
+      GLContext();
+     ~GLContext() {del();}
+      void         del();
+      Bool createSecondary();
+      void   lock();
+      void unlock();
+   }extern
+      MainContext;
+
+   Ptr GetCurrentContext();
+
+   extern UInt FBO, VAO;
+   #if IOS
+      extern UInt FBO1;
+   #elif LINUX
+      extern GLXFBConfig GLConfig;
+   #elif ANDROID || SWITCH
+      extern EGLConfig  GLConfig;
+      extern EGLDisplay GLDisplay;
+   #endif
+
+   #if !WINDOWS && !SWITCH
+      extern void (*glTexStorage2D)(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height); // available on GL 4.2+, GL ES 3.0+
+      extern void (*glTextureView )(GLuint texture, GLenum target, GLuint origtexture, GLenum internalformat, GLuint minlevel, GLuint numlevels, GLuint minlayer, GLuint numlayers); // available on GL 4.3+, GL ES NO
+   #endif
+#endif
+
+   Bool     SetDisplayMode(Int mode=1); // 0=always off (use at shutdown), 1=if want full and app is active, 2=if want full (use at init)
+   void RequestDisplayMode(Int w, Int h, Int full);
+
+   Vec2  ScreenToPixel (C Vec2 &screen, C VecI2 &res);
+   Rect  ScreenToPixel (C Rect &screen, C VecI2 &res);
+   RectI ScreenToPixelI(C Rect &screen, C VecI2 &res);
+
+          Rect ImgClamp(C Rect  &screen, C VecI2 &res);
+          Rect ImgClamp(C RectI &pixel , C VecI2 &res);
+   inline Rect ImgClamp(                 C VecI2 &res) {return ImgClamp(D.viewRect(), res);}
+
+#if WINDOWS_NEW
+   extern Flt ScreenScale;
+
+   Flt DipsToPixels (Flt dips);
+   Int DipsToPixelsI(Flt dips);
+   Flt PixelsToDips (Int pix );
+   Flt PixelsToDips (Flt pix );
+#elif MAC
+   extern NSOpenGLContext *OpenGLContext;
+#elif LINUX
+   extern ::Display *XDisplay;
+#elif IOS
+   extern Flt ScreenScale;
+#endif
+
+#endif
 void SetFov(Vec2 &fov, FOV_MODE fov_mode, Flt aspect);
 /******************************************************************************/

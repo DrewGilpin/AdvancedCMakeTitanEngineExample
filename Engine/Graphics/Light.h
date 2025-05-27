@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'LightDir'    to add a directional light onto the scene
@@ -24,16 +21,20 @@ struct LightDir // Directional Light
 {
    Vec dir         , // direction          , normalized vector
        color_l     ; // color linear gamma , (0,0,0) .. (1,1,1)
-   Flt radius_frac , // radius fraction    , (0..1  )
+   Flt rough_soft  , // roughness soften   , (0..1  )
        vol         , // volumetric amount  , (0..1  )
        vol_exponent, // volumetric exponent, (0..Inf)
        vol_steam   ; // volumetric steam   , (0..1  )
 
-   void add(Bool shadow=true, CPtr light_src=null); // add light to scene, this needs to be called only in RM_PREPARE mode, 'shadow'=if shadowing enabled, 'light_src'=custom pointer to light source (which can be later accessed from "CurrentLight.src")
-   void set(                                     ); // use only outside Renderer rendering, before drawing any shade'able meshes
+   void add(Bool shadow=true, CPtr light_src=null, Bool allow_main=true); // add light to scene, this needs to be called only in RM_PREPARE mode, 'shadow'=if shadowing enabled, 'light_src'=custom pointer to light source (which can be later accessed from "CurrentLight.src"), 'allow_main'=allow this light to be the main light (be used for water when 'Water.max1Light' is enabled).
+   void set(                                                           ); // use only outside Renderer rendering, before drawing any shade'able meshes
 
    LightDir() {}
-   LightDir(C Vec &dir, C Vec &color_l=Vec(1, 1, 1), Flt radius_frac=0.0036f, Flt vol=0, Flt vol_exponent=1, Flt vol_steam=0.5f) {T.dir=dir; T.color_l=color_l; T.radius_frac=radius_frac; T.vol=vol; T.vol_exponent=vol_exponent; T.vol_steam=vol_steam;}
+   LightDir(C Vec &dir, C Vec &color_l=Vec(1, 1, 1), Flt rough_soft=0.0036f, Flt vol=0, Flt vol_exponent=1, Flt vol_steam=0.5f) {T.dir=dir; T.color_l=color_l; T.rough_soft=rough_soft; T.vol=vol; T.vol_exponent=vol_exponent; T.vol_steam=vol_steam;}
+
+#if EE_PRIVATE
+   Bool toScreenRect(Rect &rect)C {rect=D.viewRect(); return true;}
+#endif
 };
 /******************************************************************************/
 struct LightPoint // Point Light
@@ -50,6 +51,12 @@ struct LightPoint // Point Light
 
    LightPoint() {}
    LightPoint(Flt power, C VecD &pos, C Vec &color_l=Vec(1, 1, 1), Flt lum_max=1, Flt vol=0, Flt vol_max=0.5f) {T.power=power; T.pos=pos; T.color_l=color_l; T.lum_max=lum_max; T.vol=vol; T.vol_max=vol_max;}
+
+#if EE_PRIVATE
+   void  set(Flt shadow_opacity);
+   BallM asBall()C {return BallM(range(), pos);}
+   Bool  toScreenRect(Rect &rect)C {return ToFullScreenRect(asBall(), rect);}
+#endif
 };
 /******************************************************************************/
 struct LightLinear // Point Light with small range
@@ -64,6 +71,12 @@ struct LightLinear // Point Light with small range
 
    LightLinear() {}
    LightLinear(Flt range, C VecD &pos, C Vec &color_l=Vec(1, 1, 1), Flt vol=0, Flt vol_max=0.5f) {T.range=range; T.pos=pos; T.color_l=color_l; T.vol=vol; T.vol_max=vol_max;}
+
+#if EE_PRIVATE
+   void  set(Flt shadow_opacity);
+   BallM asBall()C {return BallM(range, pos);}
+   Bool  toScreenRect(Rect &rect)C {return ToFullScreenRect(asBall(), rect);}
+#endif
 };
 /******************************************************************************/
 struct LightCone // Cone Light
@@ -78,11 +91,17 @@ struct LightCone // Cone Light
 
    LightCone() {}
    LightCone(Flt length, C VecD &pos, C Vec &dir, C Vec &color_l=Vec(1, 1, 1), Flt vol=0, Flt vol_max=0.5f);
+
+#if EE_PRIVATE
+   void set(Flt shadow_opacity);
+   Bool toScreenRect(Rect &rect)C {return ToFullScreenRect(pyramid, rect);}
+#endif
 };
 /******************************************************************************/
 struct Light
 {
    LIGHT_TYPE type          ; // light type
+   Bool       allow_main    ; // if can be used as main light
    Bool       shadow        ; // if shadowing enabled
    Flt        shadow_opacity; // opacity of shadows
    Flt        image_scale   ; // dynamic lightmap scale
@@ -103,8 +122,37 @@ struct Light
    VecD pos  ()C; // get light position (this is equal to (0,0,0) for directional lights)
 
    Light() {} // needed because of union
+
+#if EE_PRIVATE
+   Flt firstLightCost(Flt view_rect_area, Dbl frustum_volume)C; // cost for selecting first light in forward renderer
+
+   Bool toScreenRect(Rect &rect)C;
+
+   void fade(Flt fade);
+
+   void set();
+
+   void set(LightDir    &light,               Bool shadow        , CPtr light_src, Bool allow_main);
+   void set(LightPoint  &light, C Rect &rect, Flt  shadow_opacity, CPtr light_src);
+   void set(LightLinear &light, C Rect &rect, Flt  shadow_opacity, CPtr light_src);
+   void set(LightCone   &light, C Rect &rect, Flt  shadow_opacity, CPtr light_src);
+
+   void draw       ();
+   void drawForward(ALPHA_MODE alpha);
+#endif
 }extern
    CurrentLight; // this contains information about the light which is currently rendered
 /******************************************************************************/
 Flt GetLightFade(CPtr src); // get fade value of a light for specified 'Light.src' parameter, this can be called after RM_PREPARE
+/******************************************************************************/
+#if EE_PRIVATE
+#define SHADOW_MAP_DIR_RANGE_MUL 8
+
+extern Memc<Light> Lights;
+
+void   ShutLight ();
+void   InitLight ();
+void UpdateLights();
+void   DrawLights();
+#endif
 /******************************************************************************/

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Import' functions to import data from external file formats.
@@ -42,6 +39,12 @@ struct XMaterial // Material stored in external formats
 
    Flt reflect   ()C {return reflect_add;}   void reflect(Flt reflect     ); // get/set reflectivity, 0..1, default=MATERIAL_REFLECT
    Flt reflectMax()C;                        void reflect(Flt min, Flt max); // advanced
+#if EE_PRIVATE
+   void     del();
+   void fixPath(Str path);
+   Bool    save(File &f)C;
+   Bool    load(File &f) ;
+#endif
 
    XMaterial();
 };
@@ -54,6 +57,16 @@ struct XAnimation // Animation stored in external formats
    Animation anim ; // animation data
 
    XAnimation() {fps=start=0;}
+
+#if EE_PRIVATE
+   void del() {fps=start=0; name.del(); anim.del();}
+   Bool save(File &f)C;
+   Bool load(File &f);
+   Bool save(C Str &name)C;
+   Bool load(C Str &name);
+
+   void save(MemPtr<TextNode> nodes)C; // save as text
+#endif
 };
 /******************************************************************************/
 struct XSkeleton // contains information about imported skeleton bones and their mapping to original nodes
@@ -63,17 +76,37 @@ struct XSkeleton // contains information about imported skeleton bones and their
       Str     name; // original node name (can be an empty string)
       Int     parent; // parent node index, -1=none
       OrientP orient_pos; // original node orientation and position
+
+   #if EE_PRIVATE
+      Bool save(File &f)C;
+      Bool load(File &f);
+   #endif
    };
    struct Bone // links 'SkelBone' -> 'Node'
    {
       Str8 name; // 'SkelBone' name
       Int  node; // node index
+
+   #if EE_PRIVATE
+      Bool save(File &f)C;
+      Bool load(File &f);
+   #endif
    };
 
    Mems<Node> nodes;
    Mems<Bone> bones;
 
    Bool is()C {return nodes.elms() || bones.elms();} // if has any data
+
+#if EE_PRIVATE
+   void del();
+
+   void mirrorX();
+   void scale(Flt scale);
+
+   Bool save(File &f)C;
+   Bool load(File &f);
+#endif
 };
 /******************************************************************************/
 // Autodesk FilmBox - FBX
@@ -112,7 +145,15 @@ Bool ImportPSK(C Str &name, Mesh *mesh, Skeleton *skeleton, MemPtr<XMaterial> ma
 Bool ImportPSA(C Str &name, Skeleton *skeleton, MemPtr<XAnimation> animations); // import data from PSA 'name' file, false on fail
 
 // Xna Posing Studio - XPS
-Bool ImportXPS(C Str &name, Mesh *mesh, Skeleton *skeleton, MemPtr<XMaterial> materials, MemPtr<Int> part_material_index); // import data from XPS 'name' file, false on fail
+Bool ImportXPSBinary(C Str &name, Mesh *mesh, Skeleton *skeleton, MemPtr<XMaterial> materials, MemPtr<Int> part_material_index);
+Bool ImportXPSText  (C Str &name, Mesh *mesh, Skeleton *skeleton, MemPtr<XMaterial> materials, MemPtr<Int> part_material_index);
+Bool ImportXPS      (C Str &name, Mesh *mesh, Skeleton *skeleton, MemPtr<XMaterial> materials, MemPtr<Int> part_material_index); // import data from XPS 'name' file, false on fail
 
 Bool Import(C Str &name, Mesh *mesh, Skeleton *skeleton, MemPtr<XAnimation> animations, MemPtr<XMaterial> materials, MemPtr<Int> part_material_index, XSkeleton *xskeleton=null, Bool all_nodes_as_bones=false); // import data according to file extension, false on fail
+
+#if EE_PRIVATE
+Int  LodIndex(Str &name);
+void CleanMesh(Mesh &mesh);
+void ProcessBoneNames(MemPtrN<Str8, 256> names);
+#endif
 /******************************************************************************/

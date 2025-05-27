@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Circle'  to handle circle shapes, Flt type
@@ -13,8 +10,9 @@ struct Circle // Circle Shape
    Vec2 pos; // center position
 
    // set
-   Circle& set(Flt r, C Vec2 &pos=Vec2Zero) {T.r=r; T.pos=pos      ; return T;}
-   Circle& set(Flt r, Flt x, Flt y        ) {T.r=r; T.pos.set(x, y); return T;}
+   Circle& zero(                           ) {T.r=0; T.pos.zero()   ; return T;}
+   Circle& set (Flt r, C Vec2 &pos=Vec2Zero) {T.r=r; T.pos=pos      ; return T;}
+   Circle& set (Flt r, Flt x, Flt y        ) {T.r=r; T.pos.set(x, y); return T;}
 
    // get
    Flt area     ()C {return PI *r*r;} // get surface area
@@ -28,6 +26,9 @@ struct Circle // Circle Shape
    Circle& operator*=(  Flt   f) {r*=f; pos*=f; return T;}
    Circle& operator/=(  Flt   f) {r/=f; pos/=f; return T;}
 
+   Circle& operator|=(C Vec2   &v); // include 'v'
+   Circle& operator|=(C Circle &c); // include 'c'
+
    friend Circle operator+ (C Circle &circle, C Vec2 &v) {return Circle(circle)+=v;}
    friend Circle operator- (C Circle &circle, C Vec2 &v) {return Circle(circle)-=v;}
    friend Circle operator* (C Circle &circle,   Flt   f) {return Circle(circle)*=f;}
@@ -35,6 +36,7 @@ struct Circle // Circle Shape
 
    // operations
    Circle& extend(Flt e) {r+=e; return T;} // extend
+   Bool    from  (C Vec2 *point, Int points); // set circle from an array of points, false on fail (if there are no points)
 
    // draw
    void draw(C Color &color, Bool fill=true, Int resolution=-1)C;
@@ -54,8 +56,9 @@ struct CircleM // Circle Shape (mixed precision)
    VecD2 pos; // center position
 
    // set
-   CircleM& set(Flt r, C VecD2 &pos=VecD2Zero) {T.r=r; T.pos=pos      ; return T;}
-   CircleM& set(Flt r, Dbl x, Dbl y          ) {T.r=r; T.pos.set(x, y); return T;}
+   CircleM& zero(                             ) {T.r=0; T.pos.zero()   ; return T;}
+   CircleM& set (Flt r, C VecD2 &pos=VecD2Zero) {T.r=r; T.pos=pos      ; return T;}
+   CircleM& set (Flt r, Dbl x, Dbl y          ) {T.r=r; T.pos.set(x, y); return T;}
 
    // get
    Flt area     ()C {return PI *r*r;} // get surface area
@@ -93,8 +96,9 @@ struct CircleD // Circle Shape (double precision)
    VecD2 pos; // center
 
    // set
-   CircleD& set(Dbl r, C VecD2 &pos=VecD2Zero) {T.r=r; T.pos=pos      ; return T;}
-   CircleD& set(Dbl r, Dbl x, Dbl y          ) {T.r=r; T.pos.set(x, y); return T;}
+   CircleD& zero(                             ) {T.r=0; T.pos.zero()   ; return T;}
+   CircleD& set (Dbl r, C VecD2 &pos=VecD2Zero) {T.r=r; T.pos=pos      ; return T;}
+   CircleD& set (Dbl r, Dbl x, Dbl y          ) {T.r=r; T.pos.set(x, y); return T;}
 
    // get
    Dbl area     ()C {return PID *r*r;} // get surface area

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'MemberDesc' to describe a C++ structure/class member,
@@ -16,6 +13,7 @@ enum DATA_TYPE : Byte // Data Type
    DATA_CHAR8_PTR, // Char8*    pointer to   8-bit character array forming a text
    DATA_STR      , // Str       String with 16-bit per character
    DATA_STR8     , // Str8      String with  8-bit per character
+   DATA_STR_EX   , // StrEx     String
    DATA_BOOL     , // Bool      boolean
    DATA_INT      , // Int       integer
    DATA_UINT     , // UInt      unsigned integer
@@ -37,6 +35,10 @@ enum DATA_TYPE : Byte // Data Type
    DATA_DATE_TIME, // DateTime  date and time
    DATA_UID      , // UID       unique ID
    DATA_KBSC     , // KbSc      keyboard shortcut
+#if EE_PRIVATE
+   DATA_CHECK    , // if checked
+   DATA_MENU_PTR , // Menu*     pointer to menu
+#endif
 };
 /******************************************************************************/
 struct MemberDesc // Member Description - Description of a Member in a C++ class
@@ -69,6 +71,10 @@ struct MemberDesc // Member Description - Description of a Member in a C++ class
    Str   asText (CPtr object, Int precision=INT_MAX)C; // get member value as Text                  , 'object'=pointer to C++ object of class that this member belongs to, ""                on fail
    UID   asUID  (CPtr object                       )C; // get member value as UID                   , 'object'=pointer to C++ object of class that this member belongs to, UIDZero           on fail
    Int   asEnum (CPtr object                       )C; // get member value as Enum Int              , 'object'=pointer to C++ object of class that this member belongs to, -1                on fail
+#if EE_PRIVATE
+   Image* asImage(CPtr object                      )C; // get member value as Image pointer         , 'object'=pointer to C++ object of class that this member belongs to, null on fail
+   StrEx* asStrEx(CPtr object                      )C; // get member value as StrEx pointer         , 'object'=pointer to C++ object of class that this member belongs to, null on fail
+#endif
 
    T1(TYPE) TYPE& as(Ptr object)C {return *(TYPE*)((Byte*)object+offset);} // get reference to member, 'object'=pointer to C++ object of class that this member belongs to !! specified TYPE should be the exact same type of the class member !!
 
@@ -105,6 +111,7 @@ struct MemberDesc // Member Description - Description of a Member in a C++ class
                         MemberDesc& set(CChar8*  &member       ) {return setDefault(DATA_CHAR8_PTR, member);}
                         MemberDesc& set(Str      &member       ) {return setDefault(DATA_STR      , member);}
                         MemberDesc& set(Str8     &member       ) {return setDefault(DATA_STR8     , member);}
+                        MemberDesc& set(StrEx    &member       ) {return setDefault(DATA_STR_EX   , member);}
                         MemberDesc& set(Bool     &member       ) {return setDefault(DATA_BOOL     , member);}
                         MemberDesc& set(SByte    &member       ) {return setDefault(DATA_INT      , member);}
                         MemberDesc& set(Short    &member       ) {return setDefault(DATA_INT      , member);}
@@ -138,6 +145,7 @@ struct MemberDesc // Member Description - Description of a Member in a C++ class
                         MemberDesc& set(VecB     &member       ) {return setDefault(DATA_VECU     , member);}
                         MemberDesc& set(VecUS    &member       ) {return setDefault(DATA_VECU     , member);}
                         MemberDesc& set(VecB4    &member       ) {return setDefault(DATA_VECU4    , member);}
+                        MemberDesc& set(VecUS4   &member       ) {return setDefault(DATA_VECU4    , member);}
                         MemberDesc& set(Color    &member       ) {return setDefault(DATA_COLOR    , member);}
                         MemberDesc& set(Image    &member       ) {return setDefault(DATA_IMAGE    , member);}
                         MemberDesc& set(Image*   &member       ) {return setDefault(DATA_IMAGE_PTR, member);}
@@ -145,12 +153,24 @@ struct MemberDesc // Member Description - Description of a Member in a C++ class
                         MemberDesc& set(DateTime &member       ) {return setDefault(DATA_DATE_TIME, member);}
                         MemberDesc& set(UID      &member       ) {return setDefault(DATA_UID      , member);}
                         MemberDesc& set(KbSc     &member       ) {return setDefault(DATA_KBSC     , member);}
+#if EE_PRIVATE
+                        MemberDesc& set(Menu*    &member       ) {return setDefault(DATA_MENU_PTR , member);}
+#endif
 
+#if !EE_PRIVATE
 private:
+#endif
    Str  (*_data_to_text)(CPtr object                 );
    void (*_text_to_data)( Ptr object , C Str &text   );
    Int  (*_compare     )(CPtr object0,  CPtr  object1);
 
    T1(TYPE) MemberDesc& setDefault(DATA_TYPE type, TYPE &member) {return set(type, UInt(UIntPtr(&member)), SIZE(member));}
 };
+/******************************************************************************/
+#if EE_PRIVATE
+  Bool      DataIsImage (DATA_TYPE type); // if 'type' is of image data type
+  Bool      DataIsText  (DATA_TYPE type); // if 'type' is of text  data type
+  Flt       DataAlign   (DATA_TYPE type); // get default text align for data type
+C ImagePtr& DataGuiImage(CPtr data, C ListColumn &list_col, Color &color); // convert data to gui image
+#endif
 /******************************************************************************/

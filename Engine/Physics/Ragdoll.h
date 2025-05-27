@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Ragdoll' to simplify management of character physical bones representation.
@@ -16,8 +13,10 @@ struct Ragdoll // Physical Ragdoll, set of Bone Actors linked with Joints
       Char8 name[32]; // name
       Actor actor   ; // actor
 
+   #if !EE_PRIVATE
    private:
-      Byte skel_bone, rbon_parent;
+   #endif
+      BoneType skel_bone, rbon_parent;
    };
 
    // manage
@@ -62,8 +61,8 @@ struct Ragdoll // Physical Ragdoll, set of Bone Actors linked with Joints
    Int    getBoneI(CChar8 *name); // get  ragdoll bone index, Exit on fail
    Bone&  getBone (CChar8 *name); // get  ragdoll bone      , Exit on fail
 
-   Int findBoneIndexFromSkelBone (Byte skel_bone_index)C; // find ragdoll bone index, from skeleton bone index, -1 on fail
-   Int findBoneIndexFromVtxMatrix(Byte    matrix_index)C; // find ragdoll bone index, from vertex matrix index, -1 on fail
+   Int findBoneIndexFromSkelBone (BoneType skel_bone_index)C; // find ragdoll bone index, from skeleton bone index, -1 on fail
+   Int findBoneIndexFromVtxMatrix(BoneType    matrix_index)C; // find ragdoll bone index, from vertex matrix index, -1 on fail
 
    // draw
    void draw(C Color &color=WHITE)C; // this can be optionally called outside of Render function
@@ -72,16 +71,22 @@ struct Ragdoll // Physical Ragdoll, set of Bone Actors linked with Joints
    Bool saveState(File &f, Bool include_matrix_vel=true)C; // save ragdoll state (following data is not  saved: physical body, mass, density, scale, damping, max ang vel, mass center, inertia, material), false on fail, 'include_matrix_vel'=include current bone matrixes and velocities
    Bool loadState(File &f                              ) ; // load ragdoll state (following data is not loaded: physical body, mass, density, scale, damping, max ang vel, mass center, inertia, material), false on fail, typically you should first create a Ragdoll and then call this method to set its state according to data from the file
 
+#if EE_PRIVATE
+   void zero();
+#endif
+
   ~Ragdoll() {del();}
    Ragdoll();
 
+#if !EE_PRIVATE
 private:
-   Flt         _scale ;
- C Skeleton   *_skel  ;
-   Mems<Bone > _bones ;
-   Memc<Int  > _resets;
-   Memc<Joint> _joints;
-   Aggregate   _aggr  ;
+#endif
+   Flt            _scale ;
+ C Skeleton      *_skel  ;
+   Mems<Bone    > _bones ;
+   Memc<BoneType> _resets;
+   Memc<Joint   > _joints;
+   Aggregate      _aggr  ;
 };
 /******************************************************************************/
 inline Int Elms(C Ragdoll &ragdoll) {return ragdoll.bones();}

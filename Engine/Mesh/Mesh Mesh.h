@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    'Mesh' is a typical object mesh,
@@ -41,8 +38,21 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
    Mesh& create(C MeshGroup &src        , MESH_FLAG flag_and=MESH_ALL); // create from 'src'     , 'flag_and'=data to copy
    Mesh& create(C Mesh *mesh, Int meshes, MESH_FLAG flag_and=MESH_ALL); // create from mesh array, 'flag_and'=data to copy
 
+   struct Instance
+   {
+      Mesh  *mesh;
+      Int    variation;
+      Matrix matrix;
+   };
+   Mesh& create(C Instance *instance, Int instances, Ball &ball, VTX_COMPRESS compress=VTX_COMPRESS_AUTO); // create from mesh instances, 'ball'=calculate bounding ball
+
    void copyParams(C Mesh &src); // copy only parameters without meshes
 
+#if EE_PRIVATE
+   void zero();
+
+   Mesh& include (MESH_FLAG flag); // include   elements specified with 'flag'
+#endif
    Mesh& exclude (MESH_FLAG flag); // exclude   elements specified with 'flag'
    Mesh& keepOnly(MESH_FLAG flag); // keep only elements specified with 'flag'
 
@@ -50,16 +60,25 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
    MESH_FLAG flag    ()C; // get available data of all LODs
    UInt      memUsage()C; // get memory usage   of all LODs
 
+ C MeshLod& getDrawLod (C Matrix3 &matrix)C; // get          Level of Detail which should be used for drawing with current camera and given object 'matrix'
  C MeshLod& getDrawLod (C Matrix  &matrix)C; // get          Level of Detail which should be used for drawing with current camera and given object 'matrix'
  C MeshLod& getDrawLod (C MatrixM &matrix)C; // get          Level of Detail which should be used for drawing with current camera and given object 'matrix'
  C MeshLod& getDrawLod (                 )C; // get          Level of Detail which should be used for drawing with current camera and       object  identity matrix
  C MeshLod& getDrawLod (  Flt      dist2 )C; // get          Level of Detail which should be used for drawing with current camera and given object 'dist2' squared distance to camera which can be calculated using 'GetLodDist2' function
+   Int      getDrawLodI(C Matrix3 &matrix)C; // get index of Level of Detail which should be used for drawing with current camera and given object 'matrix'
    Int      getDrawLodI(C Matrix  &matrix)C; // get index of Level of Detail which should be used for drawing with current camera and given object 'matrix'
    Int      getDrawLodI(C MatrixM &matrix)C; // get index of Level of Detail which should be used for drawing with current camera and given object 'matrix'
    Int      getDrawLodI(                 )C; // get index of Level of Detail which should be used for drawing with current camera and       object  identity matrix
    Int      getDrawLodI(  Flt      dist2 )C; // get index of Level of Detail which should be used for drawing with current camera and given object 'dist2' squared distance to camera which can be calculated using 'GetLodDist2' function
+#if EE_PRIVATE
+   Flt lodQuality(Int i, Int base=0)C; // get quality of Level of Detail comparing i-th to base level, returning value in range of 0..1 where 1=full quality, 0=zero quality
+#endif
 
    // set
+#if EE_PRIVATE
+   Mesh& setEdgeNormals(Bool flag=false); // recalculate edge 2D normals, 'flag'=if include ETQ_FLAG behavior
+   Mesh& setNormals2D  (Bool flag=false); // recalculate edge and vertex 2D normals, 'flag'=if include ETQ_FLAG behavior
+#endif
    Mesh& setNormals    (                                       ); // recalculate vertex            3D normals
    Mesh& setNormalsAuto(Flt angle=EPS_NRM_AUTO, Flt pos_eps=EPS); // recalculate vertex            3D normals using an automatic smart algorithm, 'angle'=angle limit for merging vertex normals, this method will generate a lot of vertexes, it's recommended to call 'weldVtx' afterwards
    Mesh& setFaceNormals(                                       ); // recalculate triangle and quad 3D normals
@@ -68,15 +87,19 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
    Mesh& setAutoTanBin (                                       ); // automatically calculate vertex tangents and binormals if needed, if they're not needed then they will be removed
    Bool  setBox        (Bool skip_hidden_parts=true            ); // recalculate bounding box, 'skip_hidden_parts'=if MeshParts with MSHP_HIDDEN should not be included in the box, returns false on fail
 
+#if EE_PRIVATE
+   Mesh& setVtxColorAlphaAsTesselationIntensity(Bool tesselate_edges                                              ); // set vertex color alpha   (vtx.color.a) as tesselation intensity, 'tesselate_edges'=if tesselate non continuous edges
+   Mesh& setVtxDup2D                           (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS); // set vertex 2D duplicates (vtx.dup)
+#endif
    Mesh& setVtxDup     (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS); // set vertex 3D duplicates (vtx.dup)
    Mesh& setAdjacencies(Bool faces=true, Bool edges=false                                 ); // set adjacencies, 'faces'=if set face adjacencies ('tri.adjFace', 'quad.adjFace'), 'edges'=if set edges ('edge') and edge adjacencies ('tri.adjEdge', 'quad.adjEdge', 'edge.adjFace')
 
-   Mesh& delBase  (                       ); // delete all software meshes (MeshBase  ) in this mesh
-   Mesh& delRender(                       ); // delete all hardware meshes (MeshRender) in this mesh
-   Mesh& setBase  (Bool only_if_empty=true); // set software  version, convert 'MeshRender' to 'MeshBase', 'only_if_empty'=perform conversion only if the MeshBase is empty (if set to false then conversion is always performed)
-   Mesh& setRender(Bool optimize     =true); // set rendering version, convert 'MeshBase'   to 'MeshRender', 'optimize'=if optimize the mesh by re-ordering the vertexes/triangles for optimal processing on the GPU
-   Mesh& setShader(                       ); // reset shader
-   Mesh& material (C MaterialPtr &material); // set material, 'material' must point to object in constant memory address (mesh will store only the pointer to the material and later use it if needed), avoid changing materials real-time during rendering, instead consider using material variations (set them once, and later select which one to use with 'SetVariation' function)
+   Mesh& delBase  (                                          ); // delete all software meshes (MeshBase  ) in this mesh
+   Mesh& delRender(                                          ); // delete all hardware meshes (MeshRender) in this mesh
+   Mesh& setBase  (Bool only_if_empty=true                   ); // set software  version, convert 'MeshRender' to 'MeshBase', 'only_if_empty'=perform conversion only if the MeshBase is empty (if set to false then conversion is always performed)
+   Mesh& setRender(VTX_COMPRESS compress=VTX_COMPRESS_DEFAULT); // set rendering version, convert 'MeshBase'   to 'MeshRender'
+   Mesh& setShader(                                          ); // reset shader
+   Mesh& material (C MaterialPtr &material                   ); // set material, 'material' must point to object in constant memory address (mesh will store only the pointer to the material and later use it if needed), avoid changing materials real-time during rendering, instead consider using material variations (set them once, and later select which one to use with 'SetVariation' function)
 
    // join / split
    Mesh& join   (Int i0, Int i1                                                                             , Flt weld_pos_eps=EPS); // join i0-th and i1-th parts together, 'weld_pos_eps'=epsilon used for welding vertexes after joining (use <0 to disable welding)
@@ -97,13 +120,29 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
    Mesh& mirrorY      (                                  ); // mirror in Y axis
    Mesh& mirrorZ      (                                  ); // mirror in Z axis
    Mesh& reverse      (                                  ); // reverse faces
+#if EE_PRIVATE
+   Mesh& rightToLeft  (                                  ); // convert from right hand to left hand coordinate system
+#endif
 
-   // texture transform
-   Mesh& texMove  (C Vec2 &move , Byte tex_index=0); // move   texture UV's
-   Mesh& texScale (C Vec2 &scale, Byte tex_index=0); // scale  texture UV's
-   Mesh& texRotate(  Flt   angle, Byte tex_index=0); // rotate texture UV's
+   // UV transform
+   Mesh& uvMove  (C Vec2 &move , Byte uv_index=0); // move   UVs
+   Mesh& uvScale (C Vec2 &scale, Byte uv_index=0); // scale  UVs
+   Mesh& uvRotate(  Flt   angle, Byte uv_index=0); // rotate UVs
+
+#if EE_PRIVATE
+   // texturize
+   Mesh& uvMap(  Flt     scale=1, Byte uv_index=0); // map UVs according to vertex XY position and scale
+   Mesh& uvMap(C Matrix &matrix , Byte uv_index=0); // map UVs according to matrix
+   Mesh& uvMap(C Plane  &plane  , Byte uv_index=0); // map UVs according to plane
+   Mesh& uvMap(C Ball   &ball   , Byte uv_index=0); // map UVs according to ball
+   Mesh& uvMap(C Tube   &tube   , Byte uv_index=0); // map UVs according to tube
+#endif
 
    // operations
+#if EE_PRIVATE
+   Mesh& weldEdge     (); // weld edges
+   Mesh& weldVtx2D    (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld 2D vertexes     , this function will weld vertexes together if they share the same position (ignoring Z), 'flag'=if selected elements aren't equal then don't weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
+#endif
    Mesh& weldVtx      (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld 3D vertexes     , this function will weld vertexes together if they share the same position             , 'flag'=if selected elements aren't equal then don't weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
    Mesh& weldVtxValues(MESH_FLAG flag          , Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld    vertex values, this function will weld values of vertexes which  share the same position             , 'flag'=                                 elements to weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
 
@@ -112,16 +151,18 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
    Mesh& tesselate(Flt weld_pos_eps=EPS); // smooth subdivide faces, preserving original vertexes, 'weld_pos_eps'=epsilon used for final vertex position welding
    Mesh& subdivide(                    ); // smooth subdivide faces,  smoothing original vertexes
 
-   Int   boneFind (CChar8 *bone_name                                      )C; // find bone by its name and return its index, -1 on fail
-   Mesh& boneRemap(C CMemPtr<Byte, 256> &old_to_new, Bool remap_names=true) ; // remap vertex bone/matrix indexes according to bone 'old_to_new' remap, 'remap_names'=if remap the bone names as well
-   void      setUsedBones(Bool (&bones)[256])C;
-   void  includeUsedBones(Bool (&bones)[256])C;
+   Int          boneFind (CChar8 *bone_name                                           )C; // find bone by its name and return its index, -1 on fail
+   Mesh&        boneRemap(C CMemPtrN<BoneType, 256> &old_to_new, Bool remap_names=true) ; // remap vertex bone/matrix indexes according to bone 'old_to_new' remap, 'remap_names'=if remap the bone names as well
+   void      setUsedBones(   MemPtrN<Bool    , 256>  bones)C;
+   void  includeUsedBones(   MemPtrN<Bool    , 256>  bones)C;
 
    Mesh& setVtxAO(Flt strength, Flt bias, Flt max, Flt ray_length, Flt pos_eps=EPS, Int rays=1024, MESH_AO_FUNC func=MAF_FULL, Threads *threads=null); // calculate per-vertex ambient occlusion in vertex colors, 'strength'=0..1 AO strength, 'bias'=0..1, 'max'=AO limit 0..1, 'ray_length'=max ray distance to test, 'rays'=number of rays to use for AO calculation, 'func'=falloff function
 
    Mesh& freeOpenGLESData(); // this method is used only under OpenGL ES (on other platforms it is ignored), the method frees the software copy of the GPU data which increases available memory, however after calling this method the data can no longer be accessed on the CPU (can no longer be locked or saved to file)
 
    Bool waitForStream()C; // wait until streaming has finished, false on fail
+
+   void delMaterials(); // delete all materials from this mesh, this does not adjust shaders, but only clears materials
 
    // variations
    Mesh& variations      (Int variations              );   Int     variations   (            )C; // set/get number of material variations (meshes always have at least 1 material variation)
@@ -135,8 +176,9 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
    Mesh& variationInclude(C Mesh &src                 );                                         // include variation names from 'src' if they don't exist in this mesh yet, this does not setup existing mesh part variation materials
 
    // fix
-   Mesh& fixTexOffset  (Byte tex_index=0); // fix texture offset  , this reduces big texture coordinates to small ones increasing texturing quality on low precision video cards
-   Mesh& fixTexWrapping(Byte tex_index=0); // fix texture wrapping, fixes texture coordinates created by spherical/tube mapping (this can add new vertexes to the mesh)
+   Mesh& fixUVOffset  (Byte uv_index=0); // fix texture offset  , this reduces big texture coordinates to small ones increasing texturing quality on low precision video cards
+   Mesh& fixUVWrapping(Byte uv_index=0); // fix texture wrapping, fixes texture coordinates created by spherical/tube mapping (this can add new vertexes to the mesh)
+   Mesh& fixFaceSide  (               ); // fix all faces to be on the same side in case some are reversed
 
    // convert
    Mesh& edgeToDepth(Bool tex_align =true       ); // edges to depth (extrude 2D edges to 3D faces)
@@ -156,6 +198,13 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
    Mesh   &   setLods(Int n); // set n levels of MeshLods, new LODs will be empty
 
    // optimize
+#if EE_PRIVATE
+   Mesh& sortByMaterials  (); // sort MeshParts according to their materials
+   Mesh& removeDoubleEdges();
+   Mesh& removeSingleFaces(Flt fraction                                              ); // remove fraction of single faces (single triangles or quads not linked to any other face), 'fraction'=0..1
+   Mesh& weldInlineEdges  (Flt cos_edge=EPS_COL_COS, Flt cos_vtx=-1, Bool z_test=true); // weld inline edge vertexes, 'cos_edge'=minimum cosine between edge normals, 'cos_vtx'=minimum cosine between vertex normals, 'z_test'=if perform tests for inline 'z' vertex component
+#endif
+   Mesh& optimizeCache        (Bool faces=true, Bool vertexes=true); // this method will re-order elements for best rendering performance, 'faces'=if re-order faces, 'vertexes'=if re-order vertexes
    Mesh& removeDegenerateFaces(Flt eps=EPS);
    Bool  removeUnusedVtxs     (Bool include_edge_references=true, Bool set_box=true); // remove vertexes which aren't used by any face or edge, if 'include_edge_references' is set to false then only face references are tested (without the edges), 'set_box'=if recalculate bounding box upon vertex removal, returns true if any vertex was removed
 
@@ -167,12 +216,14 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
       // default drawing, doesn't use automatic Frustum Culling, this doesn't draw the mesh immediately, instead it adds the mesh to a draw list
       void draw(C Matrix           &matrix, C Matrix  &matrix_prev )C; // add mesh to draw list using 'matrix'    matrix   and    velocities based on 'matrix_prev' matrix from previous frame, this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
       void draw(C MatrixM          &matrix, C MatrixM &matrix_prev )C; // add mesh to draw list using 'matrix'    matrix   and    velocities based on 'matrix_prev' matrix from previous frame, this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
+      void draw(C Matrix3          &matrix                         )C; // add mesh to draw list using 'matrix'    matrix   and no velocities                                                  , this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
       void draw(C Matrix           &matrix                         )C; // add mesh to draw list using 'matrix'    matrix   and no velocities                                                  , this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
       void draw(C MatrixM          &matrix                         )C; // add mesh to draw list using 'matrix'    matrix   and no velocities                                                  , this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
       void draw(                                                   )C; // add mesh to draw list using  identity   matrix   and no velocities                                                  , this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
       void draw(C AnimatedSkeleton &anim_skel                      )C; // add mesh to draw list using 'anim_skel' matrixes and    velocities                                                  , this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed:            RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND, 'anim_skel' must point to constant memory address (the pointer is stored through which the object can be accessed later during frame rendering)
       void draw(C AnimatedSkeleton &anim_skel, C Material &material)C; // add mesh to draw list using 'anim_skel' matrixes and    velocities                                                  , this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed:            RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND, 'anim_skel' must point to constant memory address (the pointer is stored through which the object can be accessed later during frame rendering), 'material'=material used for rendering which overrides the default material, however for performance reasons, the default shader is used, which means that the 'material' should be similar to the default material, and if it's too different then some artifacts can occur
 
+      void drawShadow(C Matrix3          &matrix                         )C; // add mesh to shadow draw list using 'matrix'    matrix  , this should be called only in RM_SHADOW
       void drawShadow(C Matrix           &matrix                         )C; // add mesh to shadow draw list using 'matrix'    matrix  , this should be called only in RM_SHADOW
       void drawShadow(C MatrixM          &matrix                         )C; // add mesh to shadow draw list using 'matrix'    matrix  , this should be called only in RM_SHADOW
       void drawShadow(                                                   )C; // add mesh to shadow draw list using  identity   matrix  , this should be called only in RM_SHADOW
@@ -180,20 +231,20 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
       void drawShadow(C AnimatedSkeleton &anim_skel, C Material &material)C; // add mesh to shadow draw list using 'anim_skel' skeleton, this should be called only in RM_SHADOW, 'anim_skel' must point to constant memory address (the pointer is stored through which the object can be accessed later during frame rendering), 'material'=material used for rendering which overrides the default material, however for performance reasons, the default shader is used, which means that the 'material' should be similar to the default material, and if it's too different then some artifacts can occur
 
       // draw blended, this is an alternative to default 'draw' (typically 'draw' draws blended meshes automatically for materials with technique in blend mode), this method however draws the mesh immediately (which allows to set custom shader parameters per draw call) and provides additional control over material color, it always uses blend shaders regardless if the material has technique set in blend mode, this can be called only in RM_BLEND rendering mode, doesn't use automatic Frustum culling
-      void drawBlend(                                                    C Vec4 *color=null)C; // draw with  current    matrix                                                                      , 'color'=pointer to optional Material color multiplication
-      void drawBlend(C MatrixM          &matrix,                         C Vec4 *color=null)C; // draw with 'matrix'    matrix   and no velocities                                                  , 'color'=pointer to optional Material color multiplication
-      void drawBlend(C MatrixM          &matrix, C MatrixM &matrix_prev, C Vec4 *color=null)C; // draw with 'matrix'    matrix   and    velocities based on 'matrix_prev' matrix from previous frame, 'color'=pointer to optional Material color multiplication
-      void drawBlend(C AnimatedSkeleton &anim_skel,                      C Vec4 *color=null)C; // draw with 'anim_skel' matrixes and    velocities                                                  , 'color'=pointer to optional Material color multiplication
+      void drawBlendCurMatrix(                                                    C Vec4 *color=null)C; // draw with  current    matrix                                                                      , 'color'=pointer to optional Material color multiplication
+      void drawBlend         (C MatrixM          &matrix,                         C Vec4 *color=null)C; // draw with 'matrix'    matrix   and no velocities                                                  , 'color'=pointer to optional Material color multiplication
+      void drawBlend         (C MatrixM          &matrix, C MatrixM &matrix_prev, C Vec4 *color=null)C; // draw with 'matrix'    matrix   and    velocities based on 'matrix_prev' matrix from previous frame, 'color'=pointer to optional Material color multiplication
+      void drawBlend         (C AnimatedSkeleton &anim_skel,                      C Vec4 *color=null)C; // draw with 'anim_skel' matrixes and    velocities                                                  , 'color'=pointer to optional Material color multiplication
 
       // draw mesh outline, this can be optionally called in RM_OUTLINE in order to outline the mesh, doesn't use automatic Frustum culling
-      void drawOutline(C Color &color                               )C; // draw with  current    matrix
-      void drawOutline(C Color &color, C MatrixM          &matrix   )C; // draw with 'matrix'    matrix
-      void drawOutline(C Color &color, C AnimatedSkeleton &anim_skel)C; // draw with 'anim_skel' matrixes
+      void drawOutlineCurMatrix(C Color &color                               )C; // draw with  current    matrix
+      void drawOutline         (C Color &color, C MatrixM          &matrix   )C; // draw with 'matrix'    matrix
+      void drawOutline         (C Color &color, C AnimatedSkeleton &anim_skel)C; // draw with 'anim_skel' matrixes
 
       // draw using the "behind" effect, this can be optionally called in RM_BEHIND, doesn't use automatic Frustum culling, 'color_perp'=color to be used for normals perpendicular to camera, 'color_parallel'=color to be used for normals parallel to camera
-      void drawBehind(C Color &color_perp, C Color &color_parallel                               )C; // draw with  current    matrix
-      void drawBehind(C Color &color_perp, C Color &color_parallel, C MatrixM          &matrix   )C; // draw with 'matrix'    matrix
-      void drawBehind(C Color &color_perp, C Color &color_parallel, C AnimatedSkeleton &anim_skel)C; // draw with 'anim_skel' matrixes
+      void drawBehindCurMatrix(C Color &color_perp, C Color &color_parallel                               )C; // draw with  current    matrix
+      void drawBehind         (C Color &color_perp, C Color &color_parallel, C MatrixM          &matrix   )C; // draw with 'matrix'    matrix
+      void drawBehind         (C Color &color_perp, C Color &color_parallel, C AnimatedSkeleton &anim_skel)C; // draw with 'anim_skel' matrixes
 
    // io
    void operator=(C Str  &name) ; // load, Exit  on fail
@@ -201,6 +252,14 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
    Bool load     (C Str  &name) ; // load, false on fail
    Bool save     (  File &f, CChar *path=null)C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    Bool load     (  File &f, CChar *path=null) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+#if EE_PRIVATE
+   Bool saveTxt (C Str    &name               )C; // save text  , false on fail
+   Bool loadTxt (C Str    &name               ) ; // load text  , false on fail
+   Bool saveTxt (FileText &f, CChar *path=null)C; // save text  , 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadTxt (FileText &f, CChar *path=null) ; // load text  , 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool saveData(File     &f, CChar *path=null)C; // save binary, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadData(File     &f, CChar *path=null) ; // load binary, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+#endif
 
    void operator*=(C Matrix3 &m) {transform(m);} // transform by matrix
    void operator*=(C Matrix  &m) {transform(m);} // transform by matrix
@@ -212,10 +271,33 @@ struct Mesh : MeshLod // Mesh (array of Mesh LODs)
   ~Mesh() {del();}
    Mesh();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Variations
    {
+   #if EE_PRIVATE
+      Bool is()C {return _variations>0;} // if has any data
+
+      Int alloc(Int variations, Int name_size);
+
+      Int    nameSize (     )C; // get size needed for variation names
+      Char8* nameStart(     )C; // get start of the variation name memory
+     CChar8* name     (Int i)C; // get i-th variation name
+      UInt   id       (Int i)C; // get i-th variation id
+
+      Bool save(File &f)C;
+      Bool load(File &f) ;
+
+      struct Variation
+      {
+         UInt id;
+         Int  name_offset;
+      };
+      Variation *_variation; // right after '_variation' array, array of variation names is allocated (in Char8 mode)
+   #else
       Ptr _variation;
+   #endif
       Int _variations;
 
           void          del();
@@ -235,4 +317,8 @@ private:
 DECLARE_CACHE(Mesh, Meshes, MeshPtr); // 'Meshes' cache storing 'Mesh' objects which can be accessed by 'MeshPtr' pointer
 
 inline Int Elms(C Mesh &mesh) {return mesh.parts.elms();}
+
+#if EE_PRIVATE
+void InitMesh();
+#endif
 /******************************************************************************/

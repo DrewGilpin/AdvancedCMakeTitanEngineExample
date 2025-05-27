@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct Slider : GuiObj // Gui Slider !! must be stored in constant memory address !!
 {
@@ -39,10 +36,17 @@ const_mem_addr struct Slider : GuiObj // Gui Slider !! must be stored in constan
    virtual void    update(C GuiPC &gpc)override; // update object
    virtual void    draw  (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   void zero();
+   void call();
+#endif
+
   ~Slider() {del();}
    Slider();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool   _vertical, _focusable, _func_immediate;
    Flt    _value, _lit;
    Ptr    _func_user;

@@ -51,7 +51,7 @@ jobs:
         shell: bash
         run: |
           unzip -q Assets/Engine.zip      -d Assets
-          unzip -q Lib/EsenthelEngine.zip -d Lib
+          unzip -q Lib/Engine.zip -d Lib
 
       - name: Unzip Engine files (Windows)
         if: matrix.os == 'windows-2022'

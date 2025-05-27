@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct PhysMtrl // Physics Material !! must be stored in constant memory address !!
 {
@@ -13,6 +10,9 @@ const_mem_addr struct PhysMtrl // Physics Material !! must be stored in constant
    };
 
    PhysMtrl& create(); // create material
+#if EE_PRIVATE
+   void reset(); // set default values
+#endif
 
    // get / set
    Flt  bounciness      ()C;   PhysMtrl& bounciness      (  Flt   x   ); // get/set                     bounciness        , 0..1             , default=0
@@ -38,10 +38,16 @@ const_mem_addr struct PhysMtrl // Physics Material !! must be stored in constant
   ~PhysMtrl() {del();}
    PhysMtrl();
 
+#if !EE_PRIVATE
 private:
+#endif
    Flt  _bounciness, _friction_static, _friction_dynamic, _density, _damping, _adamping;
    MODE _bounciness_mode, _friction_mode;
+#if EE_PRIVATE
+   PHYS_API(PxMaterial, void) *_m;
+#else
    Ptr  _m;
+#endif
 
    NO_COPY_CONSTRUCTOR(PhysMtrl);
 };

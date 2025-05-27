@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 #ifdef _WIN32 // WINDOWS
    #define LOCK_WRITE WindowsLOCK_WRITE

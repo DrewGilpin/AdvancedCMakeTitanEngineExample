@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum MENU_FLAG // Menu Element Flags
 {
@@ -14,7 +11,7 @@ enum MENU_COLUMN // List columns available when creating 'Menu' from 'Node<MenuE
    MENU_COLUMN_CHECK, // enabled/checked state
    MENU_COLUMN_NAME , // display name
    MENU_COLUMN_KBSC , // keyboard shortcut
-   MENU_COLUMN_KBSC2, // keyboard shortcut #2
+   MENU_COLUMN_KBSC1, // keyboard shortcut #1
    MENU_COLUMN_SUB  , // sub-elements (children)
    MENU_COLUMN_NUM  , // number of menu list columns
 };
@@ -39,10 +36,13 @@ struct MenuElm // Menu Element
             MenuElm& create(C Str &name, void (*func)(Ptr   user), Ptr   user=null, Bool immediate=false); // create
    T1(TYPE) MenuElm& create(C Str &name, void (*func)(TYPE *user), TYPE *user     , Bool immediate=false) {return create(name, (void (*)(Ptr))func,  user, immediate);} // create
    T1(TYPE) MenuElm& create(C Str &name, void (*func)(TYPE &user), TYPE &user     , Bool immediate=false) {return create(name, (void (*)(Ptr))func, &user, immediate);} // create
+#if EE_PRIVATE
+            MenuElm& create(C MenuElm &src, Menu *parent); // create from 'src'
+#endif
 
    MenuElm& flag   (  Byte  flag   );   Byte  flag ()C {return _flag ;} // set/get MENU_FLAG
    MenuElm& kbsc   (C KbSc &kbsc   );   KbSc  kbsc ()C {return _kbsc ;} // set/get keyboard shortcut
-   MenuElm& kbsc2  (C KbSc &kbsc   );   KbSc  kbsc2()C {return _kbsc2;} // set/get keyboard shortcut (alternative)
+   MenuElm& kbsc1  (C KbSc &kbsc   );   KbSc  kbsc1()C {return _kbsc1;} // set/get keyboard shortcut (alternative)
    MenuElm& desc   (C Str  &desc   ); C Str&  desc ()C {return _desc ;} // set/get description
    MenuElm& setOn  (  Bool  on=true);                                   // set     if on
    MenuElm& display(C Str  &name   );                                   // set     display name, this method makes effect only if 'name' is not empty
@@ -53,17 +53,26 @@ struct MenuElm // Menu Element
    T1(TYPE) MenuElm& func(void (*func)(TYPE *user), TYPE *user     , Bool immediate=false) {return T.func((void(*)(Ptr))func,  user, immediate);} // set function called when 'MenuElm' is selected, with 'user' as its parameter, 'immediate'=if call the function immediately when a change occurs (this will happen inside object update function where you cannot delete any objects) if set to false then the function will get called after all objects finished updating (there you can delete objects)
    T1(TYPE) MenuElm& func(void (*func)(TYPE &user), TYPE &user     , Bool immediate=false) {return T.func((void(*)(Ptr))func, &user, immediate);} // set function called when 'MenuElm' is selected, with 'user' as its parameter, 'immediate'=if call the function immediately when a change occurs (this will happen inside object update function where you cannot delete any objects) if set to false then the function will get called after all objects finished updating (there you can delete objects)
 
+#if EE_PRIVATE
+   Bool pushable();
+   void push    ();
+   void zero    ();
+   void call    ();
+#endif
+
   ~MenuElm() {del();}
    MenuElm();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool   _func_immediate;
    Byte   _flag;
    Ptr    _func_user;
    void (*_func )(        );
-   void (*_func2)(Ptr user);
+   void (*_func1)(Ptr user);
    Str    _desc;
-   KbSc   _kbsc, _kbsc2;
+   KbSc   _kbsc, _kbsc1;
    Menu  *_menu;
 
    NO_COPY_CONSTRUCTOR(MenuElm);
@@ -121,7 +130,7 @@ const_mem_addr struct Menu : GuiObj // Gui Menu !! must be stored in constant me
    virtual Menu& moveClamp(C Vec2 &delta);                                                   // move by delta and clamp to desktop area
    virtual Menu& show     (             )override;                                           // show
 
-   virtual Menu& posAround(C Rect &rect, Flt align=1); // set menu position around the 'rect' screen rectangle while trying to avoid occluding it, 'align'=horizontal alignment (-1 .. 1) specifying on which side (left or right) the menu should be located
+   virtual Menu& posAround(C Rect &rect, Flt align=1, Bool prefer_up=false); // set menu position around the 'rect' screen rectangle while trying to avoid occluding it, 'align'=horizontal alignment (-1 .. 1) specifying on which side (left or right) the menu should be located, 'prefer_up'=if prefer setting position above 'rect'
 
    Menu& skin(C GuiSkinPtr &skin, Bool sub_objects=true); C GuiSkinPtr& skin()C {return _skin                       ;} // set/get skin override, default=null (if set to null then current value of 'Gui.skin' is used), 'sub_objects'=if additionally change the skin of the 'list' and sub-menus
                                                             GuiSkin* getSkin()C {return _skin ? _skin() : Gui.skin();} //     get actual skin
@@ -135,10 +144,27 @@ const_mem_addr struct Menu : GuiObj // Gui Menu !! must be stored in constant me
    virtual void    update(C GuiPC &gpc)override; // update object
    virtual void    draw  (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   Flt         paddingL  ()C {return _crect.min.x- _rect.min.x;}
+   Flt         paddingR  ()C {return  _rect.max.x-_crect.max.x;}
+   Flt         paddingT  ()C {return  _rect.max.y-_crect.max.y;}
+   Flt         paddingB  ()C {return _crect.min.y- _rect.min.y;}
+ C Rect&       clientRect()C {return _crect;}
+   Vec2        clientSize()C {return _crect.size();}
+   void        clientSize(C Vec2 &size);
+   void        zero      ();
+   GuiObj*     Owner     ()C {return _owner ? _owner : _parent;}
+   ListColumn* listColumn();
+   void        push      (Int abs);
+   void        hideAll   ();
+#endif
+
   ~Menu() {del();}
    Menu();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool          _no_child_draw;
    Int           _selectable_offset;
    Rect          _crect;

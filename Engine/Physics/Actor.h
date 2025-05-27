@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Actor' to create Physical Objects.
@@ -16,6 +13,91 @@ enum ACTOR_GROUP : Byte // Actor Group (Actor::group)
    AG_TERRAIN   =31, // World Terrain
    AG_NUM       =32, // number of actor groups
 };
+/******************************************************************************/
+#if EE_PRIVATE
+#if PHYSX
+struct _ActorShapes
+{
+   struct Shape
+   {
+      Flt       density;
+      EE::Shape shape  ;
+
+      void set(Flt density, C EE::Shape &shape) {T.density=density; T.shape=shape;}
+   };
+   struct Convex
+   {
+      Flt           density;
+      Vec           scale;
+      PxConvexMesh *convex;
+
+      void set(Flt density, C Vec &scale, PxConvexMesh *convex) {T.density=density; T.scale=scale; T.convex=convex;}
+   };
+   struct Mesh
+   {
+      Flt             density;
+      Vec             scale;
+      PxTriangleMesh *mesh;
+
+      void set(Flt density, C Vec &scale, PxTriangleMesh *mesh) {T.density=density; T.scale=scale; T.mesh=mesh;}
+   };
+
+   Memc<Shape    > shape ;
+   Memc<Convex   > convex;
+   Memc<Mesh     > mesh  ;
+   Memc<PhysMesh*> pm    ;
+
+ ~_ActorShapes();
+};
+#else
+struct _ActorShapes
+{
+   struct Shape
+   {
+      Flt       density;
+      EE::Shape shape  ;
+
+      void set(Flt density, C EE::Shape &shape) {T.density=density; T.shape=shape;}
+   };
+   struct Convex
+   {
+      Flt                density, volume;
+      Vec                scale;
+      btConvexHullShape *convex;
+
+      void set(Flt density, Flt volume, C Vec &scale, btConvexHullShape *convex) {T.density=density; T.volume=volume; T.scale=scale; T.convex=convex;}
+   };
+   struct Mesh
+   {
+      Flt                     density;
+      Vec                     scale;
+      btBvhTriangleMeshShape *mesh;
+
+      void set(Flt density, C Vec &scale, btBvhTriangleMeshShape *mesh) {T.density=density; T.scale=scale; T.mesh=mesh;}
+   };
+
+   Memc<Shape    > shape ;
+   Memc<Convex   > convex;
+   Memc<Mesh     > mesh  ;
+   Memc<PhysMesh*> pm    ;
+
+ ~_ActorShapes();
+};
+struct RigidBody : btRigidBody
+{
+   PhysMtrl                *material  ; // material index
+   Ptr                      user, obj ; // user and obj pointers
+   Vec                      offset_com; // offset applied only to Center of Mass
+   Matrix                   offset    ; // offset Bullet<->EE space
+   Memc<btCollisionObject*> ignore    ; // list of pair-coliision ignore
+
+   void materialApply();
+
+  ~RigidBody();
+   RigidBody(btRigidBody::btRigidBodyConstructionInfo &info);
+};
+#endif
+#endif
 /******************************************************************************/
 struct ActorShapes // Actor Shapes used for creating Actors made out of multiple shapes
 {
@@ -34,7 +116,14 @@ struct ActorShapes // Actor Shapes used for creating Actors made out of multiple
    ActorShapes();
 
 private:
+#if EE_PRIVATE
+   ActorShapes& add(C PhysPart &part, Flt density, C Vec &scale);
+
+  _ActorShapes *_as;
+   friend struct Actor;
+#else
    Ptr       _as;
+#endif
    PhysMtrl *_mtrl;
    NO_COPY_CONSTRUCTOR(ActorShapes);
 };
@@ -145,11 +234,53 @@ struct Actor // Physical Object
   ~Actor() {del();}
    Actor() {_actor=null; _dynamic=null; _ignore_id=0;}
 
+#if EE_PRIVATE
+      Bool materialForce(PhysMtrl *material);
+   #if PHYSX
+      Bool isDynamic()C {return            _dynamic!=null;}
+      Bool isStatic ()C {return _actor && !_dynamic      ;}
+   #else
+      Bool init(btRigidBody::btRigidBodyConstructionInfo &info, C Vec *anchor, Bool kinematic, PhysMesh *pm, PhysMtrl *material);
+
+      Bool createTry(btConvexHullShape      *convex, C Vec &scale, Flt density, Bool kinematic, PhysMesh *pm, PhysMtrl *material);
+      Bool createTry(btBvhTriangleMeshShape *mesh  , C Vec &scale                             , PhysMesh *pm, PhysMtrl *material);
+
+      Matrix massCenterMatrix()C;
+   #endif
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
+#if EE_PRIVATE
+   PHYS_API(PxRigidActor  , RigidBody) *_actor;
+   PHYS_API(PxRigidDynamic, void     ) *_dynamic;
+   Mems<PhysMesh*>                      _pm;
+#else
    Ptr       _actor, _dynamic;
    Mems<Ptr> _pm;
+#endif
    UInt      _ignore_id;
 
    NO_COPY_CONSTRUCTOR(Actor);
 };
+/******************************************************************************/
+#if EE_PRIVATE
+enum ACTOR_FLAG
+{
+   ACTOR_FREEZE_POS_X=1<< 0,
+   ACTOR_FREEZE_POS_Y=1<< 1,
+   ACTOR_FREEZE_POS_Z=1<< 2,
+   ACTOR_FREEZE_ROT_X=1<< 3,
+   ACTOR_FREEZE_ROT_Y=1<< 4,
+   ACTOR_FREEZE_ROT_Z=1<< 5,
+   ACTOR_KINEMATIC   =1<< 6,
+   ACTOR_GRAVITY     =1<< 7,
+   ACTOR_RAY         =1<< 8,
+   ACTOR_COLLISION   =1<< 9,
+   ACTOR_TRIGGER     =1<<10,
+   ACTOR_SLEEP       =1<<11,
+   ACTOR_CCD         =1<<12,
+};
+#endif
 /******************************************************************************/

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'MemPtr' to operate on any kind of memory container.
@@ -51,6 +48,10 @@ template<typename TYPE, Int Memt_size> struct CMemPtr // Const Memory Container 
    T1(VALUE)   Bool  binarySearch(C VALUE &value, Int &index, Int compare(C TYPE &a, C VALUE &b)=Compare)C; // search sorted container for presence of 'value' and return if it was found in the container, 'index'=if the function returned true then this index points to the location where the 'value' is located in the container, if the function returned false then it means that 'value' was not found in the container however the 'index' points to the place where it should be added in the container while preserving sorted data, 'index' will always be in range (0..elms) inclusive
    T1(VALUE)   Bool  binaryHas   (C VALUE &value,             Int compare(C TYPE &a, C VALUE &b)=Compare)C {Int i; return binarySearch(value, i, compare);               } // check if 'value' (using binary search) is present in container
    T1(VALUE) C TYPE* binaryFind  (C VALUE &value,             Int compare(C TYPE &a, C VALUE &b)=Compare)C {Int i; return binarySearch(value, i, compare) ? &T[i] : null;} // check if 'value' (using binary search) is present in container and return it, null on fail
+
+#if EE_PRIVATE
+   void copyTo(TYPE *dest)C; // copy raw memory of all elements to 'dest'
+#endif
 
    // io
    Bool save   (File &f)C; // save elements with their own 'save' method, this method first saves number of current elements, and then for each element calls its 'save' method, false on fail
@@ -219,6 +220,10 @@ template<typename TYPE, Int Memt_size> struct MemPtr : CMemPtr<TYPE, Memt_size> 
    template<Int src_size> MemPtr& operator=(C CMemPtr<TYPE,  src_size> &src           ); // copy elements using assignment operator (this will allow copying from 'CMemPtr' and 'MemPtr' with other sizes)
                           MemPtr& operator=(C  MemPtr<TYPE, Memt_size> &src           ); // copy elements using assignment operator (this must be specified even though method above should do the same, because without it compiler will try to use the built-in 'operator=' which will just do raw memory copy)
 
+#if EE_PRIVATE
+   MemPtr& copyFrom(C TYPE *src); // copy raw memory of all elements from 'src'
+#endif
+
    // io
    Bool save(File &f);   Bool save(File &f)C; // save elements with their own 'save' method, this method first saves number of current elements, and then for each element calls its 'save' method, false on fail
    Bool load(File &f);                        // load elements with their own 'load' method, this method first loads number of saved   elements, and then for each element calls its 'load' method, false on fail
@@ -311,25 +316,26 @@ template<const_mem_addr typename TYPE, Int Memt_elms> struct MemPtrN : MemPtr<TY
                           MemPtrN& operator=(C  MemPtrN<TYPE, Memt_elms> &src           ); // copy elements using assignment operator (this must be specified even though method above should do the same, because without it compiler will try to use the built-in 'operator=' which will just do raw memory copy)
 
    // initialize 'MemPtrN' to point to source
-                          MemPtrN(       null_t=null                                    ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(             ) {}
-                          MemPtrN(       TYPE                        &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-   template<Int src_elms> MemPtrN(       TYPE                       (&src)    [src_elms]) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(       TYPE                        *src, Int src_elms ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src, src_elms) {}
-                          MemPtrN(Mems  <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Mems  <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Memc  <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Memc  <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-   T1(EXTENDED)           MemPtrN(Memc  <EXTENDED                  > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Memt  <TYPE, SIZE(TYPE)*Memt_elms> &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Memb  <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Memb  <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-   T1(EXTENDED)           MemPtrN(Memb  <EXTENDED                  > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Memx  <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Memx  <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-   T1(EXTENDED)           MemPtrN(Memx  <EXTENDED                  > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Meml  <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(Meml  <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
-                          MemPtrN(MemPtr<TYPE, SIZE(TYPE)*Memt_elms> &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(        null_t=null                                    ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(             ) {}
+                          MemPtrN(        TYPE                        &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+   template<Int src_elms> MemPtrN(        TYPE                       (&src)    [src_elms]) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(        TYPE                        *src, Int src_elms ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src, src_elms) {}
+                          MemPtrN(Mems   <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Mems   <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Memc   <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Memc   <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+   T1(EXTENDED)           MemPtrN(Memc   <EXTENDED                  > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Memt   <TYPE, SIZE(TYPE)*Memt_elms> &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Memb   <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Memb   <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+   T1(EXTENDED)           MemPtrN(Memb   <EXTENDED                  > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Memx   <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Memx   <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+   T1(EXTENDED)           MemPtrN(Memx   <EXTENDED                  > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Meml   <TYPE                      > &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(Meml   <TYPE                      > *src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(MemPtr <TYPE, SIZE(TYPE)*Memt_elms> &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          MemPtrN(MemPtrN<TYPE,            Memt_elms> &src               ) : MemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
 
    // prevent calling constructor through operator=
                           MemPtrN& operator=(       null_t                          )=delete;
@@ -342,6 +348,30 @@ template<const_mem_addr typename TYPE, Int Memt_elms> struct MemPtrN : MemPtr<TY
                           MemPtrN& operator=(C Memx<TYPE                      > *src)=delete;
    T1(EXTENDED)           MemPtrN& operator=(C Memx<EXTENDED                  > *src)=delete;
                           MemPtrN& operator=(C Meml<TYPE                      > *src)=delete;
+};
+/******************************************************************************/
+template<const_mem_addr typename TYPE, Int Memt_elms> struct CMemPtrN : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms> // Const Memory Container Pointer, 'Memt_elms'=number of elements of the 'Memt'
+{
+   // initialize 'CMemPtrN' to point to source
+                          CMemPtrN(          null_t=null                                    ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(             ) {}
+                          CMemPtrN(C         TYPE                        &src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+   template<Int src_elms> CMemPtrN(C         TYPE                       (&src)    [src_elms]) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C         TYPE                        *src, Int src_elms ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src, src_elms) {}
+                          CMemPtrN(C  Mems  <TYPE                      > &src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Mems  <TYPE                      > *src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Memc  <TYPE                      > &src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Memc  <TYPE                      > *src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+   T1(EXTENDED)           CMemPtrN(C  Memc  <EXTENDED                  > *src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Memt  <TYPE, SIZE(TYPE)*Memt_elms> &src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Memb  <TYPE                      > &src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Memb  <TYPE                      > *src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+   T1(EXTENDED)           CMemPtrN(C  Memb  <EXTENDED                  > *src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Memx  <TYPE                      > &src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Memx  <TYPE                      > *src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+   T1(EXTENDED)           CMemPtrN(C  Memx  <EXTENDED                  > *src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Meml  <TYPE                      > &src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C  Meml  <TYPE                      > *src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
+                          CMemPtrN(C CMemPtr<TYPE, SIZE(TYPE)*Memt_elms> &src               ) : CMemPtr<TYPE, SIZE(TYPE)*Memt_elms>(src          ) {}
 };
 /******************************************************************************/
 template<typename TYPE, Int size>   inline Int Elms(C CMemPtr<TYPE, size> &memp) {return memp.elms();}

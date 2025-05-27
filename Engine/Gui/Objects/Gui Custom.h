@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct GuiCustom : GuiObj // Gui Custom Object !! must be stored in constant memory address !!
 {
@@ -13,10 +10,16 @@ const_mem_addr struct GuiCustom : GuiObj // Gui Custom Object !! must be stored 
    // set / get
    GuiCustom& focusable(Bool on);   Bool focusable()C {return _focusable;} // set/get if can catch keyboard focus, default=false
 
+#if EE_PRIVATE
+   void zero();
+#endif
+
   ~GuiCustom() {del();}
    GuiCustom();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool _focusable;
 
 protected:

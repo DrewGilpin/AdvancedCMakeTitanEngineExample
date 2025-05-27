@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Time' to access:
@@ -34,7 +31,9 @@ struct TimeClass
    Flt stateUpdateTime()C {return _state_update;} // get CPU time needed to process active application State Update in last frame
    Flt stateDrawTime  ()C {return _state_draw  ;} // get CPU time needed to process active application State Draw   in last frame
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool        _pc;
    Byte        _skip;
    UInt        _start_time_ms, _frame, _frames_drawn;
@@ -44,6 +43,10 @@ private:
    SmoothValue _sv_ad;
 
    TimeClass();
+#if EE_PRIVATE
+   void create();
+   void update();
+#endif
 }extern
    Time; // Application Time Access
 /******************************************************************************/

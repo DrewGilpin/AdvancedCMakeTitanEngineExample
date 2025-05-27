@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Grab' to grab and smoothly drag 'Actor' to any custom position.
@@ -18,6 +15,9 @@ struct Grab // Actor Grabber
    Vec    pos         (          )C {return _grab.pos() ;} // get world position of grabber
    Grab&  pos         (C Vec &pos);                        // move to 'pos' world position
 
+#if EE_PRIVATE
+   void zero();
+#endif
   ~Grab() {del();}
    Grab();
 

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum IMAGERT_TYPE : Byte // Image Render Target Type, this describes a group of Image Types
 { // P=10bit, H=16bit, F=32bit, S=Signed
@@ -44,23 +41,107 @@ enum IMAGERT_TYPE : Byte // Image Render Target Type, this describes a group of 
    IMAGERT_RGB_A2  =IMAGERT_RGB   ,
 };
 /******************************************************************************/
+#if EE_PRIVATE
+struct ImageRTDesc // Render Target Description
+{
+   VecI2        size;
+   Byte         samples;
+   IMAGERT_TYPE rt_type;
+
+   ImageRTDesc& type(IMAGERT_TYPE rt_type) {T.rt_type=rt_type; return T;}
+
+            ImageRTDesc() {}
+   explicit ImageRTDesc(Int w, Int h, IMAGERT_TYPE rt_type, Byte samples=1) {size.set(w, h); T.rt_type=rt_type; T.samples=samples;}
+
+//private:
+   mutable IMAGE_TYPE _type;
+};
+#endif
+/******************************************************************************/
 struct ImageRT : Image // Image Render Target
 {
    Bool         create(C VecI2 &size, IMAGE_TYPE type, IMAGE_MODE mode=IMAGE_RT, Byte samples=1); // create, false on fail
    ImageRT& mustCreate(C VecI2 &size, IMAGE_TYPE type, IMAGE_MODE mode=IMAGE_RT, Byte samples=1); // create, Exit  on fail
+#if EE_PRIVATE
+   Bool depthTexture()C;
+   constexpr INLINE Bool hasUAV()C
+   {
+   #if DX11
+      return _uav!=null;
+   #elif GL
+      return _txtr!=0;
+   #endif
+      return false;
+   }
+   constexpr INLINE Bool canSwapSRV()C
+   {
+   #if DX11
+      return _srv_srgb!=null;
+   #elif GL
+      return _txtr_srgb!=0;
+   #endif
+      return false;
+   }
+   constexpr INLINE Bool canSwapRTV()C
+   {
+   #if DX11
+      return _rtv_srgb!=null;
+   #elif GL
+      return _txtr_srgb!=0;
+   #endif
+      return false;
+   }
+   constexpr INLINE Bool canSwapSRGB()C {return canSwapSRV() && canSwapRTV();}
+
+   void zero       ();
+   void delThis    ();
+   void del        ();
+   Bool createEx   ()=delete;
+   Bool createViews();
+   Bool   map      ();
+   void unmap      ();
+   void swapSRV    ();
+   void swapRTV    ();
+   void swapSRGB   ();
+
+#if DX11
+   void clearHw(C Vec4 &color=Vec4Zero); // hardware render target  clear
+   void clearDS(  Byte  s    =0       ); // hardware depth  stencil clear
+#else
+// there's no 'clearHw' on OpenGL
+// there's no 'clearDS' on OpenGL
+#endif
+   void clearFull    (C Vec4 &color=Vec4Zero, Bool restore_rt=false); // clear full          area
+   void clearViewport(C Vec4 &color=Vec4Zero, Bool restore_rt=false); // clear main viewport area
+
+   void discard();
+#endif
 
    ImageRT();
   ~ImageRT();
+#if !EE_PRIVATE
 private:
+#endif
    union
    {
       struct
       {
+      #if EE_PRIVATE && DX11
+         ID3D11ShaderResourceView         *_srv_srgb;
+         ID3D11RenderTargetView    *_rtv, *_rtv_srgb;
+         ID3D11DepthStencilView    *_dsv, *_rdsv;
+         ID3D11UnorderedAccessView *_uav;
+      #else
          Ptr _ptr[6];
+      #endif
       };
       struct
       {
+      #if EE_PRIVATE && GL
+         UInt _txtr_srgb;
+      #else
          UInt _uint;
+      #endif
       };
    };
    NO_COPY_CONSTRUCTOR(ImageRT);
@@ -68,12 +149,22 @@ private:
 /******************************************************************************/
 struct ImageRTC : ImageRT // Image Render Target Counted
 {
+#if EE_PRIVATE
+   Bool available()C {return _ptr_num==0;} // if this image is not currently used
+#endif
+#if !EE_PRIVATE
 private:
+#endif
    UInt _ptr_num=0; // this shouldn't be modified in any 'del', 'create' method
 };
 /******************************************************************************/
 struct ImageRTPtr // Render Target Pointer
 {
+#if EE_PRIVATE
+   Bool       find  (C ImageRTDesc &desc); // find Render Target, false on fail
+   ImageRTPtr& get  (C ImageRTDesc &desc); // find Render Target, Exit  on fail
+   ImageRTPtr& getDS(Int w, Int h, Byte samples=1, Bool reuse_main=true);
+#endif
    Bool       find(Int w, Int h, IMAGERT_TYPE rt_type, Byte samples=1); // find Render Target, false on fail, 'samples'=number of samples per-pixel (allows multi-sampling)
    ImageRTPtr& get(Int w, Int h, IMAGERT_TYPE rt_type, Byte samples=1); // find Render Target, Exit  on fail, 'samples'=number of samples per-pixel (allows multi-sampling)
 
@@ -99,10 +190,48 @@ struct ImageRTPtr // Render Target Pointer
    ImageRTPtr(  null_t=null  ) {_data=null; _last_index=-1;}
    ImageRTPtr(C ImageRTPtr &p);
    ImageRTPtr(  ImageRTC   *p);
+#if EE_PRIVATE
+   ImageRTPtr& clearNoDiscard(); // clear the pointer to null, this automatically decreases the reference count of current data, without discarding
+   explicit ImageRTPtr(C ImageRTDesc &desc) {_data=null; _last_index=-1; get(desc);}
+#endif
   ~ImageRTPtr(               ) {clear();}
 
+#if !EE_PRIVATE
 private:
+#endif
    ImageRTC *_data;
    Int       _last_index;
 };
+/******************************************************************************/
+#if EE_PRIVATE
+struct ImageRTPtrRef
+{
+   ImageRTPtr &ref;
+
+   ImageRTPtr& get(C ImageRTDesc &desc) {return ref.get(desc);}
+
+   ImageRTC* operator() ()C {return  ref;}
+   ImageRTC* operator-> ()C {return  ref;}
+   ImageRTC& operator*  ()C {return *ref;}
+   operator  ImageRTPtr&()C {return  ref;}
+   operator  ImageRTC  *()C {return  ref;}
+
+   void clear() {ref.clear();}
+
+   explicit ImageRTPtrRef(ImageRTPtr &image_rt_ptr) : ref(image_rt_ptr) {}
+           ~ImageRTPtrRef(                        )  {ref.clear();}
+
+   NO_COPY_CONSTRUCTOR(ImageRTPtrRef);
+};
+
+IMAGERT_TYPE GetImageRTTypeLinear(                 Bool       alpha, IMAGE_PRECISION     precision);
+IMAGERT_TYPE GetImageRTType      (                 Bool       alpha, IMAGE_PRECISION     precision);
+IMAGERT_TYPE GetImageRTType      (IMAGE_TYPE type                                                 );
+IMAGERT_TYPE GetImageRTType      (IMAGE_TYPE type, Bool allow_alpha                               );
+IMAGERT_TYPE GetImageRTType      (IMAGE_TYPE type, Bool allow_alpha, IMAGE_PRECISION max_precision);
+
+IMAGE_TYPE DepthStencilRT(Int i); // get recommended depth stencil type, i=0..Inf
+
+void ResetImageTypeCreateResult();
+#endif
 /******************************************************************************/

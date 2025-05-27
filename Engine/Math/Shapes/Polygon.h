@@ -1,6 +1,49 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
+/******************************************************************************/
+#if EE_PRIVATE
+struct Poly // Polygon
+{
+   struct Vtx // polygon vertex
+   {
+      Int index, // point index
+          edge ; // edge  index
+      Flt angle; // angle
+
+      void set(Int index          ) {T.index=index;}
+      void set(Int index, Int edge) {T.index=index; T.edge=edge;}
+   };
+
+   Byte      angle; // if angles should be calculated
+   Int       id   ; // id number
+   Vec      *pos  ; // pointer to vertex positions
+   Meml<Vtx> vtx  ; // list of vertexes
+
+   // manage
+   Poly& del   (                  ); // delete
+   Poly& create(Vec *pos, Int id=0); // create
+
+   // get / set
+   Bool infinite() ; // if infinite
+   Flt  length2D()C; // get 2D length
+   Flt  length3D()C; // get 3D length
+   void setAngle() ; // recalculate angles of vertexes
+
+   // operations
+   void    addVtx(Int index          ) {vtx.New().set(index      );} // add    vertex
+   void    addVtx(Int index, Int edge) {vtx.New().set(index, edge);} // add    vertex and set edge
+   void removeVtx(MemlNode *v                          );            // remove vertex
+   void link     (Poly &poly, MemlNode *i, MemlNode *pi);            // link with vertexes from poly, 'i'=connected vertex from self, 'pi'= connected vertex from 'poly', 'poly' remains unmodified
+
+   // draw
+   void draw2D(C Color &color);
+   void draw3D(C Color &color); // this relies on active object matrix which can be set using 'SetMatrix' function
+
+  ~Poly() {del();}
+   Poly();
+
+private:
+   Byte _infinite;
+};
+#endif
 /******************************************************************************/
 void CreateConvex2D  (MemPtr<Vec2 > poly, C Vec2  *point, Int points); // create convex 'poly' from points xy coordinates ('point'=array of points, 'points'=number of points)
 void CreateConvex2D  (MemPtr<VecD2> poly, C VecD2 *point, Int points); // create convex 'poly' from points xy coordinates ('point'=array of points, 'points'=number of points)

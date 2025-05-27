@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'SoundCallback' to play dynamically generated sound data.
@@ -25,6 +22,14 @@ enum SOUND_CODEC : Byte
    SOUND_NUM        , // number of sound codecs
 };
 CChar8* CodecName(SOUND_CODEC codec); // get codec name
+#if EE_PRIVATE
+enum SND_CODEC : Byte // !! These enums are saved !!
+{
+   SND_RAW_16, // Raw 16-bit
+   SND_VORBIS,
+   SND_OPUS  ,
+};
+#endif
 /******************************************************************************/
 const_mem_addr struct SoundCallback // Sound Callback used to dynamically create sound data !! must be stored in constant memory address !! this object is passed on to functions which store pointer to it, therefore it must be stored in a constant memory address
 {
@@ -67,7 +72,9 @@ const_mem_addr struct SoundStream // can be moved however 'memAddressChanged' ne
    SoundStream();
   ~SoundStream() {del();}
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Params // parameters
    {
       Byte bytes, channels, block;
@@ -92,6 +99,9 @@ private:
    Params         _par;
    SoundCallback *_callback;
 
+#if EE_PRIVATE
+   Bool open(C Str &name);
+#endif
    NO_COPY_CONSTRUCTOR(SoundStream);
 };
 /******************************************************************************/
@@ -113,4 +123,13 @@ struct SoundHeader
 };
 /******************************************************************************/
 Bool SaveWavHeader(File &f, Int bits, Int channels, Int frequency, UInt size); // 'bits'=number of bits per sample (use 8 for 8-bit samples or 16 for 16-bit samples), 'channels'=number of channels (use 1 for mono and 2 for stereo), 'frequency'=sample rate, 'size'=size of audio data in bytes, after writing this header to a file you can store the raw audio data
+/******************************************************************************/
+#if EE_PRIVATE
+Bool SaveSndHeader(File &f, SND_CODEC codec, Int channels, Int frequency, Long samples); // 'channels'=number of channels (use 1 for mono and 2 for stereo), 'frequency'=sample rate, 'samples'=number of audio samples
+
+Int OpusFrequency(Int freq);
+
+void InitStream();
+void ShutStream();
+#endif
 /******************************************************************************/

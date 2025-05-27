@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Orient' to handle objects orientation.
@@ -16,6 +13,7 @@ struct Orient // Orientation
    Vec cross()C {return Cross(perp, dir);} // cross                      (x - right  )
 
    Orient& operator+=(C Orient  &o);
+   Orient& operator-=(C Orient  &o);
    Orient& operator*=(  Flt      f);
    Orient& operator*=(C Vec     &v);
    Orient& operator*=(C Matrix3 &m) {return mul(m);}
@@ -32,28 +30,48 @@ struct Orient // Orientation
    Orient& identity(          ); // set identity
    Orient& setDir  (C Vec &dir); // set from 'dir' and calculate correct 'perp' to match it, 'dir' must be normalized
 
+   // get
+   Vec axisAngle()C;
+   Flt angleY   ()C; // get rotation angle along Y axis, this is the same as "axisAngle().y" but faster
+
    // transform
    Orient& mirrorX(); // mirror in X axis
+#if EE_PRIVATE
+   Orient& mirrorY(); // mirror in Y axis
+   Orient& mirrorZ(); // mirror in Z axis
 
-   Orient& rotateDir  (Flt angle       ); // rotate along 'dir'   vector, this is equal to "mul(Matrix3().setRotate(dir    , angle), true)" but faster
-   Orient& rotatePerp (Flt angle       ); // rotate along 'perp'  vector, this is equal to "mul(Matrix3().setRotate(perp   , angle), true)" but faster
-   Orient& rotateCross(Flt angle       ); // rotate along 'cross' vector, this is equal to "mul(Matrix3().setRotate(cross(), angle), true)" but faster
-   Orient& rotateCross(Flt cos, Flt sin); // rotate along 'cross' vector, this is equal to "mul(Matrix3().setRotate(cross(), angle), true)" but faster, this method works like 'rotateCross(Flt angle)' however it accepts 'Cos' and 'Sin' of 'angle'
+   Orient& chs        (); // change sign of all vectors
+   Orient& rightToLeft(); // convert right to left hand coordinate system
+#endif
 
-   Orient& rotateX(Flt angle); // rotate along X axis, this is equal to "mul(Matrix3().setRotateX(angle), true)" but faster
-   Orient& rotateY(Flt angle); // rotate along Y axis, this is equal to "mul(Matrix3().setRotateY(angle), true)" but faster
-   Orient& rotateZ(Flt angle); // rotate along Z axis, this is equal to "mul(Matrix3().setRotateZ(angle), true)" but faster
+   Orient& rotateDir  (Flt angle       ); // rotate along 'dir'   vector, this is equal to "mul(Matrix3().setRotate(dir    , angle))" but faster
+   Orient& rotatePerp (Flt angle       ); // rotate along 'perp'  vector, this is equal to "mul(Matrix3().setRotate(perp   , angle))" but faster
+   Orient& rotateCross(Flt angle       ); // rotate along 'cross' vector, this is equal to "mul(Matrix3().setRotate(cross(), angle))" but faster
+   Orient& rotateCross(Flt cos, Flt sin); // rotate along 'cross' vector, this is equal to "mul(Matrix3().setRotate(cross(), angle))" but faster, this method works like 'rotateCross(Flt angle)' however it accepts 'Cos' and 'Sin' of 'angle'
 
-   Orient& mul(C Matrix3 &matrix, Bool normalized=false); // transform by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   Orient& div(C Matrix3 &matrix, Bool normalized=false); // divide    by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
+   Orient& rotateX(Flt angle); // rotate along X axis, this is equal to "mul(Matrix3().setRotateX(angle))" but faster
+   Orient& rotateY(Flt angle); // rotate along Y axis, this is equal to "mul(Matrix3().setRotateY(angle))" but faster
+   Orient& rotateZ(Flt angle); // rotate along Z axis, this is equal to "mul(Matrix3().setRotateZ(angle))" but faster
 
-   Orient& rotateToDir    (C Vec &dir           ); // rotate current orientation to 'dir' vector, 'dir' must be normalized
-   Orient& rotateToDir    (C Vec &dir, Flt blend); // rotate current orientation to 'dir' vector, 'dir' must be normalized, 'blend'=how much to rotate (0=no rotation, 0.5=half rotation, 1.0=full rotation)
-   Orient& rotateToDirFast(C Vec &dir           ); // rotate current orientation to 'dir' vector, 'dir' must be normalized
+   Orient& mul          (C Matrix3 &matrix              ) ; // transform by matrix
+   Orient& div          (C Matrix3 &matrix              ) ; // divide    by matrix
+   Orient& divNormalized(C Matrix3 &matrix              ) ; // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized
+   void    divNormalized(C Matrix3 &matrix, Orient &dest)C; // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized, store result in 'dest'
 
-   Orient& rotateToPerp    (C Vec &perp           ); // rotate current orientation to 'perp' vector, 'perp' must be normalized
-   Orient& rotateToPerp    (C Vec &perp, Flt blend); // rotate current orientation to 'perp' vector, 'perp' must be normalized, 'blend'=how much to rotate (0=no rotation, 0.5=half rotation, 1.0=full rotation)
-   Orient& rotateToPerpFast(C Vec &perp           ); // rotate current orientation to 'perp' vector, 'perp' must be normalized
+   Orient& rotateToDir        (C Vec &dir               ); // rotate current orientation to 'dir' vector, 'dir' must be normalized
+   Orient& rotateToDir        (C Vec &dir, Flt blend    ); // rotate current orientation to 'dir' vector, 'dir' must be normalized, 'blend'=how much to rotate (0=no rotation, 0.5=half rotation, 1.0=full rotation)
+   Orient& rotateToDirMaxAngle(C Vec &dir, Flt max_angle); // rotate current orientation to 'dir' vector, 'dir' must be normalized, 'max_angle'=limit rotation
+   Orient& rotateToDirFast    (C Vec &dir               ); // rotate current orientation to 'dir' vector, 'dir' must be normalized
+
+   Orient& rotateToPerp        (C Vec &perp               ); // rotate current orientation to 'perp' vector, 'perp' must be normalized
+   Orient& rotateToPerp        (C Vec &perp, Flt blend    ); // rotate current orientation to 'perp' vector, 'perp' must be normalized, 'blend'=how much to rotate (0=no rotation, 0.5=half rotation, 1.0=full rotation)
+   Orient& rotateToPerpMaxAngle(C Vec &perp, Flt max_angle); // rotate current orientation to 'perp' vector, 'perp' must be normalized, 'max_angle'=limit rotation
+   Orient& rotateToPerpFast    (C Vec &perp               ); // rotate current orientation to 'perp' vector, 'perp' must be normalized
+
+   Orient& rotateToDirKeepPerp        (C Vec &dir                ); // rotate current orientation to 'dir'  vector, try to preserve existing 'perp', 'dir'  must be normalized
+   Orient& rotateToDirKeepPerpMaxAngle(C Vec &dir , Flt max_angle); // rotate current orientation to 'dir'  vector, try to preserve existing 'perp', 'dir'  must be normalized, 'max_angle'=limit rotation
+   Orient& rotateToPerpKeepDir        (C Vec &perp               ); // rotate current orientation to 'perp' vector, try to preserve existing 'dir' , 'perp' must be normalized
+   Orient& rotateToPerpKeepDirMaxAngle(C Vec &perp, Flt max_angle); // rotate current orientation to 'perp' vector, try to preserve existing 'dir' , 'perp' must be normalized, 'max_angle'=limit rotation
 
    Orient& inverse(              ) ; // inverse orientation
    void    inverse(Orient   &dest)C; // inverse orientation and store it in 'dest'
@@ -65,6 +83,18 @@ struct Orient // Orientation
    Orient& fixPerp  (); // fix perpendicular, use when 'dir' or 'perp' has changed, this method aligns 'perp' so it's perpendicular to 'dir'  and normalized
    Orient& fixDir   (); // fix direction    , use when 'dir' or 'perp' has changed, this method aligns 'dir'  so it's perpendicular to 'perp' and normalized
    Bool    fix      (); // normalize and fix perpendicular, false on fail
+
+   Orient& limitPitch(C Vec &up);
+   Orient& limitPitch(C Vec &up, Flt max_angle);
+
+   Orient& changePitchWithLimit(C Vec &up, Flt delta);
+
+   Orient& removeRoll(C Vec &up, Flt max_angle);
+
+   Orient& removeRollLimitPitch(C Vec &up, Flt max_angle);
+
+   // draw
+   void draw(C Vec &pos, C Color &cross_color=RED, C Color &perp_color=GREEN, C Color &dir_color=BLUE, Bool arrow=true)C; // draw axes, this can be optionally called outside of Render function, this relies on active object matrix which can be set using 'SetMatrix' function
 
    // io
    void save(MemPtr<TextNode> nodes)C; // save as text
@@ -83,6 +113,7 @@ struct OrientD // Orientation (double precision)
         perp;                               // perpendicular to direction (y - up     )
    VecD cross()C {return Cross(perp, dir);} // cross                      (x - right  )
 
+   OrientD& operator+=(C OrientD  &o);
    OrientD& operator*=(  Dbl       f);
    OrientD& operator*=(C VecD     &v);
    OrientD& operator*=(C MatrixD3 &m) {return mul(m);}
@@ -99,10 +130,21 @@ struct OrientD // Orientation (double precision)
    OrientD& identity(           ); // set identity
    OrientD& setDir  (C VecD &dir); // set from 'dir' and calculate correct 'perp' to match it, 'dir' must be normalized
 
+   // get
+   VecD axisAngle()C;
+   Dbl  angleY   ()C; // get rotation angle along Y axis, this is the same as "axisAngle().y" but faster
+
    // transform
    OrientD& mirrorX(); // mirror in X axis
-   OrientD& mul(C MatrixD3 &matrix, Bool normalized=false); // transform by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientD& div(C MatrixD3 &matrix, Bool normalized=false); // divide    by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
+#if EE_PRIVATE
+   OrientD& mirrorY(); // mirror in Y axis
+   OrientD& mirrorZ(); // mirror in Z axis
+
+   OrientD& chs(); // change sign of all vectors
+#endif
+   OrientD& mul          (C MatrixD3 &matrix); // transform by matrix
+   OrientD& div          (C MatrixD3 &matrix); // divide    by matrix
+   OrientD& divNormalized(C MatrixD3 &matrix); // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized
 
    OrientD& rotateToDir(C VecD &dir); // rotate current orientation to 'dir' vector, 'dir' must be normalized
 
@@ -128,6 +170,9 @@ struct OrientD // Orientation (double precision)
 struct OrientP : Orient // Positioned Orientation
 {
    Vec pos; // position
+
+   Orient& orn()  {return T;} // get reference to self as       'Orient'
+ C Orient& orn()C {return T;} // get reference to self as const 'Orient'
 
    OrientP& operator+=(C Vec     &v) {pos+=v; return T;}
    OrientP& operator-=(C Vec     &v) {pos-=v; return T;}
@@ -155,12 +200,21 @@ struct OrientP : Orient // Positioned Orientation
 
    // transform
    OrientP& mirrorX(); // mirror in X axis
-   OrientP& mul(C Matrix3 &matrix, Bool normalized=false); // transform by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientP& mul(C Matrix  &matrix, Bool normalized=false); // transform by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientP& mul(C MatrixM &matrix, Bool normalized=false); // transform by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientP& div(C Matrix3 &matrix, Bool normalized=false); // divide    by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientP& div(C Matrix  &matrix, Bool normalized=false); // divide    by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientP& div(C MatrixM &matrix, Bool normalized=false); // divide    by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
+#if EE_PRIVATE
+   OrientP& mirrorY(); // mirror in Y axis
+   OrientP& mirrorZ(); // mirror in Z axis
+
+   OrientP& rightToLeft(); // convert right to left hand coordinate system
+#endif
+   OrientP& mul          (C Matrix3 &matrix); // transform by matrix
+   OrientP& mul          (C Matrix  &matrix); // transform by matrix
+   OrientP& mul          (C MatrixM &matrix); // transform by matrix
+   OrientP& div          (C Matrix3 &matrix); // divide    by matrix
+   OrientP& div          (C Matrix  &matrix); // divide    by matrix
+   OrientP& div          (C MatrixM &matrix); // divide    by matrix
+   OrientP& divNormalized(C Matrix3 &matrix); // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized
+   OrientP& divNormalized(C Matrix  &matrix); // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized
+   OrientP& divNormalized(C MatrixM &matrix); // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized
 
    void inverse(Matrix3  &dest)C {super::inverse(dest);} // inverse orientation and store it in 'dest' matrix
    void inverse(MatrixD3 &dest)C {super::inverse(dest);} // inverse orientation and store it in 'dest' matrix
@@ -188,6 +242,9 @@ struct OrientM : Orient // Positioned Orientation (mixed precision)
 {
    VecD pos; // position
 
+   Orient& orn()  {return T;} // get reference to self as       'Orient'
+ C Orient& orn()C {return T;} // get reference to self as const 'Orient'
+
    OrientM& operator+=(C VecD    &v) {pos+=v; return T;}
    OrientM& operator-=(C VecD    &v) {pos-=v; return T;}
    OrientM& operator+=(C OrientM &o);
@@ -196,6 +253,7 @@ struct OrientM : Orient // Positioned Orientation (mixed precision)
    OrientM& operator*=(C Matrix3 &m) {return mul(m);}
    OrientM& operator*=(C Matrix  &m) {return mul(m);}
    OrientM& operator*=(C MatrixM &m) {return mul(m);}
+   OrientM& operator*=(C MatrixO &m) {return mul(m);}
    OrientM& operator/=(C Matrix3 &m) {return div(m);}
    OrientM& operator/=(C Matrix  &m) {return div(m);}
    OrientM& operator/=(C MatrixM &m) {return div(m);}
@@ -207,6 +265,7 @@ struct OrientM : Orient // Positioned Orientation (mixed precision)
    friend OrientM operator* (C OrientM &o, C Matrix3 &m) {return OrientM(o)*=m;}
    friend OrientM operator* (C OrientM &o, C Matrix  &m) {return OrientM(o)*=m;}
    friend OrientM operator* (C OrientM &o, C MatrixM &m) {return OrientM(o)*=m;}
+   friend OrientM operator* (C OrientM &o, C MatrixO &m) {return OrientM(o)*=m;}
 
    // set
    OrientM& zero     (                       ); // set all vectors to zero
@@ -215,12 +274,20 @@ struct OrientM : Orient // Positioned Orientation (mixed precision)
 
    // transform
    OrientM& mirrorX(); // mirror in X axis
-   OrientM& mul(C Matrix3 &matrix, Bool normalized=false); // transform by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientM& mul(C Matrix  &matrix, Bool normalized=false); // transform by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientM& mul(C MatrixM &matrix, Bool normalized=false); // transform by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientM& div(C Matrix3 &matrix, Bool normalized=false); // divide    by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientM& div(C Matrix  &matrix, Bool normalized=false); // divide    by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
-   OrientM& div(C MatrixM &matrix, Bool normalized=false); // divide    by matrix, if 'matrix' is normalized set 'normalized' to true for more performance
+#if EE_PRIVATE
+   OrientM& mirrorY(); // mirror in Y axis
+   OrientM& mirrorZ(); // mirror in Z axis
+#endif
+   OrientM& mul          (C Matrix3 &matrix); // transform by matrix
+   OrientM& mul          (C Matrix  &matrix); // transform by matrix
+   OrientM& mul          (C MatrixM &matrix); // transform by matrix
+   OrientM& mul          (C MatrixO &matrix); // transform by matrix
+   OrientM& div          (C Matrix3 &matrix); // divide    by matrix
+   OrientM& div          (C Matrix  &matrix); // divide    by matrix
+   OrientM& div          (C MatrixM &matrix); // divide    by matrix
+   OrientM& divNormalized(C Matrix3 &matrix); // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized
+   OrientM& divNormalized(C Matrix  &matrix); // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized
+   OrientM& divNormalized(C MatrixM &matrix); // divide    by matrix, this method is faster than 'div' however 'matrix' must be normalized
 
    // draw
    void draw(C Color &color, Flt size=0.2f)C; // this can be optionally called outside of Render function, this relies on active object matrix which can be set using 'SetMatrix' function
@@ -241,6 +308,9 @@ struct OrientM : Orient // Positioned Orientation (mixed precision)
 struct OrientPD : OrientD // Positioned Orientation (double precision)
 {
    VecD pos; // position
+
+   OrientD& orn()  {return T;} // get reference to self as       'OrientD'
+ C OrientD& orn()C {return T;} // get reference to self as const 'OrientD'
 
    void inverse(MatrixD &dest)C; // inverse orientation and store it in 'dest' matrix
 
@@ -270,7 +340,9 @@ struct AxisRoll // Axis+Roll based rotation
 /******************************************************************************/
 inline OrientM operator* (C OrientP &o, C MatrixM &m) {return OrientM(o)*=m;}
 
-Orient Lerp(C Orient &a, C Orient &b, Flt step); // linear interpolation, 'step'=0..1
+Orient SlerpFast    (C Orient &a, C Orient &b, Flt step     ); // spherical linear interpolation, 'step'=0..1
+Orient Slerp        (C Orient &a, C Orient &b, Flt step     ); // spherical linear interpolation, 'step'=0..1
+Orient SlerpMaxAngle(C Orient &a, C Orient &b, Flt max_angle); // spherical linear interpolation
 /******************************************************************************/
 Bool Equal(C Orient  &a, C Orient  &b, Flt eps=EPS                   );
 Bool Equal(C OrientD &a, C OrientD &b, Dbl eps=EPSD                  );

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'ImageAtlas' for storing multiple images in one texture.
@@ -20,7 +17,7 @@ struct ImageAtlas // Image Atlas, set of multiple images packed together into as
    {
       Byte  image_index  ; // index of the image in 'images' in which the part is located, or 0xFF if this part is completely transparent and is not stored in any image
       Bool  rotated      ; // if this part is stored in the image as rotated and needs vertical drawing
-      Rect  tex_rect     ; // UV texture coordinates of the part (after trimming)
+      Rect  uv_rect      ; // UV texture coordinates of the part (after trimming)
       Vec2  center_offset; // offset which you can apply for drawing assuming that the anchor point was located in the center of the original image, it's equal to "Vec2(trim_pos.x-original_size.x/2, -trim_pos.y+original_size.y/2)" (in pixels)
       VecI2 original_size, // size of the image (in pixels, without trimming)
             trimmed_size , // size of the image (in pixels, after   trimming)

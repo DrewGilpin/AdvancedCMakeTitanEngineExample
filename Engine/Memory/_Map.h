@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct _Map // Map (base) - Do not use this class, use 'Map' instead
 {
@@ -21,7 +18,9 @@ struct _Map // Map (base) - Do not use this class, use 'Map' instead
 
  ~_Map() {del();}
 
+#if !EE_PRIVATE
 private:
+#endif
    Byte       _mode;
    Int        _elms, _key_offset, /*_data_offset, */_desc_offset, _data_size;
    Elm      **_order;
@@ -31,6 +30,24 @@ private:
    Bool     (*_create  )( Ptr elm  , CPtr key  , Ptr user);
    void     (*_copy_key)( Ptr dest , CPtr src  );
 
+#if EE_PRIVATE
+   Desc& elmDesc(  Elm &elm )C {return *(Desc*)((Byte*)&elm+_desc_offset);}
+ C Desc& elmDesc(C Elm &elm )C {return *(Desc*)((Byte*)&elm+_desc_offset);}
+   Ptr   elmKey (  Elm &elm )C {return          (Byte*)&elm+ _key_offset ;}
+  CPtr   elmKey (C Elm &elm )C {return          (Byte*)&elm+ _key_offset ;}
+   Ptr   elmData(  Elm &elm )C {return          (Byte*)&elm/*+_data_offset*/ ;} // assumes that '_data_offset' is zero
+  CPtr   elmData(C Elm &elm )C {return          (Byte*)&elm/*+_data_offset*/ ;} // assumes that '_data_offset' is zero
+   Elm*  dataElm( CPtr  data)C {return  (Elm *)((Byte*)data/*-_data_offset*/);} // assumes that '_data_offset' is zero
+
+   Elm*         findElm(CPtr  key, Int &stop )C;
+   void      addToOrder( Elm &elm, Int  index);
+   void removeFromOrder(           Int  index);
+   void       getFailed()C;
+   Bool     containsElm(C Elm *elm)C {return _memx.contains(elm);}
+   Int  dataInMapToAbsIndex(CPtr data)C;
+
+private:
+#endif
    Byte mode(Byte mode);
 
    CPtr dataInMapToKeyRef(CPtr data)C {return (Byte*)data /*-_data_offset*/ + _key_offset;} // assumes that '_data_offset' is zero
@@ -41,8 +58,9 @@ private:
 
    void from(C _Map &src);
 
-   void clear();
-   void del  ();
+   void clear  ();
+   void del    ();
+   void cleanup() {_memx.cleanup();}
 
    Ptr find   (CPtr key)C;
    Ptr get    (CPtr key);
@@ -110,6 +128,14 @@ private:
    void delayRemove   (Flt time);
    void delayRemoveNow();
    void update();
+
+#if EE_PRIVATE
+   DescPtrNum& elmDesc(  Elm &elm)C {return *(DescPtrNum*)((Byte*)&elm+_desc_offset);}
+ C DescPtrNum& elmDesc(C Elm &elm)C {return *(DescPtrNum*)((Byte*)&elm+_desc_offset);}
+
+   void processDelayRemove(Bool always);
+   Int  findDelayRemove(Elm &elm);
+#endif
 
    Ptr find   (CPtr key, Bool counted);
    Ptr get    (CPtr key, Bool counted);

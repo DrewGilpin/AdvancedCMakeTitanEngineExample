@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'SQL' class to access SQL database.
@@ -30,7 +27,8 @@ enum SQL_DATA_TYPE : Byte // possible type of an Column Data in a SQL Table
    SDT_STR      , // 16-bit string
    SDT_STR8     , //  8-bit string
    SDT_UID      , // unique id
-   SDT_DATE_TIME, // date   time
+   SDT_DATE     , // date
+   SDT_DATE_TIME, // date time
    SDT_BINARY   , // binary data
 };
 /******************************************************************************/
@@ -61,7 +59,35 @@ union
    SQLColumn() {str_len=binary_size=16;}
 };
 /******************************************************************************/
-struct SQLValues // SQL Row values, use this for creating new rows in a table
+struct SQLValue
+{
+   void set(C Str &name,   Int       value);
+   void set(C Str &name,   UInt      value);
+   void set(C Str &name,   Long      value);
+   void set(C Str &name,   ULong     value);
+   void set(C Str &name,   Dbl       value);
+   void set(C Str &name, C Str      &value);
+   void set(C Str &name, C UID      &value);
+   void set(C Str &name, C Date     &value);
+   void set(C Str &name, C DateTime &value);
+   void set(C Str &name,  CPtr       data, Int size); // add new value from binary memory, data is copied to temporary memory during this call (slow), data doesn't need to be present after this call anymore
+   void set(C Str &name,   File     &file          ); // add new value from binary file  , data is copied to temporary memory during this call (slow), data doesn't need to be present after this call anymore, data is copied from 'file' current position to its end
+
+   void setPtr(C Str &name, CPtr data, Int size); // add new value from binary memory, only pointer to data is set (fast), data needs to be present as long as this object is going to be used
+
+#if !EE_PRIVATE
+private:
+#endif
+   Byte type=0;
+   Str  name, value;
+   union
+   {
+      struct{CPtr  data; Int size;};
+      struct{File *file;};
+   };
+   void _set(Byte type, C Str &name, C Str &value) {T.type=type; T.name=name; T.value=value;}
+};
+struct SQLValues : MemtN<SQLValue, 64> // SQL Row values, use this for creating new rows in a table
 {
    SQLValues& New(C Str &name,   Int       value);
    SQLValues& New(C Str &name,   UInt      value);
@@ -70,18 +96,21 @@ struct SQLValues // SQL Row values, use this for creating new rows in a table
    SQLValues& New(C Str &name,   Dbl       value);
    SQLValues& New(C Str &name, C Str      &value);
    SQLValues& New(C Str &name, C UID      &value);
+   SQLValues& New(C Str &name, C Date     &value);
    SQLValues& New(C Str &name, C DateTime &value);
-   SQLValues& New(C Str &name,  CPtr       value, Int size); // add new value from binary memory
-   SQLValues& New(C Str &name,   File     &file           ); // add new value from binary data of the file from its current position to the end of the file
+   SQLValues& New(C Str &name,  CPtr       data, Int size); // add new value from binary memory, data is copied to temporary memory during this call (slow), data doesn't need to be present after this call anymore
+   SQLValues& New(C Str &name,   File     &file          ); // add new value from binary file  , data is copied to temporary memory during this call (slow), data doesn't need to be present after this call anymore, data is copied from 'file' current position to its end
 
-private:
-   struct Value {Byte type; Str name, value;   Value() {type=0;}   Value& set(C Str &name, C Str &value) {T.name=name; T.value=value; return T;}};
-   Memc<Value> _values;
+   SQLValues& NewPtr(C Str &name, CPtr data, Int size); // add new value from binary memory, only pointer to data is set (fast), data needs to be present as long as this object is going to be used
 };
 /******************************************************************************/
 struct SQL
 {
    // connect
+#if EE_PRIVATE
+   Bool connectODBC(C Str &params, Str *messages, Int *error, Int sql_type);
+   Bool connectODBC(C Str &server_name, C Str &database, C Str &user, C Str &password, Str *messages, Int *error, Int port, C Str &driver_name, Int sql_type);
+#endif
    Bool connectMSSQL (C Str &server_name, C Str &database, C Str &user=S, C Str &password=S, Str *messages=null, Int *error=null                                                                                   ); // connect to Microsoft SQL 'server_name' and 'database', 'messages'=optional pointer to custom string which will receive any messages, 'error'=optional pointer to error code, false on fail
    Bool connectMySQL (C Str &server_name, C Str &database, C Str &user=S, C Str &password=S, Str *messages=null, Int *error=null, C Str &mysql_driver_name="MySQL ODBC 8.0 Unicode Driver"                         ); // connect to         MySQL 'server_name' and 'database', 'messages'=optional pointer to custom string which will receive any messages, 'error'=optional pointer to error code, false on fail, 'mysql_driver_name'=can be obtained by running "ODBC Data Sources" application on Windows (use 32/64-bit versions depending on your application) in the "Drivers" tab
    Bool connectPgSQL (C Str &server_name, C Str &database, C Str &user=S, C Str &password=S, Str *messages=null, Int *error=null, C Str &pgsql_driver_name=(X64 ? "PostgreSQL Unicode(x64)" : "PostgreSQL Unicode")); // connect to    PostgreSQL 'server_name' and 'database', 'messages'=optional pointer to custom string which will receive any messages, 'error'=optional pointer to error code, false on fail
@@ -104,14 +133,20 @@ struct SQL
       Bool appendTable    (C Str      &table_name , C CMemPtr<SQLColumn> &columns, Str *messages=null, Int *error=null); // append a 'table_name' table           in the database, false on fail, this method works by adding new 'columns' to an existing table
       Bool    delTableCols(C Str      &table_name , C CMemPtr<Str      > &columns, Str *messages=null, Int *error=null); // delete   'table_name' table 'columns' in the database, false on fail
       Bool existsTable    (C Str      &table_name                                , Str *messages=null, Int *error=null); // check if 'table_name' table exists    in the database, false on fail
+   #if EE_PRIVATE
+      Bool createTableIndexes(C Str &table_name, C CMemPtr<SQLColumn> &columns, Str *messages, Str &cmd);
+   #endif
 
       // rows
-      Bool delAllRows(C Str &table_name,                                                       Str *messages=null, Int *error=null); // delete all      rows in 'table_name' table                                                    , false on fail
-      Bool    delRows(C Str &table_name, C Str &condition,                                     Str *messages=null, Int *error=null); // delete existing rows in 'table_name' table which meet the 'condition'                         , false on fail, 'condition' is a custom string specifying the condition, for example: "id=0" will delete all rows which have 'id' column equal to 0
-      Bool    newRow (C Str &table_name,                                  C SQLValues &values, Str *messages=null, Int *error=null); // create a new    row  in 'table_name' table                             with given row 'values', false on fail
-      Bool modifyRows(C Str &table_name, C Str &condition               , C SQLValues &values, Str *messages=null, Int *error=null); // modify existing rows in 'table_name' table which meet the 'condition'  by setting its 'values', false on fail, 'condition' is a custom string specifying the condition, for example: "id=0" will modify all rows which have 'id' column equal to 0
-      Bool    setRow (C Str &table_name, C Str &id_name, C Str &id_value, C SQLValues &values, Str *messages=null, Int *error=null); // set             row  in 'table_name' table which matches ID parameters with given row 'values', false on fail, 'id_name'=column name used for row ID comparison, 'id_value'=value of the ID, if row with specified ID exists then it's modified with 'values', if it doesn't exist then it's created with 'values'
-      Bool    setRow (C Str &table_name, C Str &id_name, C UID &id_value, C SQLValues &values, Str *messages=null, Int *error=null); // set             row  in 'table_name' table which matches ID parameters with given row 'values', false on fail, 'id_name'=column name used for row ID comparison, 'id_value'=value of the ID, if row with specified ID exists then it's modified with 'values', if it doesn't exist then it's created with 'values'
+      Bool delAllRows(C Str &table_name,                                                                    Str *messages=null, Int *error=null); // delete all      rows in 'table_name' table                                                    , false on fail
+      Bool    delRows(C Str &table_name, C Str &condition,                                                  Str *messages=null, Int *error=null); // delete existing rows in 'table_name' table which meet the 'condition'                         , false on fail, 'condition' is a custom string specifying the condition, for example: "id=0" will delete all rows which have 'id' column equal to 0
+      Bool    newRow (C Str &table_name,                                  C CMemPtrN<SQLValue, 64> &values, Str *messages=null, Int *error=null); // create a new    row  in 'table_name' table                             with given row 'values', false on fail
+      Bool modifyRows(C Str &table_name, C Str &condition               , C CMemPtrN<SQLValue, 64> &values, Str *messages=null, Int *error=null); // modify existing rows in 'table_name' table which meet the 'condition'  by setting its 'values', false on fail, 'condition' is a custom string specifying the condition, for example: "id=0" will modify all rows which have 'id' column equal to 0
+      Bool    setRow (C Str &table_name, C Str &id_name, C Str &id_value, C CMemPtrN<SQLValue, 64> &values, Str *messages=null, Int *error=null); // set             row  in 'table_name' table which matches ID parameters with given row 'values', false on fail, 'id_name'=column name used for row ID comparison, 'id_value'=value of the ID, if row with specified ID exists then it's modified with 'values', if it doesn't exist then it's created with 'values'
+      Bool    setRow (C Str &table_name, C Str &id_name, C UID &id_value, C CMemPtrN<SQLValue, 64> &values, Str *messages=null, Int *error=null); // set             row  in 'table_name' table which matches ID parameters with given row 'values', false on fail, 'id_name'=column name used for row ID comparison, 'id_value'=value of the ID, if row with specified ID exists then it's modified with 'values', if it doesn't exist then it's created with 'values'
+   #if EE_PRIVATE
+      Bool   _setRow (C Str &table_name, C Str &id_name, C Str &safe_id_value, C CMemPtrN<SQLValue, 64> &values, Str *messages, Int *error);
+   #endif
 
       Bool getAllRows    (C Str &table_name,                                            Str *messages=null, Int *error=null); // get all rows of a 'table_name' table                           , if the method succeeds you can access the rows using 'getNextRow' method, returned rows will have information about all their     column data, false on fail
       Bool getRows       (C Str &table_name, C Str &condition,                          Str *messages=null, Int *error=null); // get     rows of a 'table_name' table which meet the 'condition', if the method succeeds you can access the rows using 'getNextRow' method, returned rows will have information about all their     column data, false on fail, 'condition' is a custom string specifying the condition, for example: "id=0" will return all rows which have 'id' column equal to 0
@@ -124,11 +159,15 @@ struct SQL
       Int getUniqueValuesNum(C Str &table_name, C Str &column_name, Str *messages=null, Int *error=null); // get number of unique values in 'column_name' column of 'table_name' table, -1 on fail
 
       // custom
-      Bool command(C Str &command, Str *messages=null, Int *error=null); // 'command'=custom SQL command to be executed, 'messages'=optional pointer to custom string which will receive any messages, 'error'=optional pointer to error code, false on fail
+      Bool command(C Str &command, Str *messages=null, Int *error=null, C CMemPtrN<SQLValue, 64> &values=null); // 'command'=custom SQL command to be executed, 'messages'=optional pointer to custom string which will receive any messages, 'error'=optional pointer to error code, false on fail
 
       // custom with parameters passed by method calls !! these methods are supported only on MSSQL, MySQL and PostgreSQL !!
       Bool commandPrepare(C Str &command, Str *messages=null, Int *error=null); // 'command'=custom SQL command to be executed with parameters replaced with "?", 'messages'=optional pointer to custom string which will receive any messages, 'error'=optional pointer to error code, unlike the 'command' method above, this method only prepares execution of specified command, after calling this method you should call 'commandParam' for each parameter, and 'commandExecute' at the end. This method returns false on fail. For example: if(commandPrepare("insert into players(player_name, race, gender) values (?, ?, ?)"))commandParam(0, "John").commandParam(1, "Elf").commandParam(2, "Male").commandExecute(); Another example: if(commandPrepare("update players set player_name=? where player_id=?"))commandParam(0, "John").commandParam(1, "123").commandExecute();
 
+   #if EE_PRIVATE
+      Bool commandParamRaw (Int i, CPtr value, Int size, Int c_type, Int sql_type);
+      Bool commandParamRaw2(Int i, CPtr value, Int size, Int c_type, Int sql_type);
+   #endif
       SQL& commandParam(Int i,   Bool           value          ); // set i-th parameter as 'value'
       SQL& commandParam(Int i,   Int            value          ); // set i-th parameter as 'value'
       SQL& commandParam(Int i,   UInt           value          ); // set i-th parameter as 'value'
@@ -141,6 +180,7 @@ struct SQL
       SQL& commandParam(Int i, C Str           &value          ); // set i-th parameter as 'value'
       SQL& commandParam(Int i, C Str8          &value          ); // set i-th parameter as 'value'
       SQL& commandParam(Int i, C UID           &value          ); // set i-th parameter as 'value'
+      SQL& commandParam(Int i, C Date          &value          ); // set i-th parameter as 'value'
       SQL& commandParam(Int i, C DateTime      &value          ); // set i-th parameter as 'value'
       SQL& commandParam(Int i, C DateTimeMs    &value          ); // set i-th parameter as 'value'
       SQL& commandParam(Int i, C CMemPtr<Byte> &value          ); // set i-th parameter as 'value'
@@ -178,6 +218,7 @@ struct SQL
    Bool getCol(Int i, Str         &value                 ); // get i-th column data as 'value', false on fail
    Bool getCol(Int i, Str8        &value                 ); // get i-th column data as 'value', false on fail
    Bool getCol(Int i, UID         &value                 ); // get i-th column data as 'value', false on fail
+   Bool getCol(Int i, Date        &value                 ); // get i-th column data as 'value', false on fail
    Bool getCol(Int i, DateTime    &value                 ); // get i-th column data as 'value', false on fail
    Bool getCol(Int i, DateTimeMs  &value                 ); // get i-th column data as 'value', false on fail
    Bool getCol(Int i, MemPtr<Byte> value                 ); // get i-th column data as 'value', false on fail
@@ -208,12 +249,29 @@ private:
       Str           name;
       SQL_DATA_TYPE type;
    };
+#if EE_PRIVATE
+   enum SQL_TYPE : Byte
+   {
+      NONE  ,
+      MSSQL ,
+      MYSQL ,
+      PGSQL ,
+      SQLITE,
+   };
+#endif
    Byte               _type=0;
    Int                _rows_pos=0;
    Ptr                _env=null, _conn=null, _statement=null, _sqlite=null;
    Memc<Row>          _rows;
    Memc<Col>          _cols;
    Memc< Memc<Byte> > _params;
+#if EE_PRIVATE
+   Str  valueBin (C Str &value)C;
+   Str  valueID  (C Str &value)C;
+   Str  value    (C SQLValue &value)C;
+   Bool colDesc  (C SQLColumn &col, Str &desc, Str *messages, Bool append=false);
+   void getStatus(Str *messages, Int *error, Bool statement=true);
+#endif
    NO_COPY_CONSTRUCTOR(SQL);
 };
 /******************************************************************************/

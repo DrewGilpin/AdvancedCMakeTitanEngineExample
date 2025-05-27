@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 namespace Edit{
 /******************************************************************************/
@@ -113,6 +110,12 @@ const_mem_addr struct Viewport4
    Int         getViewType(View *view)C;                                                          // get     VIEW_TYPE from view object, -1   if none, this method tests if 'view' belongs to this object     , and returns VIEW_TYPE associated with that view
    Int         getViewType(GuiObj *go)C;                                                          // get     VIEW_TYPE from gui  object, -1   if none, this method tests if   'go' belongs to any of the views, and returns VIEW_TYPE associated with that object
    View       *getView    (GuiObj *go);                                                           // get     view      from gui  object, null if none, this method tests if   'go' belongs to any of the views, and returns view      associated with that object
+#if EE_PRIVATE
+   View       *getViewCtrl(GuiObj *go);                                                           // get     view      from gui  object, null if none, this method tests if   'go' belongs to any of the views, and returns view      associated with that object
+   Flt         moveScale  (View &view, Bool time=true)C; // get keyboard movement scale for 'view'
+   void        setRect    ();
+   void        setCubeRect();
+#endif
 
    // operations
    Viewport4& show             (                ) {return visible(true );}
@@ -135,7 +138,9 @@ const_mem_addr struct Viewport4
    // update
    void update();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Cube : GuiCustom
    {
       Int        part;
@@ -144,6 +149,12 @@ private:
       View      *view;
 
       Cube() {part=-1; v4=null; view=null;}
+
+#if EE_PRIVATE
+      Cube&    create(Viewport4 &v4, View &view);
+      void    setView(C GuiPC &gpc, DisplayClass::ViewportSettings &view,   Camera &camera, MatrixM &matrix);
+      void  resetView(            C DisplayClass::ViewportSettings &view, C Camera &camera);
+#endif
 
       virtual GuiObj* test  (C GuiPC &gpc, C Vec2 &pos, GuiObj* &mouse_wheel)override;
       virtual void    update(C GuiPC &gpc)override;

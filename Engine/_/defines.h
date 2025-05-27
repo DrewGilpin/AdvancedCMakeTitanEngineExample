@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 // DEFINITIONS
 /******************************************************************************/
@@ -17,18 +14,31 @@
 #define T1(a      )   template<typename a                        > // 1 type  template
 #define T2(a, b   )   template<typename a, typename b            > // 2 types template
 #define T3(a, b, c)   template<typename a, typename b, typename c> // 3 types template
+#if EE_PRIVATE
+#define T4( a, b, c, d                     )   template<typename a, typename b, typename c, typename d                                                                                    > //  4 types template
+#define T5( a, b, c, d, e                  )   template<typename a, typename b, typename c, typename d, typename e                                                                        > //  5 types template
+#define T6( a, b, c, d, e, f               )   template<typename a, typename b, typename c, typename d, typename e, typename f                                                            > //  6 types template
+#define T7( a, b, c, d, e, f, g            )   template<typename a, typename b, typename c, typename d, typename e, typename f, typename g                                                > //  7 types template
+#define T8( a, b, c, d, e, f, g, h         )   template<typename a, typename b, typename c, typename d, typename e, typename f, typename g, typename h                                    > //  8 types template
+#define T9( a, b, c, d, e, f, g, h, i      )   template<typename a, typename b, typename c, typename d, typename e, typename f, typename g, typename h, typename i                        > //  9 types template
+#define T10(a, b, c, d, e, f, g, h, i, j   )   template<typename a, typename b, typename c, typename d, typename e, typename f, typename g, typename h, typename i, typename j            > // 10 types template
+#define T11(a, b, c, d, e, f, g, h, i, j, k)   template<typename a, typename b, typename c, typename d, typename e, typename f, typename g, typename h, typename i, typename j, typename k> // 11 types template
+#endif
 /******************************************************************************/
 // HELPER MACROS
 /******************************************************************************/
-#define SIZE( x)                    UIntPtr(sizeof(x))               // get raw size of C++ element in bytes
-#define SIZEL(x)                       Long(sizeof(x))               // get raw size of C++ element in bytes as 'Long' type
+#define SIZE(  x)                   UIntPtr(sizeof(x))               // get raw size of C++ element in bytes
+#define SIZEI( x)                       Int(sizeof(x))               // get raw size of C++ element in bytes as   'Int' type
+#define SIZEU( x)                      UInt(sizeof(x))               // get raw size of C++ element in bytes as  'UInt' type
+#define SIZEL( x)                      Long(sizeof(x))               // get raw size of C++ element in bytes as  'Long' type
+#define SIZEUL(x)                     ULong(sizeof(x))               // get raw size of C++ element in bytes as 'ULong' type
 #define MEMBER(     Class, member)        (((Class*)null)-> member)  // null based Class::member, this macro is used to obtain member information by many other macros/functions
 #define OFFSET(     Class, member)  UIntPtr(&MEMBER(Class,  member)) // get offset   of member in class
 #define MEMBER_SIZE(Class, member)     SIZE( MEMBER(Class,  member)) // get size     of member in class
 #define MEMBER_ELMS(Class, member)     ELMS( MEMBER(Class,  member)) // get elements of member in class
 #define  CAST(      Class, object)     dynamic_cast<Class*>(object)  // perform a dynamic cast of 'object' to 'Class' class
 #define SCAST(      Class, object)      static_cast<Class&>(object)  // perform a  static cast of 'object' to 'Class' class
-#define ELMS(       Array        )      (SIZE(Array)/SIZE(Array[0])) // get number of elements in array (this is the compile-time version, use 'Elms' instead of 'ELMS' whenever possible)
+#define ELMS(       Array        )  UInt(SIZE(Array)/SIZE(Array[0])) // get number of elements in array (this is the compile-time version, use 'Elms' instead of 'ELMS' whenever possible)
 #define ENUM_TYPE(  Enum         )     std::underlying_type_t<Enum>  // get the actual type of an enum
 
 T1(TYPE) TYPE& ConstCast(C TYPE &x) {return const_cast<TYPE&>(x);} // remove the const modifier
@@ -54,9 +64,14 @@ T1(TYPE) TYPE&& RValue(TYPE & x) {return (TYPE&&)x;}
 #define FREPAO(    a)  for(Int i=     0 ;   i< Elms(a); i++) (a)[i] // forward repeat all                 and operate:         0 .. Elms(a)-1
 #define FREPAOD(i, a)  for(Int i=     0 ;   i< Elms(a); i++) (a)[i] // forward repeat all with definition and operate:         0 .. Elms(a)-1
 
-#define   REPS( i, n)  for((i)=    (n); --(i)>= 0 ;      ) //         repeat     with i specified:      n -1 .. 0
-#define  FREPS( i, n)  for((i)=     0 ;   (i)< (n); (i)++) // forward repeat     with i specified:         0 .. n-1
-#define   REPAS(i, a)  for((i)=Elms(a); --(i)>= 0 ;      ) //         repeat all with i specified: Elms(a)-1 .. 0
+#define   REPS( i, n)  for((i)=    (n); --(i)>=     0 ;      ) //         repeat     with i specified:      n -1 .. 0
+#define  FREPS( i, n)  for((i)=     0 ;   (i)<     (n); (i)++) // forward repeat     with i specified:         0 .. n-1
+#define   REPAS(i, a)  for((i)=Elms(a); --(i)>=     0 ;      ) //         repeat all with i specified: Elms(a)-1 .. 0
+#define  FREPAS(i, a)  for((i)=     0 ;   (i)< Elms(a); (i)++) // forward repeat all with i specified:         0 .. Elms(a)-1
+
+#if EE_PRIVATE
+   #define REPP(n)  for(IntPtr i=(n); --i>=0; ) // repeat: n-1 .. 0
+#endif
 /******************************************************************************/
 // ENUM MACROS
 /******************************************************************************/
@@ -65,7 +80,12 @@ T1(TYPE) TYPE&& RValue(TYPE & x) {return (TYPE&&)x;}
 
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator- (TYPE  a, TYPE  b) {return Int            (a)- Int            (b);}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator+ (Bool  a, TYPE  b) {return                 a + Int            (b);}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator- (Bool  a, TYPE  b) {return                 a - Int            (b);}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator* (Bool  a, TYPE  b) {return                 a * Int            (b);}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator+ (Byte  a, TYPE  b) {return                 a + Int            (b);}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator- (Byte  a, TYPE  b) {return                 a - Int            (b);}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator* (Byte  a, TYPE  b) {return                 a * Int            (b);}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator/ (Byte  a, TYPE  b) {return                 a / Int            (b);}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator+ (Int   a, TYPE  b) {return                 a + Int            (b);}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator- (Int   a, TYPE  b) {return                 a - Int            (b);}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator* (Int   a, TYPE  b) {return                 a * Int            (b);}
@@ -89,6 +109,10 @@ T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Dbl  ) operator/ (Dbl   a, TYPE  b) {ret
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator+ (TYPE  a, Bool  b) {return Int            (a)+                 b ;}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator- (TYPE  a, Bool  b) {return Int            (a)-                 b ;}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator* (TYPE  a, Bool  b) {return Int            (a)*                 b ;}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator+ (TYPE  a, Byte  b) {return Int            (a)+                 b ;}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator- (TYPE  a, Byte  b) {return Int            (a)-                 b ;}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator* (TYPE  a, Byte  b) {return Int            (a)*                 b ;}
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator/ (TYPE  a, Byte  b) {return Int            (a)/                 b ;}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator+ (TYPE  a, Int   b) {return Int            (a)+                 b ;}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator- (TYPE  a, Int   b) {return Int            (a)-                 b ;}
 T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Int  ) operator* (TYPE  a, Int   b) {return Int            (a)*                 b ;}
@@ -121,18 +145,21 @@ T2(ENUM0, ENUM1) constexpr typename std::enable_if< std::is_enum<ENUM0>::value &
 #define ASSERT_CONCAT2(a, b) a##b                 // don't use this
 #define ASSERT_CONCAT( a, b) ASSERT_CONCAT2(a, b) // don't use this
 
-#define             ASSERT(value             )   typedef Int ASSERT_CONCAT(_AssertDummyName, __LINE__)[(value) ? 1 : -1]    // compile time assertion, alternative to static_assert(value, "assert failed"); which is more flexible on Clang/GCC
-#define     DYNAMIC_ASSERT(value, error      )   {if(!(value))Exit(S+(error)+"\nFile: \""+__FILE__+"\"\nLine: "+__LINE__);} // dynamic      assertion
+#define               EXIT(       error      )   Exit(S+(error)+"\nFile: \""+__FILE__+"\"\nLine: "+__LINE__)             // Exit application with debug info
+#define             ASSERT(value             )   typedef Int ASSERT_CONCAT(_AssertDummyName, __LINE__)[(value) ? 1 : -1] // compile time assertion, alternative to static_assert(value, "assert failed"); which is more flexible on Clang/GCC
+#define     DYNAMIC_ASSERT(value, error      )   {if(!(value))EXIT(error);}                                              // dynamic      assertion
 #if DEBUG
-   #define    DEBUG_ASSERT(value, error      )   DYNAMIC_ASSERT(value, error)                                               // debug        assertion   available only in debug   mode
+   #define    DEBUG_ASSERT(value, error      )   DYNAMIC_ASSERT(value, error)                                            // debug        assertion   available only in debug   mode
+   #define    DEBUG_EXIT(         error      )   EXIT          (       error)                                            // Exit in debug only
 #else
-   #define    DEBUG_ASSERT(value, error      )   {}                                                                         // debug        assertion unavailable      in release mode
+   #define    DEBUG_ASSERT(value, error      )   {}                                                                      // debug        assertion unavailable      in release mode
+   #define    DEBUG_EXIT(         error      )   {}                                                                      // Exit in debug only
 #endif
-#define DEBUG_RANGE_ASSERT(index, elms       )     DEBUG_ASSERT(InRange(index, elms), "Element out of range")               // out of range assertion, asserts that 'index' is in range "0..elms-1"
-#define       RANGE_ASSERT(index, elms       )   DYNAMIC_ASSERT(InRange(index, elms), "Element out of range")               // out of range assertion, asserts that 'index' is in range "0..elms-1"
-#define RANGE_ASSERT_ERROR(index, elms, error)   DYNAMIC_ASSERT(InRange(index, elms), error                 )               // out of range assertion, asserts that 'index' is in range "0..elms-1"
-#define     ALIGN_ASSERT(  Class, member     )   ASSERT(!(OFFSET(Class, member)&(SIZE(Ptr)-1)))                             // assert that class member has alignment native to the target platform
-#define     ALIGN_ASSERT_X(Class, member, x  )   ASSERT(!(OFFSET(Class, member)&(x        -1)))                             // assert that class member has alignment native to the target platform
+#define DEBUG_RANGE_ASSERT(index, elms       )     DEBUG_ASSERT(InRange(index, elms), "Element out of range")            // out of range assertion, asserts that 'index' is in range "0..elms-1"
+#define       RANGE_ASSERT(index, elms       )   DYNAMIC_ASSERT(InRange(index, elms), "Element out of range")            // out of range assertion, asserts that 'index' is in range "0..elms-1"
+#define RANGE_ASSERT_ERROR(index, elms, error)   DYNAMIC_ASSERT(InRange(index, elms), error                 )            // out of range assertion, asserts that 'index' is in range "0..elms-1"
+#define     ALIGN_ASSERT(  Class, member     )   ASSERT(!(OFFSET(Class, member)&(SIZE(Ptr)-1)))                          // assert that class member has alignment native to the target platform
+#define     ALIGN_ASSERT_X(Class, member, x  )   ASSERT(!(OFFSET(Class, member)&(x        -1)))                          // assert that class member has alignment native to the target platform
 
 ASSERT(SIZE(Bool )==1); // size of Bool  must be 1 byte
 ASSERT(SIZE(Char8)==1); // size of Char8 must be 1 byte
@@ -169,12 +196,15 @@ ASSERT(SIZE(Char8)==1); // size of Char8 must be 1 byte
 // CONFIGURATION
 /******************************************************************************/
 // Rendering
-#define TILE_BASED_GPU                       MOBILE // assume all mobile GPU's are tile-based
-#define SUPPORT_EARLY_Z                      (!TILE_BASED_GPU) // disable on tile-based GPU's because it's discouraged by Mali, PowerVR, ..
+#define TILE_BASED_GPU                       (MOBILE && !SWITCH) // assume all mobile GPU's are tile-based
+#define SUPPORT_EARLY_Z                      0//(!TILE_BASED_GPU) // disable on tile-based GPU's because it's discouraged by Mali, PowerVR, ..
 #define SUPPORT_EMISSIVE                     1
 #define COUNT_MATERIAL_USAGE                 0 // never use "DEBUG" here, because it affects Material class size/members, which needs to remain constant
 #define SUPPORT_MATERIAL_CHANGE_IN_RENDERING 0
 #define SUPPORT_MLAA                         0
+#define SUPPORT_STENCIL                      0 // 0: depth=32-bit stencil=0-bit. 1: depth=24-bit stencil=8-bit
+#define SUPPORT_MESH_STENCIL                 (0 && SUPPORT_STENCIL) // allows setting custom stencil values per each mesh instance
+#define SUPPORT_RT_FORWARD                   0
 
 // Compression
 #define SUPPORT_RLE    (!SWITCH && !WEB)
@@ -192,15 +222,17 @@ ASSERT(SIZE(Char8)==1); // size of Char8 must be 1 byte
 #define SUPPORT_MP3        1
 #define SUPPORT_SAMPLERATE (WINDOWS)
 
-#define OPUS_DEC_NINTENDO 1 // if use Opus Decoder from Nintendo Switch SDK ( enable because performance is the same, but when using SDK we could potentially reduce app size, to avoid extra linking of these functions, since Nintendo Switch version is available anyway through DLL's)
+#define OPUS_DEC_NINTENDO 0 // if use Opus Decoder from Nintendo Switch SDK (disable because it fails on some sounds)
 #define OPUS_ENC_NINTENDO 0 // if use Opus Encoder from Nintendo Switch SDK (disable because default is 10% faster)
 
 // Image
 #define SUPPORT_JPG  1
+#define SUPPORT_JXL  (WINDOWS)
 #define SUPPORT_PNG  1
 #define SUPPORT_PSD  (!SWITCH && !WEB)
 #define SUPPORT_TIF  (!SWITCH && !WEB)
 #define SUPPORT_WEBP 1
+#define SUPPORT_AVIF (!SWITCH && !WEB)
 #define SUPPORT_HEIF 0 // (WINDOWS_OLD && X64 && !ARM)
 
 // Video
@@ -210,4 +242,26 @@ ASSERT(SIZE(Char8)==1); // size of Char8 must be 1 byte
 // Database
 #define SUPPORT_SQLITE 1 // isn't going to be linked unless used
 #define SUPPORT_ODBC   (DESKTOP && !WINDOWS_NEW)
+/******************************************************************************/
+#if EE_PRIVATE
+   #define MAX_LONG_PATH 1024
+   #define MAX_UTF_PATH  2048
+
+   #define DEPTH_FLUSH (GL && TILE_BASED_GPU && !WEB) // some GPUs store RTs (including depth buffer) on fast on-chip memory and to be able to read from them, we need to flush them to the texture memory first. No need to do on WEB because there we can never read from depth while writing to it.
+
+   #if LINUX
+      #define FIND_ATOM(x) x=XInternAtom(XDisplay, #x, true ) // null on fail
+      #define  GET_ATOM(x) x=XInternAtom(XDisplay, #x, false) // New  on fail
+   #endif
+
+   T1(TYPE ) TYPE& DTOR(TYPE &elm             ) {     elm.~TYPE(     ); return elm;} //  destructor
+   T1(TYPE ) TYPE& CTOR(TYPE &elm             ) {new(&elm) TYPE       ; return elm;} // constructor
+   T2(TA,TB) TA  & CTOR(TA   &elm,   TB &param) {new(&elm) TA  (param); return elm;} // constructor with a parameter
+   T2(TA,TB) TA  & CTOR(TA   &elm, C TB &param) {new(&elm) TA  (param); return elm;} // constructor with a parameter
+
+   T1(TYPE) Bool OK     (TYPE   x) {return x>=0;}
+   T1(TYPE) void RELEASE(TYPE* &x) {if(x){x->Release(); x=null;}}
+
+   #define IS_POW_2(x) (!( (x) & ((x)-1) ))
+#endif
 /******************************************************************************/

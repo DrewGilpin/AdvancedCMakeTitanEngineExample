@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'AnimBone'  to store animation keys for a particular bone.
@@ -59,7 +56,7 @@ enum ROOT_FLAG // Root Flags
 struct Animation // set of animation keyframes used for animating 'AnimatedSkeleton'
 {
    Mems<AnimBone>  bones ; // bone animations
-   Mems<AnimEvent> events; // animation events
+   Mems<AnimEvent> events; // animation events, sorted by time
    AnimKeys        keys  ; // animation keys of the whole body
 
    // get / set
@@ -94,9 +91,11 @@ struct Animation // set of animation keyframes used for animating 'AnimatedSkele
  C    Matrix& rootEnd      ()C {return _root_end      ;} // get root matrix at the end   of animation
  C RevMatrix& rootTransform()C {return _root_transform;} // get      matrix that transforms 'rootStart' into 'rootEnd'
 
-   Flt rootSpeed ()C {return _root_transform.pos.length ()/    _length ;} // get root   movement speed         between first and last keyframe
-   Flt rootSpeed2()C {return _root_transform.pos.length2()/Sqr(_length);} // get root   movement speed squared between first and last keyframe
-   Flt rootSpeedZ()C {return _root_transform.pos.z        /    _length ;} // get root Z movement speed         between first and last keyframe
+   Flt rootSpeed      ()C {return _root_transform.pos.length ()/    _length ;} // get root   movement speed         between first and last keyframe
+   Flt rootSpeed2     ()C {return _root_transform.pos.length2()/Sqr(_length);} // get root   movement speed squared between first and last keyframe
+   Flt rootSpeedZ     ()C {return _root_transform.pos.z        /    _length ;} // get root Z movement speed         between first and last keyframe
+   Flt rootSpeedAngle ()C {return _root_transform.angle (true) /    _length ;} // get root   rotation speed         between first and last keyframe
+   Flt rootSpeedAngleY()C {return _root_transform.angleY(true) /    _length ;} // get root Y rotation speed         between first and last keyframe
 
    // transform
    Animation& transform(C Matrix &matrix, C Skeleton &source, Bool skel_const); // transform animation by 'matrix', basing on 'source' skeleton, 'skel_const'=if skeleton remains constant (was not and will not going to be transformed by 'matrix'), set to true if you haven't and won't transform the skeleton by 'matrix' or set to false if you have or will transform the skeleton by 'matrix'
@@ -127,6 +126,27 @@ struct Animation // set of animation keyframes used for animating 'AnimatedSkele
    Animation& removeUnused(); // remove unused bone animations
 
    Animation& sortEvents(); // sort events in time order, this should be called after manually modifying the events and changing their time values
+#if EE_PRIVATE
+   void setRootMatrix2();
+   void getRootMatrixExactTime(Matrix &matrix, Flt time)C; // get root 'matrix' at specified 'time'
+
+   Bool timeRange(Flt &min, Flt &max)C; // get min/max time value out of all keyframes/events, false on fail (if there are no keyframes/events)
+
+   Animation& sortFrames(); // sort frames in time order, this should be called after manually modifying keyframes and changing their time values
+
+   void includeTimesForBoneAndItsParents(C Skeleton &skel, Int skel_bone, MemPtr<Flt, 16384> orn_times, MemPtr<Flt, 16384> pos_times, MemPtr<Flt, 16384> scale_times)C;
+
+   Animation& copyParams(C Animation &src);
+
+   // transform
+   Animation& scale      (Flt scale         ); // scale position offset key values by 'scale'
+   Animation& mirrorX    (                  ); // mirror keyframes in x axis
+   Animation& rightToLeft(C Skeleton &source); // convert from right hand to left hand coordinate system, basing on 'source' skeleton and 'mesh' source mesh
+
+   // convert
+   Animation& convertRotToOrn(C Skeleton &skeleton); // convert relative  rotations to target orientations according to given 'skeleton'
+   Animation& convertOrnToRot(C Skeleton &skeleton); // convert target orientations to relative  rotations according to given 'skeleton'
+#endif
 
    void freezeBone(C Skeleton &skel, Int skel_bone); // adjust the animation by moving root bones, so that selected bone will appear without movement
 
@@ -154,6 +174,9 @@ private:
          Flt _length;
       Matrix _root_start, _root_end, _root_start_inv;
    RevMatrix _root_transform;
+#if EE_PRIVATE
+   void zero();
+#endif
 };
 /******************************************************************************/
 extern Cache<Animation> Animations; // Animation Cache
@@ -179,6 +202,16 @@ struct SkelAnim // helper class for 'Skeleton' <-> 'Animation' relation, 'SkelAn
    Bool eventBetween (CChar8 *from, CChar8 *to, Flt start_time, Flt dt)C {return _animation ? _animation->eventBetween  (from, to   , start_time, dt) : false;} // if           between events 'from' and 'to', 'start_time'=animation time at the start of the frame, 'dt'=animation time delta (should be set to "Time.d() * animation_speed")
    Flt  eventProgress(CChar8 *from, CChar8 *to, Flt       time        )C {return _animation ? _animation->eventProgress (from, to   ,       time    ) :     0;} // get progress between events 'from' and 'to',       'time'=animation time, 0 on fail
 
+   Int  sbonToAbon(Int  sbon)C;                      // convert 'SkelBone' to 'AnimBone' index, -1        on fail
+#if EE_PRIVATE
+   Byte abonToSbon(Byte abon)C {return _bone[abon];} // convert 'AnimBone' to 'SkelBone' index, BONE_NULL on fail
+
+   Bool load(C Str &name          ) {return false;} // this is unused, 'load' with 'user' is used instead
+   Bool load(C Str &name, Ptr user);
+
+   void zero();
+#endif
+
             SkelAnim&   del(); // delete manually
            ~SkelAnim() {del();}
             SkelAnim();
@@ -187,7 +220,11 @@ struct SkelAnim // helper class for 'Skeleton' <-> 'Animation' relation, 'SkelAn
       void operator=(C SkelAnim &src);
 
 private:
-   Byte      *_bone;
+   Byte      *_bone; // #MeshVtxBoneHW
  C Animation *_animation;
 };
+/******************************************************************************/
+#if EE_PRIVATE
+void ShutAnimation();
+#endif
 /******************************************************************************/

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Memt' for temporary memory based dynamic array container.
@@ -30,6 +27,8 @@
 /******************************************************************************/
 template<const_mem_addr typename TYPE, Int size> struct Memt // Temporary Memory Based Container, 'TYPE'=type of elements to be stored in this container, 'size'=memory size (in bytes) that can be used for storing the elements without having to allocate any dynamic memory
 {
+   static constexpr Bool Continuous=true; // Memt memory is continuous
+
    // manage
    Memt& clear(); // remove all elements and free helper memory
    Memt& del  (); // remove all elements and free helper memory
@@ -40,6 +39,11 @@ template<const_mem_addr typename TYPE, Int size> struct Memt // Temporary Memory
    UIntPtr memUsage()C; // memory usage
    UIntPtr elmsMem ()C;
    UInt    maxElms ()C {return _max_elms;}
+
+#if EE_PRIVATE
+   TYPE* dataNull()  {return elms() ? data() : null;} // get pointer to the start of the elements and null if there are no elements
+ C TYPE* dataNull()C {return elms() ? data() : null;} // get pointer to the start of the elements and null if there are no elements
+#endif
 
    TYPE* data      (     ) ; // get    pointer to the start of the elements
  C TYPE* data      (     )C; // get    pointer to the start of the elements
@@ -116,6 +120,12 @@ template<const_mem_addr typename TYPE, Int size> struct Memt // Temporary Memory
    Bool operator==(C Memt<TYPE, size> &x)C;
    Bool operator!=(C Memt<TYPE, size> &x)C;
 
+#if EE_PRIVATE
+   void  copyTo  (  TYPE *dest)C {CopyN(dest  , data(), elms());          } // copy raw memory of all elements to   'dest'
+   Memt& copyFrom(C TYPE *src )  {CopyN(data(), src   , elms()); return T;} // copy raw memory of all elements from 'src '
+   void  minNumDiscard(Int num); // set at least 'num' elements, if reallocating then discard previous elements
+#endif
+
    // io
    Bool save(File &f);   Bool save(File &f)C; // save elements with their own 'save' method, this method first saves number of current elements, and then for each element calls its 'save' method, false on fail
    Bool load(File &f);                        // load elements with their own 'load' method, this method first loads number of saved   elements, and then for each element calls its 'load' method, false on fail
@@ -124,6 +134,13 @@ template<const_mem_addr typename TYPE, Int size> struct Memt // Temporary Memory
    Bool loadRaw    (File &f) ; // load raw memory of elements (number of elements + elements raw memory), false on fail
    Bool saveRawData(File &f)C; // save raw memory of elements (                     elements raw memory), false on fail
    Bool loadRawData(File &f) ; // load raw memory of elements (                     elements raw memory), false on fail
+
+#if EE_PRIVATE
+   Bool loadRawDataFast(File &f); // load raw memory of elements (elements raw memory), without zeroing on fail, false on fail
+
+   Bool _saveRaw(File &f)C; // save raw memory of elements (number of elements + elements raw memory), false on fail, deprecated - do not use
+   Bool _loadRaw(File &f) ; // load raw memory of elements (number of elements + elements raw memory), false on fail, deprecated - do not use
+#endif
 
   ~Memt(           );
    Memt(           );
@@ -150,4 +167,8 @@ template<const_mem_addr typename TYPE, Int Memt_elms> struct MemtN : Memt<TYPE, 
 };
 /******************************************************************************/
 template<typename TYPE, Int size>   inline Int Elms(C Memt<TYPE, size> &memt) {return memt.elms();}
+/******************************************************************************/
+#if EE_PRIVATE
+inline UIntPtr MemtMemUsage(UIntPtr mem, UInt stack=65536) {return mem>stack ? mem : 0;}
+#endif
 /******************************************************************************/

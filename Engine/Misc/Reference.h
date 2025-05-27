@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 T1(TYPE) struct Reference // Reference, this is a pointer to an object which may be deleted but its memory is still accessible and possibly occupied by another object of similar class
 {

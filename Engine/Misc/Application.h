@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'App' to setup initial application parameters inside 'InitPre' function.
@@ -34,12 +31,16 @@ enum APP_FLAG // Application Flags
    APP_SHADER_CACHE_MAX_COMPRESS      =1<<23, // if enable maximum compression for the Shader Cache, this slows down generation of the Shader Cache, but reduces its size
    APP_JOYPAD_THREAD                  =1<<24, // if create a dedicated thread for polling joypads state, enables higher precision joypad events at the cost of extra processing
    APP_JOYPAD_DISABLE_MINI            =1<<25, // if disable support for a single Nintendo Switch Joy-Con Left or Right held horizontally [Supported Platforms: NintendoSwitch]
+   APP_MANUAL_CACHES_UPDATE           =1<<26, // 'CachesUpdate' won't be automatically called by the engine, instead you have to call it manually every once in a while
 
    APP_AUTO_FREE_OPEN_GL_ES_DATA=APP_AUTO_FREE_IMAGE_OPEN_GL_ES_DATA|APP_AUTO_FREE_MESH_OPEN_GL_ES_DATA,
 };
 /******************************************************************************/
 enum AWAKE_MODE : Byte
 {
+#if EE_PRIVATE
+   // !! THESE ENUMS MUST BE EQUAL TO "EsenthelActivity.java" !!
+#endif
    AWAKE_OFF   , // the system and screen can go to sleep
    AWAKE_SYSTEM, // prevent the system from going to sleep, however the screen can go to sleep
    AWAKE_SCREEN, // prevent the system and screen from going to sleep, as long as the App is active or has APP_WORK_IN_BACKGROUND enabled
@@ -47,6 +48,9 @@ enum AWAKE_MODE : Byte
 /******************************************************************************/
 enum SYSTEM_BAR : Byte
 {
+#if EE_PRIVATE
+   // !! THESE ENUMS MUST BE EQUAL TO "EsenthelActivity.java" !!
+#endif
    SYSTEM_BAR_HIDDEN , // completely hidden
    SYSTEM_BAR_OVERLAY, // semi-transparent drawn on top of the application
    SYSTEM_BAR_VISIBLE, // completely visible
@@ -60,66 +64,74 @@ struct Application // Application Settings
        background_wait; // amount of milliseconds the application should wait before making 'Update' calls when in background mode and with APP_WORK_IN_BACKGROUND enabled, -1=unlimited (app will wait until it's activated), 0=instant (app will keep calling 'Update' continuously), >0=wait (app will wait specified time until activated    before making 'Update' calls), default=0. It's recommended to use this instead of manually waiting with 'Time.wait', because this method allows app to resume instantly when it gets activated, unlike 'Time.wait' which waits without stopping.
    Mems<Str>  cmd_line; // command line arguments
 
-   void (*receive_data       )(CPtr data, Int size, C SysWindow &sender_window        ); // pointer to custom function called when application has received binary data sent using 'SysWindow.sendData' function, application may not access 'data' memory after the callback function returns, 'sender_window'=system window of the sender, default=null
    void (*save_state         )(                                                       ); // pointer to custom function called when application is being put into background or will be terminated, in this function you should save current state of data which you may want to restore at next application startup, this function is used only on mobile platforms where the Operating System may close the application for any reason, default=null
    void (* paused            )(                                                       ); // pointer to custom function called when application is being  paused (lost   focus), default=null
    void (*resumed            )(                                                       ); // pointer to custom function called when application is being resumed (gained focus), default=null
    void (*drop               )(Memc<Str> &names, GuiObj *focus_obj, C Vec2 &screen_pos); // pointer to custom function called when a file is Drag and Dropped on the application window, 'names'=list of file names being drag and dropped, 'focus_obj'=gui object at which elements are being dropped, 'screen_pos'=screen position at which dropping occurs, default=null
+   void (*receive_file       )(File &f                                                ); // pointer to custom function called when a file is received [Supported Platforms: Android, iOS]
+   void (*receive_data       )(CPtr data, Int size, C SysWindow &sender_window        ); // pointer to custom function called when application has received binary data sent using 'SysWindow.sendData' function, application may not access 'data' memory after the callback function returns, 'sender_window'=system window of the sender, default=null
    void (*quit               )(                                                       ); // pointer to custom function called when the application was requested to quit (for example by pressing Alt+F4 or clicking on the "X" close window button), if this member is different than null, then the application will not exit automatically, manual exiting can be called inside custom 'quit' function (for example by activating 'StateExit' State), this member is ignored when the application was created with APP_NO_CLOSE flag, default=null, this is not supported on Windows Universal Apps
    void (*exit               )(CChar *error                                           ); // pointer to custom function called when 'Exit' function is called, typically this happens when application has encountered an error and is about to be terminated, default=null
    void (*low_memory         )(                                                       ); // pointer to custom function called when the application has received low memory notification from the system, inside it you can release any unnecessary memory, default=null
    void (*notification       )(Notification &notification, Bool selected              ); // pointer to custom function called when the application notification was selected or dismissed. If the callback is specified, then this notification is not automatically removed, you should call 'notification.remove' to remove it. If no callback is specified, then 'notification.remove' is called automatically.
    void (*sleep              )(Bool sleep                                             ); // pointer to custom function called when the device is going to sleep.
+   void (*joypad_changed     )(                                                       ); // pointer to custom function called when a Joypad has been added, removed or changed order, default=null
    void (*joypad_user_changed)(UInt joypad_id                                         ); // pointer to custom function called when user associated with a Joypad has changed. This is called on Windows UWP only.
 
    // get / set
-   Application& name          (C Str &name    );                           // set application name
- C Str&         name          (               )C {return _name          ;} // get application name
- C Str&         exe           (               )C {return _exe           ;} // get executable path and name
-   Application& lang          (LANG_TYPE lang );                           // set application language, some engine messages rely on this value, changing language triggers 'GuiObj.setText' for all gui objects, default=OSLanguage()
-   LANG_TYPE    lang          (               )C {return _lang          ;} // get application language, some engine messages rely on this value, changing language triggers 'GuiObj.setText' for all gui objects, default=OSLanguage()
-   Bool         elevated      (               )C {return _elevated      ;} // get application        process elevation (true if has administrator rights)
-   UInt   parentProcessID     (               )C;                          // get application parent process ID
-   UInt         processID     (               )C {return _process_id    ;} // get application        process ID
-   UIntPtr       threadID     (               )C {return _thread_id     ;} // get application main   thread  ID
- C SysWindow&   window        (               )C {return _window        ;} // get application system window
- C RectI&       desktopArea   (               )C {return _desktop_area  ;} // get available desktop area (not covered by windows taskbar or other desktop toolbars)
- C VecI2&       desktop       (               )C {return _desktop_size  ;} // get screen size   at the moment of application start (desktop size  )
-   Int          desktopW      (               )C {return _desktop_size.x;} // get screen width  at the moment of application start (desktop width )
-   Int          desktopH      (               )C {return _desktop_size.y;} // get screen height at the moment of application start (desktop height)
-   Bool         active        (               )C {return _active        ;} // if  application is active (its window is focused)
-   Bool         minimized     (               )C;                          // if  application is minimized
-   Bool         maximized     (               )C;                          // if  application is maximized
-   Bool         closed        (               )C {return _closed        ;} // if  application has finished closing, this is enabled at the very end of application life cycle, right before all global C++ destructors being called
-   Flt          opacity       (               )C;                          // get application window opacity, 0..1
-   Application& opacity       (Flt opacity    );                           // set application window opacity, 0..1
-   Application& flash         (               );                           // set application window to flash
-   Application& stateNormal   (               );                           // set application window to be displayed as normal                             (this will work only on Window 7 or newer)
-   Application& stateWorking  (               );                           // set application window to be displayed as working with unknown progress      (this will work only on Window 7 or newer)
-   Application& stateProgress (Flt progress   );                           // set application window to be displayed as working with 'progress' 0..1 value (this will work only on Window 7 or newer)
-   Application& statePaused   (Flt progress   );                           // set application window to be displayed as paused  with 'progress' 0..1 value (this will work only on Window 7 or newer)
-   Application& stateError    (Flt progress   );                           // set application window to be displayed as error   with 'progress' 0..1 value (this will work only on Window 7 or newer)
-   Bool         hidden        (               )C;                          // if  application window is hidden
-   Application& hide          (               );                           // set application window to be hidden
-   Application& show          (Bool activate  );                           // set application window to be visible, 'activate'=if also activate
-   DIR_ENUM     orientation   (               )C;                          // get device orientation, this is valid for mobile devices which support accelerometers, for those devices the method will return one of the following orientation: DIR_UP (default), DIR_DOWN (rotated down), DIR_LEFT (rotated left), DIR_RIGHT (rotated right), if the device doesn't support accelerometers then DIR_UP is returned
-   Bool         mainThread    (               )C;                          // if  current thread is the main thread
-   Application& icon          (C Image   &icon);                           // set custom application icon
-   Application& stayAwake     (AWAKE_MODE mode);                           // set preventing the Operating System from going to sleep
- C Str&         backgroundText(               )C {return _back_text     ;} // get text displayed on the Status Bar Notification when App is running in Background mode on Android, default="Running in background"
-   Application& backgroundText(C Str &text    );                           // set text displayed on the Status Bar Notification when App is running in Background mode on Android, default="Running in background"
-   Bool         backgroundFull(               )C {return _back_full     ;} // get if Application is allowed to remain visible on the screen when in fullscreen mode but inactive (if false then application is minimized), default=false
-   Application& backgroundFull(Bool   on      );                           // set if Application is allowed to remain visible on the screen when in fullscreen mode but inactive (if false then application is minimized), default=false
+   Application& name           (C Str &name    );                           // set application name
+ C Str&         name           (               )C {return _name          ;} // get application name
+ C Str&         exe            (               )C {return _exe           ;} // get executable path and name
+   Application& lang           (LANG_TYPE lang );                           // set application language, some engine messages rely on this value, changing language triggers 'GuiObj.setText' for all gui objects, default=OSLanguage()
+   LANG_TYPE    lang           (               )C {return _lang          ;} // get application language, some engine messages rely on this value, changing language triggers 'GuiObj.setText' for all gui objects, default=OSLanguage()
+   Bool         elevated       (               )C {return _elevated      ;} // get application        process elevation (true if has administrator rights)
+   UInt   parentProcessID      (               )C;                          // get application parent process ID
+   UInt         processID      (               )C {return _process_id    ;} // get application        process ID
+   UIntPtr       threadID      (               )C {return _thread_id     ;} // get application main   thread  ID
+   Application&  threadPriority(Int   priority );                           // set application main   thread  priority, 'priority'=-3..3
+   Application&  threadMask    (ULong mask     );                           // set application main   thread  CPU HW Threads on which the thread is allowed to run (every bit specifies different HW Thread)
+ C SysWindow&   window         (               )C {return _window        ;} // get application system window
+ C RectI&       desktopArea    (               )C {return _desktop_area  ;} // get available desktop area (not covered by windows taskbar or other desktop toolbars)
+ C VecI2&       desktop        (               )C {return _desktop_size  ;} // get screen size   at the moment of application start (desktop size  )
+   Int          desktopW       (               )C {return _desktop_size.x;} // get screen width  at the moment of application start (desktop width )
+   Int          desktopH       (               )C {return _desktop_size.y;} // get screen height at the moment of application start (desktop height)
+   Bool         active         (               )C {return _active        ;} // if  application is active (its window is focused)
+   Bool         minimized      (               )C;                          // if  application is minimized
+   Bool         maximized      (               )C;                          // if  application is maximized
+   Bool         closed         (               )C {return _closed        ;} // if  application has finished closing, this is enabled at the very end of application life cycle, right before all global C++ destructors being called
+   Flt          opacity        (               )C;                          // get application window opacity, 0..1
+   Application& opacity        (Flt opacity    );                           // set application window opacity, 0..1
+   Application& flash          (               );                           // set application window to flash
+   Application& stateNormal    (               );                           // set application window to be displayed as normal                             (this will work only on Window 7 or newer)
+   Application& stateWorking   (               );                           // set application window to be displayed as working with unknown progress      (this will work only on Window 7 or newer)
+   Application& stateProgress  (Flt progress   );                           // set application window to be displayed as working with 'progress' 0..1 value (this will work only on Window 7 or newer)
+   Application& statePaused    (Flt progress   );                           // set application window to be displayed as paused  with 'progress' 0..1 value (this will work only on Window 7 or newer)
+   Application& stateError     (Flt progress   );                           // set application window to be displayed as error   with 'progress' 0..1 value (this will work only on Window 7 or newer)
+   Bool         hidden         (               )C;                          // if  application window is hidden
+   Application& hide           (               );                           // set application window to be hidden
+   Application& show           (Bool activate  );                           // set application window to be visible, 'activate'=if also activate
+   DIR_ENUM     orientation    (               )C;                          // get device orientation, this is valid for mobile devices which support accelerometers, for those devices the method will return one of the following orientation: DIR_UP (default), DIR_DOWN (rotated down), DIR_LEFT (rotated left), DIR_RIGHT (rotated right), if the device doesn't support accelerometers then DIR_UP is returned
+   Bool         mainThread     (               )C;                          // if  current thread is the main thread
+   Application& icon           (C Image   &icon);                           // set custom application icon
+   Application& stayAwake      (AWAKE_MODE mode);                           // set preventing the Operating System from going to sleep
+ C Str&         backgroundText (               )C {return _back_text     ;} // get text displayed on the Status Bar Notification when App is running in Background mode on Android, default="Running in background"
+   Application& backgroundText (C Str &text    );                           // set text displayed on the Status Bar Notification when App is running in Background mode on Android, default="Running in background"
+   Bool         backgroundFull (               )C {return _back_full     ;} // get if Application is allowed to remain visible on the screen when in fullscreen mode but inactive (if false then application is minimized), default=false
+   Application& backgroundFull (Bool   on      );                           // set if Application is allowed to remain visible on the screen when in fullscreen mode but inactive (if false then application is minimized), default=false
 
    // system bars
-   Bool    getSystemBars(SYSTEM_BAR &status, SYSTEM_BAR &navigation)C;   Application& systemBars(SYSTEM_BAR status, SYSTEM_BAR navigation); // get/set system     bars [Supported Platforms: Android]
-   SYSTEM_BAR statusBar (                                          )C;   Application& statusBar (SYSTEM_BAR bar                          ); // get/set status     bar  [Supported Platforms: Android]
-   SYSTEM_BAR navBar    (                                          )C;   Application&    navBar (SYSTEM_BAR bar                          ); // get/set navigation bar  [Supported Platforms: Android]
+                                                          Application& systemBars    (SYSTEM_BAR status, SYSTEM_BAR navigation); //     set system     bars      [Supported Platforms: Android, iOS]
+   SYSTEM_BAR statusBar     ()C {return _status      ;}   Application& statusBar     (SYSTEM_BAR bar                          ); // get/set status     bar       [Supported Platforms: Android, iOS]
+   SYSTEM_BAR    navBar     ()C {return    _nav      ;}   Application&    navBar     (SYSTEM_BAR bar                          ); // get/set navigation bar       [Supported Platforms: Android, iOS]
+   Bool       statusBarColor()C {return _status_color;}   Application& statusBarColor(Bool       light                        ); // get/set status     bar color [Supported Platforms: Android, iOS]
+   Bool          navBarColor()C {return    _nav_color;}   Application&    navBarColor(Bool       light                        ); // get/set navigation bar color [Supported Platforms: Android     ]
 
    // operations
    Bool renameSelf      (C Str &dest); // rename application executable file to 'dest' location, false on fail
    void deleteSelfAtExit(           ); // notify that the exe should delete itself at application exit
    void close           (           ); // request application to be closed, if 'App.quit' was specified then it will be called instead
+
+   void pickPhoto(Int max_files); // open Photo Picker allowing to select 'max_files' number of images, they will be received through 'App.receive_file' callback [Supported Platforms: Android, iOS]
 
    // function callbacks
             void addFuncCall(void func(          )            ) {_callbacks.add(func      );}             // add custom function to the Application callback list to be automatically called during Application Update on the main thread
@@ -132,28 +144,76 @@ struct Application // Application Settings
    T1(TYPE) void includeFuncCall(void func(TYPE *user), TYPE *user) {includeFuncCall((void(*)(Ptr))func,  user);} // include custom function to the gui function callback list to be automatically called at the end of the 'Gui.update'
    T1(TYPE) void includeFuncCall(void func(TYPE &user), TYPE &user) {includeFuncCall((void(*)(Ptr))func, &user);} // include custom function to the gui function callback list to be automatically called at the end of the 'Gui.update'
 
+#if EE_PRIVATE
+   static Bool Fullscreen();
+
+   void del    ();
+   Bool create0();
+   Bool create1();
+   Bool create ();
+   void update ();
+   void loop   ();
+#if WINDOWS
+   HMONITOR hmonitor()C;
+#endif
+#if WINDOWS_NEW
+   void wait(SyncEvent &event); // wait for async operation to complete
+   static void ExecuteRecordedEvents();
+#elif LINUX
+   void setWindowFlags(Bool force_resizable=false);
+#endif
+   Bool activeOrBackFull       ()C {return _active || _back_full;}
+   void activeOrBackFullChanged();
+   void setActive(Bool active);
+   void setStayAwake();
+
+   Bool testInstance  ();
+   void windowBounds  ();
+   void windowCreate  ();
+   void windowDel     ();
+   void windowMsg     ();
+   void windowAdjust  (Bool set=false);
+   void deleteSelf    ();
+   void detectMemLeaks();
+   void showError     (CChar *error);
+   void lowMemory     ();
+#endif
+
+#if !EE_PRIVATE
 private:
-   Bool                _active, _initialized, _minimized, _maximized, _close, _closed, _del_self_at_exit, _elevated, _back_full;
+#endif
+   Bool                _active, _initialized, _minimized, _maximized, _close, _closed, _del_self_at_exit, _elevated, _back_full, _status_color, _nav_color;
 #if WINDOWS_NEW
    Bool                _waiting;
 #endif
    AWAKE_MODE          _stay_awake;
    DIR_ENUM            _orientation=DIR_UP;
    LANG_TYPE           _lang;
+   SYSTEM_BAR          _status, _nav;
+   SByte               _thread_priority;
    Int                 _mem_leaks;
    mutable UInt        _parent_process_id;
    UInt                _process_id;
    UIntPtr             _thread_id;
+   ULong               _thread_mask;
    SysWindow           _window;
    VecI2               _window_pos, _window_size, _window_resized, _desktop_size;
    RectI               _desktop_area, _bound, _bound_maximized;
    Str                 _exe, _name, _back_text;
 #if WINDOWS_OLD
    UInt                _style_window, _style_window_maximized, _style_full;
+#if EE_PRIVATE
+   HINSTANCE           _hinstance;
+#else
    Ptr                 _hinstance;
 #endif
+#endif
 #if WINDOWS
+#if EE_PRIVATE
+   HICON               _icon;
+#else
    Ptr                 _icon;
+#endif
 #else
    Image               _icon;
 #endif
@@ -189,6 +249,7 @@ inline Str MLT(C Str &english) {return english;}
        Str MLT(C Str &english, LANG_TYPE l0, C Str &t0, LANG_TYPE l1, C Str &t1, LANG_TYPE l2, C Str &t2, LANG_TYPE l3, C Str &t3, LANG_TYPE l4, C Str &t4, LANG_TYPE l5, C Str &t5, LANG_TYPE l6, C Str &t6, LANG_TYPE l7, C Str &t7, LANG_TYPE l8, C Str &t8);
        Str MLT(C Str &english, LANG_TYPE l0, C Str &t0, LANG_TYPE l1, C Str &t1, LANG_TYPE l2, C Str &t2, LANG_TYPE l3, C Str &t3, LANG_TYPE l4, C Str &t4, LANG_TYPE l5, C Str &t5, LANG_TYPE l6, C Str &t6, LANG_TYPE l7, C Str &t7, LANG_TYPE l8, C Str &t8, LANG_TYPE l9, C Str &t9);
        Str MLT(C Str &english, LANG_TYPE l0, C Str &t0, LANG_TYPE l1, C Str &t1, LANG_TYPE l2, C Str &t2, LANG_TYPE l3, C Str &t3, LANG_TYPE l4, C Str &t4, LANG_TYPE l5, C Str &t5, LANG_TYPE l6, C Str &t6, LANG_TYPE l7, C Str &t7, LANG_TYPE l8, C Str &t8, LANG_TYPE l9, C Str &t9, LANG_TYPE l10, C Str &t10);
+       Str MLT(C Str &english, LANG_TYPE l0, C Str &t0, LANG_TYPE l1, C Str &t1, LANG_TYPE l2, C Str &t2, LANG_TYPE l3, C Str &t3, LANG_TYPE l4, C Str &t4, LANG_TYPE l5, C Str &t5, LANG_TYPE l6, C Str &t6, LANG_TYPE l7, C Str &t7, LANG_TYPE l8, C Str &t8, LANG_TYPE l9, C Str &t9, LANG_TYPE l10, C Str &t10, LANG_TYPE l11, C Str &t11);
 
 // Multi Language Text Constant, returns one of the few translations provided depending on current application language
 inline CChar* MLTC(CChar* english) {return english;}
@@ -203,4 +264,13 @@ inline CChar* MLTC(CChar* english) {return english;}
        CChar* MLTC(CChar* english, LANG_TYPE l0, CChar* t0, LANG_TYPE l1, CChar* t1, LANG_TYPE l2, CChar* t2, LANG_TYPE l3, CChar* t3, LANG_TYPE l4, CChar* t4, LANG_TYPE l5, CChar* t5, LANG_TYPE l6, CChar* t6, LANG_TYPE l7, CChar* t7, LANG_TYPE l8, CChar* t8);
        CChar* MLTC(CChar* english, LANG_TYPE l0, CChar* t0, LANG_TYPE l1, CChar* t1, LANG_TYPE l2, CChar* t2, LANG_TYPE l3, CChar* t3, LANG_TYPE l4, CChar* t4, LANG_TYPE l5, CChar* t5, LANG_TYPE l6, CChar* t6, LANG_TYPE l7, CChar* t7, LANG_TYPE l8, CChar* t8, LANG_TYPE l9, CChar* t9);
        CChar* MLTC(CChar* english, LANG_TYPE l0, CChar* t0, LANG_TYPE l1, CChar* t1, LANG_TYPE l2, CChar* t2, LANG_TYPE l3, CChar* t3, LANG_TYPE l4, CChar* t4, LANG_TYPE l5, CChar* t5, LANG_TYPE l6, CChar* t6, LANG_TYPE l7, CChar* t7, LANG_TYPE l8, CChar* t8, LANG_TYPE l9, CChar* t9, LANG_TYPE l10, CChar* t10);
+       CChar* MLTC(CChar* english, LANG_TYPE l0, CChar* t0, LANG_TYPE l1, CChar* t1, LANG_TYPE l2, CChar* t2, LANG_TYPE l3, CChar* t3, LANG_TYPE l4, CChar* t4, LANG_TYPE l5, CChar* t5, LANG_TYPE l6, CChar* t6, LANG_TYPE l7, CChar* t7, LANG_TYPE l8, CChar* t8, LANG_TYPE l9, CChar* t9, LANG_TYPE l10, CChar* t10, LANG_TYPE l11, CChar* t11);
+/******************************************************************************/
+#if EE_PRIVATE
+extern Bool LogInit;
+#if LINUX
+extern Atom _NET_WM_STATE, _NET_WM_NAME, UTF8_STRING;
+#endif
+RectI GetDesktopArea();
+#endif
 /******************************************************************************/

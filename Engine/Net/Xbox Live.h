@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Xbox Live is available only on Windows UWP
@@ -53,10 +50,16 @@ struct XBOXLive
       ULong id=0;
       Str   name, image_url;
       Long  score=-1; // -1=unknown
+   #if EE_PRIVATE
+      void clear();
+   #endif
    };
    struct Friend : User
    {
       Bool favorite=false;
+   #if EE_PRIVATE
+      void clear();
+   #endif
    };
 
    struct Achievement
@@ -118,6 +121,13 @@ private:
    User              _me;
    Mems<Friend>      _friends;
    Mems<Achievement> _achievements;
+#if EE_PRIVATE
+   void setStatus(STATUS status);
+   void logInOK();
+   void logInOK1();
+   void getUserProfile(); // request extra profile information for current user (such as score and image url), result will be reported through the 'callback' function
+   void getUserProfile(C CMemPtr<ULong> &user_ids);
+#endif
 }extern
    XboxLive;
 /******************************************************************************/

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Please read following instructions carefully in order to know how to enable Facebook support.
@@ -44,7 +41,10 @@ struct Facebook
       void clear() {User::clear(); email.clear();}
    };
 
-   enum RESULT
+#if EE_PRIVATE
+   // !! THESE ENUMS MUST BE EQUAL TO "EsenthelActivity.java" !!
+#endif
+   enum RESULT : Byte
    {
       POST_ERROR  , // there was an error while trying to post
       POST_CANCEL , // user canceled posting
@@ -71,7 +71,9 @@ struct Facebook
 
    void post(C Str &url, C Str &quote=S); // post link to user's timeline, 'url'=link address, 'quote'=text to quote in the post
 
+#if !EE_PRIVATE
 private:
+#endif
    UserEmail  _me;
    Mems<User> _friends;
 }extern

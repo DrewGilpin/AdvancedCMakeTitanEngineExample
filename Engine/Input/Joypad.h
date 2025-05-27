@@ -1,11 +1,17 @@
 ﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
-/******************************************************************************
 
    Use 'Joypads' container to access Joypads input.
 
 /******************************************************************************/
+#if EE_PRIVATE
+enum JP_NAME_TYPE : Byte
+{
+   JP_NAME         ,
+   JP_NAME_NINTENDO,
+   JP_NAME_SONY    ,
+   JP_NAMES        ,
+};
+#endif
 enum JOYPAD_BUTTON : Byte // button indexes as defined for XInput/Xbox/NintendoSwitch controllers
 {
    JB_A    , // A
@@ -58,7 +64,14 @@ enum JOYPAD_BUTTON : Byte // button indexes as defined for XInput/Xbox/NintendoS
    JB_DPAD_RIGHT=33,
    JB_DPAD_DOWN =34,
    JB_DPAD_UP   =35,
+#if EE_PRIVATE
+   JB_TOTAL,
+#endif
 };
+#if EE_PRIVATE
+inline Bool IsDPad (JOYPAD_BUTTON button) {return button>=JB_DPAD_LEFT;}
+inline Bool IsDPadY(JOYPAD_BUTTON button) {return button>=JB_DPAD_DOWN;}
+#endif
 /******************************************************************************/
 struct Vibration
 {
@@ -127,7 +140,27 @@ struct Joypad // Joypad Input
  C Color2& colorLeft ()C {return _color_left ;} // get color of the left  part of the Joypad (TRANSPARENT if unknown)
  C Color2& colorRight()C {return _color_right;} // get color of the right part of the Joypad (TRANSPARENT if unknown)
 
+#if EE_PRIVATE
+   // manage
+   void acquire   (Bool on);
+   void setDiri   (Int x, Int y);
+   void setTrigger(Int index, Flt value);
+   void getState  ();
+   void update    ();
+   void clear     ();
+   void zero      ();
+   void push      (Byte b);
+   void release   (Byte b);
+   void sensors   (Bool calculate);
+   void setInfo   (U16 vendor_id, U16 product_id);
+#if IOS
+   void changed   (GCControllerElement *element);
+#endif
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    BS_FLAG _button[32];
    Bool    _mini=false;
    Bool    _connected=false;
@@ -174,10 +207,24 @@ private:
    Sensor  _sensor_left, _sensor_right;
    Str     _name;
 #if JP_DIRECT_INPUT
+#if EE_PRIVATE
+   IDirectInputDevice8 *_dinput=null;
+#else
    Ptr     _dinput=null;
 #endif
+#endif
 #if JP_GAMEPAD_INPUT
+#if EE_PRIVATE
+   #if WINDOWS_OLD
+      Microsoft::WRL::ComPtr<ABI::Windows::Gaming::Input::IGamepad          > _gamepad;
+      Microsoft::WRL::ComPtr<ABI::Windows::Gaming::Input::IRawGameController> _raw_game_controller;
+   #else
+      Windows::Gaming::Input::Gamepad           ^_gamepad;
+      Windows::Gaming::Input::RawGameController ^_raw_game_controller;
+   #endif
+#else
    Ptr     _gamepad=null, _raw_game_controller=null;
+#endif
 #endif
 #if MAC
    struct Elm
@@ -190,9 +237,19 @@ private:
       };
       TYPE               type;
       Byte               index;
+   #if EE_PRIVATE
+      IOHIDElementCookie cookie;
+   #else
       UInt               cookie;
+   #endif
       Int                avg, max; // button_on=(val>avg);
       Flt                mul, add;
+
+   #if EE_PRIVATE
+      void setPad   (C IOHIDElementCookie &cookie                     , Int max) {T.type=PAD   ; T.cookie=cookie; T.max  =max+1; T.mul=-PI2/T.max; T.add=PI_2;}
+      void setButton(C IOHIDElementCookie &cookie, Byte index, Int min, Int max) {T.type=BUTTON; T.cookie=cookie; T.index=index; T.avg=(min+max)/2;}
+      void setAxis  (C IOHIDElementCookie &cookie, Byte index, Int min, Int max) {T.type=AXIS  ; T.cookie=cookie; T.index=index; T.mul=2.0f/(max-min); T.add=-1-min*T.mul; if(index==1 || index==3){CHS(mul); CHS(add);}} // change sign for vertical
+   #endif
    };
 
    Mems<Elm> _elms;
@@ -209,10 +266,27 @@ private:
       };
       TYPE                 type;
       Byte                 index;
+   #if EE_PRIVATE
+      GCControllerElement *element;
+   #else
       Ptr                  element;
+   #endif
+   #if EE_PRIVATE
+      void set(TYPE type, Byte index, GCControllerElement *element) {T.type=type; T.index=index; T.element=element;}
+   #endif
    };
    Mems<Elm> _elms;
-   Ptr     _gamepad=null
+#if EE_PRIVATE
+   void addPad    (GCControllerElement *element);
+   void addButton (GCControllerElement *element, JOYPAD_BUTTON button);
+   void addTrigger(GCControllerElement *element, Byte          index );
+   void addAxis   (GCControllerElement *element, Byte          index );
+#endif
+#if EE_PRIVATE
+   GCExtendedGamepad *_gamepad=null;
+#else
+   Ptr       _gamepad=null;
+#endif
 #endif
 
    struct State
@@ -224,12 +298,41 @@ private:
          {
             UInt data[(32 + 4 + 6*8)/4]; // use UInt to force alignment
          }data;
+
+      #if EE_PRIVATE
+      #if JP_GAMEPAD_INPUT && WINDOWS_OLD
+         ABI::Windows::Gaming::Input::GamepadReading gamepad;   ASSERT(SIZE(gamepad)<=SIZE(data));
+
+         struct
+         {
+            boolean                                                   button[ELMS(_remap)];
+            ABI::Windows::Gaming::Input::GameControllerSwitchPosition Switch[1];
+            DOUBLE                                                    axis  [6];
+         }raw_game_controller;   ASSERT(SIZE(raw_game_controller)<=SIZE(data));
+      #endif
+      #if JP_X_INPUT
+         XINPUT_STATE xinput;   ASSERT(SIZE(xinput)<=SIZE(data));
+      #endif
+      #if JP_DIRECT_INPUT
+         DIJOYSTATE dinput;   ASSERT(SIZE(dinput)<=SIZE(data));
+      #endif
+      #endif
       };
    #endif
 
    #if JP_GAMEPAD_INPUT && WINDOWS_NEW
+   #if EE_PRIVATE
+      Platform::Array<bool                                                > ^button;
+      Platform::Array<Windows::Gaming::Input::GameControllerSwitchPosition> ^Switch;
+      Platform::Array<double                                              > ^axis;
+   #pragma pack(push)
+   #pragma pack() // default packing required for storing WinRT classes not as ^ pointers, without this 'gamepad' members were getting corrupt values
+      Windows::Gaming::Input::GamepadReading gamepad;   ASSERT(SIZE(gamepad)==SIZE(UInt)*16); // use UInt for alignment
+   #pragma pack(pop)
+   #else
       Ptr  button=null, Switch=null, axis=null;
       UInt gamepad[16];
+   #endif
    #endif
    }_state[2];
 
@@ -249,7 +352,18 @@ struct JoypadsClass // Container for Joypads
    void swapOrder(Int i  , Int j        ); // swap order of 'i' and 'j' joypads
    void moveElm  (Int elm, Int new_index); // move 'elm' joypad to new position located at 'new_index'
 
+#if EE_PRIVATE
+   void clear  ();
+   void remove (Int     i     ); // remove i-th Joypad
+   void remove (Joypad *joypad); // remove joypad
+   void update ();
+   void acquire(Bool on);
+   void list   ();
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    MemtN<Joypad, 4> _data;
 }extern
    Joypads;
@@ -262,4 +376,15 @@ Bool JoypadSensors();               // if want Joypad sensors to be calculated (
 void ConfigureJoypads(Int min_players, Int max_players, C CMemPtr<Str> &player_names=null, C CMemPtr<Color> &player_colors=null); // open OS joypad configuration screen, 'min_players'=minimum number of players required, 'max_players'=maximum number of players allowed, 'player_names'=names for each player (optional), 'player_colors'=colors for each player (optional), supported only on Nintendo Switch
 
 inline Int Elms(C JoypadsClass &jps) {return jps.elms();}
+#if EE_PRIVATE
+extern Bool     JoypadLayoutName;
+extern SyncLock JoypadLock;
+
+Joypad& GetJoypad  (UInt id, Bool &added);
+UInt    NewJoypadID(UInt id); // generate a Joypad ID based on 'id' that's not yet used by any other existing Joypad
+
+void ListJoypads();
+void InitJoypads();
+void ShutJoypads();
+#endif
 /******************************************************************************/

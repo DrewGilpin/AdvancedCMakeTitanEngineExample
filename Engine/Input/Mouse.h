@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Mouse' to access Mouse input.
@@ -15,8 +12,22 @@ struct MouseCursorHW // Hardware Mouse Cursor
    MouseCursorHW()  {       _cursor =null;}
    Bool       is()C {return _cursor!=null;}
 
+#if EE_PRIVATE
+   #if WINDOWS_OLD
+      HCURSOR _cursor;
+   #elif WINDOWS_NEW
+      Windows::UI::Core::CoreCursor ^_cursor;
+   #elif MAC
+      NSCursor *_cursor;
+   #elif LINUX
+      Ptr _cursor; // cast to XCursor which is unsigned long
+   #else
+      Ptr _cursor;
+   #endif
+#else
 private:
    Ptr   _cursor;
+#endif
    Image _image;
 
    NO_COPY_CONSTRUCTOR(MouseCursorHW);
@@ -27,7 +38,9 @@ struct MouseCursor // Mouse Cursor
    void del   (); // delete manually
    void create(C ImagePtr &image, C VecI2 &hot_spot=VecI2(0, 0), Bool hardware=true); // create from image, 'hot_spot'=focus position in image coordinates, 'hardware'=if use hardware cursor (this allows to draw the mouse cursor with full display speed, regardless of the game speed)
 
+#if !EE_PRIVATE
 private:
+#endif
    MouseCursorHW _hw;
    ImagePtr      _image;
    VecI2         _hot_spot;
@@ -55,8 +68,8 @@ struct MouseClass // Mouse Input
    Int wheelI ()C {return _wheel_i.y;} // get vertical   mouse wheel delta in integer steps
    Int wheelIX()C {return _wheel_i.x;} // get horizontal mouse wheel delta in integer steps
 
-   Dbl startTime()C {return                    _start_time ;} // get time of when the latest button was pushed, obtained using "Time.appTime()"
-   Flt life     ()C {return Flt(Time.appTime()-_start_time);} // get how long     the latest button is  pushed
+   Dbl startTime()C {return                    _start_time ;} // get time when the latest button was pushed, obtained using "Time.appTime()"
+   Flt life     ()C {return Flt(Time.appTime()-_start_time);} // get how  long the latest button is  pushed
 
    Bool selecting()C {return _selecting;} // if enough                     movement occurred since the latest button was pushed to consider it selecting
    Bool dragging ()C {return _dragging ;} // if enough time has passed and movement occurred since the latest button was pushed to consider it dragging
@@ -85,6 +98,9 @@ struct MouseClass // Mouse Input
    Bool        frozen()C {return _frozen;}               // if currently frozen
 
    // cursor visuals
+#if EE_PRIVATE
+   void resetCursor();
+#endif
    Bool        visible(            )C {return  _visible          ;} // if     cursor is visible
    Bool        hidden (            )C {return !_visible          ;} // if     cursor is hidden
    MouseClass& visible(Bool visible);                               // set    cursor visibility
@@ -108,7 +124,25 @@ struct MouseClass // Mouse Input
    void moveAbs(C Vec2 &screen_d); // manually move position by 'screen_d' screen delta (unaffected by current display scale)
    void scroll (C Vec2 &d       ); // manually apply wheel delta
 
+#if EE_PRIVATE
+   // manage
+   void del    ();
+   void create ();
+   void acquire(Bool on);
+
+   // operations
+   void clear     ();
+   void _push     (Byte b);
+   void _release  (Byte b);
+   void updatePos ();
+   void update    ();
+   void clipUpdate();   void clipUpdateConditional();
+   void draw      ();
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    BS_FLAG          _button[8];
    Bool             _selecting, _dragging, _first, _hardware, _detected, _on_client, _visible, _clip_rect_on, _clip_window, _freeze, _frozen, _action, _want_cur_hw, _locked, _swapped;
    Int              _cur;
@@ -123,7 +157,11 @@ private:
    MouseCursor      _cursor_temp;
  C MouseCursor     *_cursor;
 #if WINDOWS_OLD
+#if EE_PRIVATE && MS_DIRECT_INPUT
+   IDirectInputDevice8 *_device;
+#else
    Ptr              _device;
+#endif
 #endif
 
    MouseClass();

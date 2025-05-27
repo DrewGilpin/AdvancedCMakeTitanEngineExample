@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'TextData' to handle automatic text data saving and loading.
@@ -15,6 +12,8 @@ struct TextParam
        value; // parameter value
 
    // set / get
+   Bool is()C {return name.is() || value.is();} // if has any data
+
    TextParam& setName(C Str &name=S) {T.name=name; return T;}
 
    TextParam& setValue(C Str   &value=S) {T.value=         value           ; return T;}   void getValue(Str   &value)C {value=asText ();}
@@ -102,7 +101,10 @@ struct TextParam
 
    TextParam& clear() {name.clear(); value.clear(); return T;}
    TextParam& del  () {name.del  (); value.del  (); return T;}
-   
+
+   Bool operator==(C TextParam &tp)C {return name==tp.name &&  Equal(value, tp.value, true);}
+   Bool operator!=(C TextParam &tp)C {return name!=tp.name || !Equal(value, tp.value, true);}
+
             TextParam() {}
    explicit TextParam(C Str &name, C Str &value=S) {set(name, value);}
 };
@@ -112,6 +114,8 @@ struct TextNode : TextParam
    Memc<TextNode> nodes;
 
    // get / set
+   Bool is()C {return super::is() || nodes.elms();} // if has any data
+
    TextNode* findNode(C Str &name, Int i=0) ; // find i-th node which name is equal to 'name', null on fail (if not found)
  C TextNode* findNode(C Str &name, Int i=0)C; // find i-th node which name is equal to 'name', null on fail (if not found)
    TextNode&  getNode(C Str &name         ) ; // get       node which name is equal to 'name', New  on fail (if not found)
@@ -121,6 +125,17 @@ struct TextNode : TextParam
    // manage
    TextNode& clear() {super::clear(); nodes.clear(); return T;} // clear
    TextNode& del  () {super::del  (); nodes.del  (); return T;} // delete manually
+
+#if EE_PRIVATE
+   Bool save    (FileText &f, Bool just_values)C;
+   Bool saveJSON(FileText &f, Bool just_values, Bool last)C;
+   Char load    (FileText &f, Bool just_values, Char first_char);
+   Char loadJSON(FileText &f, Bool just_values, Char first_char);
+   Char loadYAML(FileText &f, Bool just_values, Char first_char, const Int node_spaces, Int &cur_spaces);
+#endif
+
+   Bool operator==(C TextNode &tn)C {return super::operator==(tn) && nodes==tn.nodes;}
+   Bool operator!=(C TextNode &tn)C {return super::operator!=(tn) || nodes!=tn.nodes;}
 
    TextNode() {}
    TextNode(C XmlNode &xml); // create from 'XmlNode'
@@ -156,6 +171,9 @@ struct TextData
    Bool loadYAML(C Str    &name, const_mem_addr Cipher *cipher=null); // load from file in YAML format, false on fail, 'cipher' must point to object in constant memory address (only pointer is stored through which the object can be later accessed)
    Bool loadYAML(FileText &f                                       ); // load from file in YAML format, false on fail, 'f' file should be already opened for reading
 
+   Bool operator==(C TextData &td)C {return nodes==td.nodes;}
+   Bool operator!=(C TextData &td)C {return nodes!=td.nodes;}
+
    TextData() {}
    TextData(C XmlData &xml); // create from 'XmlData'
 };
@@ -183,6 +201,11 @@ struct XmlNode // Xml Node
    // manage
    XmlNode& clear() {name.clear(); params.clear(); data.clear(); nodes.clear(); return T;} // clear
    XmlNode& del  () {name.del  (); params.del  (); data.del  (); nodes.del  (); return T;} // delete manually
+
+#if EE_PRIVATE
+   Bool save(FileText &f, Bool params_in_separate_lines)C;
+   Bool load(FileText &f, Char first_char);
+#endif
 
    XmlNode() {}
    XmlNode(C TextNode &text); // create from 'TextNode'
@@ -214,9 +237,12 @@ struct XmlData // Xml Data
    XmlData(C TextData &text); // create from 'TextData'
 };
 /******************************************************************************/
-  TextNode*  FindNode(   MemPtr<TextNode>  nodes, C Str &name, Int i=0); // find i-th node which name is equal to 'name', null on fail (if not found)
-C TextNode* CFindNode(C CMemPtr<TextNode> &nodes, C Str &name, Int i=0); // find i-th node which name is equal to 'name', null on fail (if not found)
-  TextNode&   GetNode(   MemPtr<TextNode>  nodes, C Str &name         ); // get       node which name is equal to 'name', New  on fail (if not found)
+  TextParam*  FindParam(   MemPtr<TextParam>  params, C Str &name, Int i=0); // find i-th param which name is equal to 'name', null on fail (if not found)
+C TextParam* CFindParam(C CMemPtr<TextParam> &params, C Str &name, Int i=0); // find i-th param which name is equal to 'name', null on fail (if not found)
+
+  TextNode*  FindNode(   MemPtr<TextNode>  nodes, C Str &name, Int i=0                           ); // find i-th node which name is equal to 'name', null on fail (if not found)
+C TextNode* CFindNode(C CMemPtr<TextNode> &nodes, C Str &name, Int i=0, Bool case_sensitive=false); // find i-th node which name is equal to 'name', null on fail (if not found)
+  TextNode&   GetNode(   MemPtr<TextNode>  nodes, C Str &name                                    ); // get       node which name is equal to 'name', New  on fail (if not found)
 
 XmlNode* FindNode(MemPtr<XmlNode> nodes, C Str &name, Int i=0); // find i-th node which name is equal to 'name', null on fail (if not found)
 XmlNode&  GetNode(MemPtr<XmlNode> nodes, C Str &name         ); // get       node which name is equal to 'name', New  on fail (if not found)
@@ -244,5 +270,28 @@ struct FileParams
    static Str              Encode(C CMemPtr<FileParams> &file_params); // encode 'file_params' array into string
    static Mems<FileParams> Decode(C Str                 &str        ); // decode 'str' string into file params array
    static Str              Merge (C Str                 &a, C Str &b); // merge  'a' 'b' strings
+};
+/******************************************************************************/
+struct TextMetaElm
+{
+   Str      text;
+   TextData data;
+
+#if EE_PRIVATE
+   void save(Str &s)C;
+
+   Bool operator==(C TextMetaElm &e)C {return text==e.text && data==e.data;}
+   Bool operator!=(C TextMetaElm &e)C {return text!=e.text || data!=e.data;}
+#endif
+};
+struct TextMeta : Memc<TextMetaElm> // text mixed with meta data
+{
+   void operator+=(  Char c);
+   void operator+=(C Str &s);
+
+   Str  save(         )C;
+   void save(  Str  &s)C;
+   Bool load(C Str  &s);
+   Bool load(C Str8 &s);
 };
 /******************************************************************************/

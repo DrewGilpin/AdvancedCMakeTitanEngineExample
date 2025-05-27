@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum DIST_TYPE // Distance Type
 {
@@ -21,6 +18,18 @@ enum DIST_TYPE // Distance Type
    DIST_EDGE =DIST_EDGE0 , // edge
 };
 /******************************************************************************/
+#if EE_PRIVATE
+struct Int24
+{
+   Byte b[3];
+
+   Bool negative()C {return (b[2]>>7)!=0;}
+   Int     asInt()C {Int out; CopyFast(&out, b, 3); ((Byte*)&out)[3]=(negative() ? 0xFF : 0); return out;}
+
+   Int24& operator=(Int i) {CopyFast(b, &i, 3); return T;}
+};
+#endif
+/******************************************************************************/
 Bool Special(C Flt &r); // if 'r' is a special type float  (NaN, -Inf, +Inf)
 Bool Special(C Dbl &r); // if 'r' is a special type double (NaN, -Inf, +Inf)
 Bool NaN    (C Flt &r); // if 'r' is Not a Number
@@ -33,37 +42,51 @@ inline void MinMax (  Byte   a, Byte b  , Byte  &min, Byte  &max) {if(a<b){min=a
 inline void MinMax (  Int    a, Int  b  , Int   &min, Int   &max) {if(a<b){min=a; max=b;}else{min=b; max=a;}} // get min max value: min=Min(a, b); max=Max(a, b);
 inline void MinMax (  Flt    a, Flt  b  , Flt   &min, Flt   &max) {if(a<b){min=a; max=b;}else{min=b; max=a;}} // get min max value: min=Min(a, b); max=Max(a, b);
 inline void MinMax (  Dbl    a, Dbl  b  , Dbl   &min, Dbl   &max) {if(a<b){min=a; max=b;}else{min=b; max=a;}} // get min max value: min=Min(a, b); max=Max(a, b);
+       void MinMax (C Int   *f, Int  num, Int   &min, Int   &max); // get min max value:   min =Min(f[]);   max =Max(f[]);
        void MinMax (C Flt   *f, Int  num, Flt   &min, Flt   &max); // get min max value:   min =Min(f[]);   max =Max(f[]);
        void MinMax (C Dbl   *f, Int  num, Dbl   &min, Dbl   &max); // get min max value:   min =Min(f[]);   max =Max(f[]);
+       void MinMaxI(C Int   *f, Int  num, Int   &min, Int   &max); // get min max index: f[min]=Min(f[]); f[max]=Max(f[]);
        void MinMaxI(C Flt   *f, Int  num, Int   &min, Int   &max); // get min max index: f[min]=Min(f[]); f[max]=Max(f[]);
        void MinMaxI(C Dbl   *f, Int  num, Int   &min, Int   &max); // get min max index: f[min]=Min(f[]); f[max]=Max(f[]);
+       Bool MinMax (C VecI2 *v, Int  num, VecI2 &min, VecI2 &max);
        Bool MinMax (C Vec2  *v, Int  num, Vec2  &min, Vec2  &max);
        Bool MinMax (C VecD2 *v, Int  num, VecD2 &min, VecD2 &max);
+       Bool MinMax (C VecI  *v, Int  num, VecI  &min, VecI  &max);
        Bool MinMax (C Vec   *v, Int  num, Vec   &min, Vec   &max);
        Bool MinMax (C VecD  *v, Int  num, VecD  &min, VecD  &max);
+       Bool MinMax (C VecI4 *v, Int  num, VecI4 &min, VecI4 &max);
        Bool MinMax (C Vec4  *v, Int  num, Vec4  &min, Vec4  &max);
        Bool MinMax (C VecD4 *v, Int  num, VecD4 &min, VecD4 &max);
 
 // get absolute value
-constexpr Int   Abs(  Int    x) {return (x>=0) ? x : -x;}
-constexpr Long  Abs(  Long   x) {return (x>=0) ? x : -x;}
-constexpr Flt   Abs(  Flt    x) {return (x>=0) ? x : -x;}
-constexpr Dbl   Abs(  Dbl    x) {return (x>=0) ? x : -x;}
-inline    Vec2  Abs(C Vec2  &v) {return Vec2 (Abs(v.x), Abs(v.y)                    );}
-inline    VecD2 Abs(C VecD2 &v) {return VecD2(Abs(v.x), Abs(v.y)                    );}
-inline    VecI2 Abs(C VecI2 &v) {return VecI2(Abs(v.x), Abs(v.y)                    );}
-inline    Vec   Abs(C Vec   &v) {return Vec  (Abs(v.x), Abs(v.y), Abs(v.z)          );}
-inline    VecD  Abs(C VecD  &v) {return VecD (Abs(v.x), Abs(v.y), Abs(v.z)          );}
-inline    VecI  Abs(C VecI  &v) {return VecI (Abs(v.x), Abs(v.y), Abs(v.z)          );}
-inline    Vec4  Abs(C Vec4  &v) {return Vec4 (Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w));}
-inline    VecD4 Abs(C VecD4 &v) {return VecD4(Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w));}
-inline    VecI4 Abs(C VecI4 &v) {return VecI4(Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w));}
+constexpr Int   Abs(  Int     x) {return (x>=0) ? x : -x;}
+constexpr Long  Abs(  Long    x) {return (x>=0) ? x : -x;}
+constexpr Flt   Abs(  Flt     x) {return (x>=0) ? x : -x;}
+constexpr Dbl   Abs(  Dbl     x) {return (x>=0) ? x : -x;}
+inline    Vec2  Abs(C Vec2   &v) {return Vec2 (Abs(v.x), Abs(v.y)                    );}
+inline    VecD2 Abs(C VecD2  &v) {return VecD2(Abs(v.x), Abs(v.y)                    );}
+inline    VecI2 Abs(C VecI2  &v) {return VecI2(Abs(v.x), Abs(v.y)                    );}
+inline    VecB2 Abs(C VecSB2 &v) {return VecB2(Abs(v.x), Abs(v.y)                    );}
+inline    Vec   Abs(C Vec    &v) {return Vec  (Abs(v.x), Abs(v.y), Abs(v.z)          );}
+inline    VecD  Abs(C VecD   &v) {return VecD (Abs(v.x), Abs(v.y), Abs(v.z)          );}
+inline    VecI  Abs(C VecI   &v) {return VecI (Abs(v.x), Abs(v.y), Abs(v.z)          );}
+inline    VecB  Abs(C VecSB  &v) {return VecB (Abs(v.x), Abs(v.y), Abs(v.z)          );}
+inline    Vec4  Abs(C Vec4   &v) {return Vec4 (Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w));}
+inline    VecD4 Abs(C VecD4  &v) {return VecD4(Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w));}
+inline    VecI4 Abs(C VecI4  &v) {return VecI4(Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w));}
+inline    VecB4 Abs(C VecSB4 &v) {return VecB4(Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w));}
 
 // make absolute value
 inline void ABS(Int  &x) {if(x<0)x=-x;}              // works as "x=Abs(x);"
 inline void ABS(Long &x) {if(x<0)x=-x;}              // works as "x=Abs(x);"
 inline void ABS(Flt  &x) {((U32&) x)   &=~SIGN_BIT;} // works as "x=Abs(x);"
 inline void ABS(Dbl  &x) {((U32*)&x)[1]&=~SIGN_BIT;} // works as "x=Abs(x);"
+
+#if EE_PRIVATE
+// get absolute scale
+inline Flt AbsScale(Flt x, Flt base) {return (x>base) ? x/base : base/x;}
+inline Dbl AbsScale(Dbl x, Dbl base) {return (x>base) ? x/base : base/x;}
+#endif
 
 // get middle value
 constexpr Int  Mid(  Int   x,   Int   min,   Int   max) {return (x>=max) ? max : (x<=min) ? min : x;}
@@ -133,15 +156,15 @@ VecD  ScaleFactor(C VecD  &vec);   VecD  ScaleFactorR(C VecD  &vec);
 Vec4  ScaleFactor(C Vec4  &vec);   Vec4  ScaleFactorR(C Vec4  &vec);
 VecD4 ScaleFactor(C VecD4 &vec);   VecD4 ScaleFactorR(C VecD4 &vec);
 
-constexpr Int   Sqr(  Int   x) {return x*x;} // square  = x**2
-constexpr UInt  Sqr(  UInt  x) {return x*x;} // square  = x**2
-constexpr Long  Sqr(  Long  x) {return x*x;} // square  = x**2
-constexpr ULong Sqr(  ULong x) {return x*x;} // square  = x**2
-constexpr Flt   Sqr(  Flt   x) {return x*x;} // square  = x**2
-constexpr Dbl   Sqr(  Dbl   x) {return x*x;} // square  = x**2
-inline    Vec2  Sqr(C Vec2 &x) {return x*x;} // square  = x**2
-inline    Vec   Sqr(C Vec  &x) {return x*x;} // square  = x**2
-inline    Vec4  Sqr(C Vec4 &x) {return x*x;} // square  = x**2
+constexpr Int   Sqr(  Int   x) {return x*x;} // square = x**2
+constexpr UInt  Sqr(  UInt  x) {return x*x;} // square = x**2
+constexpr Long  Sqr(  Long  x) {return x*x;} // square = x**2
+constexpr ULong Sqr(  ULong x) {return x*x;} // square = x**2
+constexpr Flt   Sqr(  Flt   x) {return x*x;} // square = x**2
+constexpr Dbl   Sqr(  Dbl   x) {return x*x;} // square = x**2
+inline    Vec2  Sqr(C Vec2 &x) {return x*x;} // square = x**2
+inline    Vec   Sqr(C Vec  &x) {return x*x;} // square = x**2
+inline    Vec4  Sqr(C Vec4 &x) {return x*x;} // square = x**2
 
 constexpr Int   Cube(Int   x) {return x*x*x;} // cube = x**3
 constexpr UInt  Cube(UInt  x) {return x*x*x;} // cube = x**3
@@ -177,35 +200,104 @@ inline ULong& SQR(ULong &x) {return x*=x;}
 inline Flt  & SQR(Flt   &x) {return x*=x;}
 inline Dbl  & SQR(Dbl   &x) {return x*=x;}
 
-inline Flt  SqrtFast(  Int   x) {return sqrtf((Flt)x);} //                 square root, returns      NaN  for negative values
-inline Flt  SqrtFast(  Flt   x) {return sqrtf(     x);} //                 square root, returns      NaN  for negative values
-inline Dbl  SqrtFast(  Dbl   x) {return sqrt (     x);} //                 square root, returns      NaN  for negative values
-       Flt  Sqrt    (  Int   x);                        //                 square root, returns        0  for negative values
-       Flt  Sqrt    (  Flt   x);                        //                 square root, returns        0  for negative values
-       Dbl  Sqrt    (  Dbl   x);                        //                 square root, returns        0  for negative values
-       Vec2 Sqrt    (C Vec2 &x);                        //                 square root, returns        0  for negative values
-       Vec  Sqrt    (C Vec  &x);                        //                 square root, returns        0  for negative values
-       Vec4 Sqrt    (C Vec4 &x);                        //                 square root, returns        0  for negative values
-       Flt  SqrtS   (  Int   x);                        // sign preserving square root, returns -Sqrt(-x) for negative values
-       Flt  SqrtS   (  Flt   x);                        // sign preserving square root, returns -Sqrt(-x) for negative values
-       Dbl  SqrtS   (  Dbl   x);                        // sign preserving square root, returns -Sqrt(-x) for negative values
-inline Flt  Cbrt    (  Int   x) {return cbrtf((Flt)x);} //                 cube   root, works         ok  for negative values
-inline Flt  Cbrt    (  Flt   x) {return cbrtf(     x);} //                 cube   root, works         ok  for negative values
-inline Dbl  Cbrt    (  Dbl   x) {return cbrt (     x);} //                 cube   root, works         ok  for negative values
+// fast inverse sqrt approximation
+INLINE Flt RSqrtSimd(Flt x)
+{
+#if X86
+   __m128 vx=_mm_set_ss   (x);
+   __m128 vy=_mm_rsqrt_ss (vx);
+   return    _mm_cvtss_f32(vy);
+#elif ARM
+   float32x2_t vx=vdup_n_f32 (x);
+   float32x2_t vy=vrsqrte_f32(vx);
+   return vy[0];
+#else
+   return 1/SqrtFast(x);
+#endif
+}
+inline Flt RSqrt0(Flt x) // ~1/Sqrt(x) inverse square root, high speed, low  precision
+{
+#if X86 || ARM // faster/similar speed, but more precision
+   return RSqrtSimd(x);
+#else
+   Int i=0x5F3759DF-((Int&)x>>1); // initial guess
+   Flt y=(Flt&)i;
+   return y;
+#endif
+}
+inline Flt RSqrt1(Flt x) // ~1/Sqrt(x) inverse square root, med  speed, med  precision
+{
+#if X86 || ARM // faster/similar speed, but more precision
+   return RSqrtSimd(x);
+#else
+   Flt x_2=x/2;
+   Int i=0x5F3759DF-((Int&)x>>1); // initial guess
+   Flt y=(Flt&)i;
+   y*=1.5f-(x_2*y*y); // 1st Newton iteration
+   return y;
+#endif
+}
+Flt RSqrt2(Flt x); // ~1/Sqrt(x) inverse square root, low  speed, high precision
 
-inline Flt Pow(Int x, Flt y) {return powf((Flt)x,      y);} // raise 'x' to the power 'y'
-inline Flt Pow(Flt x, Int y) {return powf(     x, (Flt)y);} // raise 'x' to the power 'y'
-inline Flt Pow(Flt x, Flt y) {return powf(     x,      y);} // raise 'x' to the power 'y'
-inline Dbl Pow(Int x, Dbl y) {return pow (     x,      y);} // raise 'x' to the power 'y'
-inline Dbl Pow(Dbl x, Int y) {return pow (     x,      y);} // raise 'x' to the power 'y'
-inline Dbl Pow(Dbl x, Dbl y) {return pow (     x,      y);} // raise 'x' to the power 'y'
+#if EE_PRIVATE
+      UInt  SqrtI(UInt  x               ); // integer square root (binary    method, fastest)
+       Int  SqrtI( Int  x               ); // integer square root (binary    method, fastest)
+      UInt  SqrtI(ULong x               ); // integer square root (binary    method, fastest)
+       Int  SqrtI( Long x               ); // integer square root (binary    method, fastest)
+      UInt  SqrtI(UInt  x, Int max_steps); // integer square root (iterative method, slower but can be faster if "max_steps<=2")
+#endif
+inline Vec2 SqrtFast(C Vec2 &x) {return Vec2(SqrtFast(x.x), SqrtFast(x.y));}
+inline Vec  SqrtFast(C Vec  &x) {return Vec (SqrtFast(x.x), SqrtFast(x.y), SqrtFast(x.z));}
+inline Vec4 SqrtFast(C Vec4 &x) {return Vec4(SqrtFast(x.x), SqrtFast(x.y), SqrtFast(x.z), SqrtFast(x.w));}
 
-inline Flt Ln  (Flt x) {return logf (x);} // e-base logarithm
-inline Dbl Ln  (Dbl x) {return log  (x);} // e-base logarithm
-inline Flt Log2(Flt x) {return log2f(x);} // 2-base logarithm
-inline Dbl Log2(Dbl x) {return log2 (x);} // 2-base logarithm
-       Flt Log (Flt x, Flt base);         //        logarithm
-       Dbl Log (Dbl x, Dbl base);         //        logarithm
+       Flt  Sqrt(  Int   x); // square root, returns 0 for negative values
+       Flt  Sqrt(  Flt   x); // square root, returns 0 for negative values
+       Dbl  Sqrt(  Dbl   x); // square root, returns 0 for negative values
+inline Vec2 Sqrt(C Vec2 &x) {return Vec2(Sqrt(x.x), Sqrt(x.y));}
+inline Vec  Sqrt(C Vec  &x) {return Vec (Sqrt(x.x), Sqrt(x.y), Sqrt(x.z));}
+inline Vec4 Sqrt(C Vec4 &x) {return Vec4(Sqrt(x.x), Sqrt(x.y), Sqrt(x.z), Sqrt(x.w));}
+
+Flt SqrtS(Int x); // sign preserving square root, returns -Sqrt(-x) for negative values
+Flt SqrtS(Flt x); // sign preserving square root, returns -Sqrt(-x) for negative values
+Dbl SqrtS(Dbl x); // sign preserving square root, returns -Sqrt(-x) for negative values
+
+inline Flt  Pow(Int x, Flt y) {return powf((Flt)x,      y);} // raise 'x' to the power 'y' = Exp2(Log2(x)*y)
+inline Flt  Pow(Flt x, Int y) {return powf(     x, (Flt)y);} // raise 'x' to the power 'y' = Exp2(Log2(x)*y)
+inline Flt  Pow(Flt x, Flt y) {return powf(     x,      y);} // raise 'x' to the power 'y' = Exp2(Log2(x)*y)
+inline Dbl  Pow(Int x, Dbl y) {return pow (     x,      y);} // raise 'x' to the power 'y' = Exp2(Log2(x)*y)
+inline Dbl  Pow(Dbl x, Int y) {return pow (     x,      y);} // raise 'x' to the power 'y' = Exp2(Log2(x)*y)
+inline Dbl  Pow(Dbl x, Dbl y) {return pow (     x,      y);} // raise 'x' to the power 'y' = Exp2(Log2(x)*y)
+inline Vec2 Pow(C Vec2 &v, Flt exp) {return Vec2(Pow(v.x, exp), Pow(v.y, exp));}
+inline Vec  Pow(C Vec  &v, Flt exp) {return Vec (Pow(v.x, exp), Pow(v.y, exp), Pow(v.z, exp));}
+inline Vec4 Pow(C Vec4 &v, Flt exp) {return Vec4(Pow(v.x, exp), Pow(v.y, exp), Pow(v.z, exp), Pow(v.w, exp));}
+
+inline Flt  Exp(  Flt   x) {return expf(x);} // raise 'e' to the power 'x' = Exp2(x/Log(2))
+inline Dbl  Exp(  Dbl   x) {return exp (x);} // raise 'e' to the power 'x' = Exp2(x/Log(2))
+inline Vec2 Exp(C Vec2 &v) {return Vec2(Exp(v.x), Exp(v.y));}
+inline Vec  Exp(C Vec  &v) {return Vec (Exp(v.x), Exp(v.y), Exp(v.z));}
+inline Vec4 Exp(C Vec4 &v) {return Vec4(Exp(v.x), Exp(v.y), Exp(v.z), Exp(v.w));}
+
+// 'Exp2' is slower than 'Exp' on Intel Core i7-11700K, so try using 'Exp' instead
+inline Flt  Exp2(  Flt   x) {return exp2f(x);} // raise '2' to the power 'x'
+inline Dbl  Exp2(  Dbl   x) {return exp2 (x);} // raise '2' to the power 'x'
+inline Vec2 Exp2(C Vec2 &v) {return Vec2(Exp2(v.x), Exp2(v.y));}
+inline Vec  Exp2(C Vec  &v) {return Vec (Exp2(v.x), Exp2(v.y), Exp2(v.z));}
+inline Vec4 Exp2(C Vec4 &v) {return Vec4(Exp2(v.x), Exp2(v.y), Exp2(v.z), Exp2(v.w));}
+
+inline Flt  Ln(  Flt   x) {return logf(x);} // e-base logarithm
+inline Dbl  Ln(  Dbl   x) {return log (x);} // e-base logarithm
+inline Vec2 Ln(C Vec2 &v) {return Vec2(Ln(v.x), Ln(v.y));}
+inline Vec  Ln(C Vec  &v) {return Vec (Ln(v.x), Ln(v.y), Ln(v.z));}
+inline Vec4 Ln(C Vec4 &v) {return Vec4(Ln(v.x), Ln(v.y), Ln(v.z), Ln(v.w));}
+
+inline Flt  Log2(  Flt   x) {return log2f(x);} // 2-base logarithm, 'Log2' is slower than 'Ln' on Intel Core i7-11700K, so try using 'Ln' instead
+inline Dbl  Log2(  Dbl   x) {return log2 (x);} // 2-base logarithm
+inline Vec2 Log2(C Vec2 &v) {return Vec2(Log2(v.x), Log2(v.y));}
+inline Vec  Log2(C Vec  &v) {return Vec (Log2(v.x), Log2(v.y), Log2(v.z));}
+inline Vec4 Log2(C Vec4 &v) {return Vec4(Log2(v.x), Log2(v.y), Log2(v.z), Log2(v.w));}
+
+Flt Log(Flt x, Flt base); // logarithm
+Dbl Log(Dbl x, Dbl base); // logarithm
 
 Flt Pinch      (Flt x, Flt pinch       ); // pinch, 'x'=0..1, 'pinch'       =   0..Inf (<1 makes the curve start slow and accelerate, 1 makes the curve linear, >1 makes the curve start fast and deccelerate)
 Flt PinchFactor(Flt x, Flt pinch_factor); // pinch, 'x'=0..1, 'pinch_factor'=-Inf..Inf (<0 makes the curve start slow and accelerate, 0 makes the curve linear, >0 makes the curve start fast and deccelerate)
@@ -232,41 +324,65 @@ Flt       SplitAlpha  (Flt alpha  , Int steps); // calculate alpha to be used fo
 Flt     VisibleOpacity(Flt density, Flt range); // calculate visible     opacity (0..1) having 'density' environment density (0..1), and 'range' (0..Inf)
 Flt AccumulatedDensity(Flt density, Flt range); // calculate accumulated density (0..1) having 'density' environment density (0..1), and 'range' (0..Inf)
 
-// sigmoid
-Flt SigmoidExp    (Flt x);
+// sigmoid, these functions squash -Inf..Inf to -1..1 range, with Sigmoid(0)=0, and having derivative(0)=1, they are "S" shaped
 Flt SigmoidDiv    (Flt x);
+Flt SigmoidDivInv (Flt y); // inverse function of 'SigmoidDiv', SigmoidDivInv(SigmoidDiv(x))=x
+Flt SigmoidSqr    (Flt x);
+Flt SigmoidSqrInv (Flt y); // inverse function of 'SigmoidSqr', SigmoidSqrInv(SigmoidSqr(x))=x
+Flt SigmoidPow    (Flt x, Flt exp);
+Flt SigmoidPowInv (Flt y, Flt exp); // inverse function of 'SigmoidPow', SigmoidPowInv(SigmoidPow(x, exp), exp)=x
+Flt SigmoidExp    (Flt x);
+Flt SigmoidExpInv (Flt y); // inverse function of 'SigmoidExp', SigmoidExpInv(SigmoidExp(x))=x
+Flt SigmoidExpA   (Flt x);
+Flt SigmoidExpAInv(Flt y); // inverse function of 'SigmoidExpA', SigmoidExpAInv(SigmoidExpA(x))=x
 Flt SigmoidAtan   (Flt x);
-Flt SigmoidSqrt   (Flt x);
-Flt SigmoidSqrtInv(Flt y); // inverse function of 'SigmoidSqrt', SigmoidSqrtInv(SigmoidSqrt(x))=x
-Flt SigmoidGd     (Flt x);
+Flt SigmoidAtanInv(Flt y); // inverse function of 'SigmoidAtan', SigmoidAtanInv(SigmoidAtan(x))=x
 Flt SigmoidTanh   (Flt x);
+Flt SigmoidTanhInv(Flt y); // inverse function of 'SigmoidTanh', SigmoidTanhInv(SigmoidTanh(x))=x
+Flt SigmoidGd     (Flt x);
 Flt SigmoidErf    (Flt x);
+
+#if EE_PRIVATE
+       Flt DistDot(Flt dist2, Flt dist_plane); // calculate distance scaled by angle, 'dist2'=squared distance, 'dist_plane'=distance along the plane of interest
+inline Flt LengthMul(C Vec &a, C Vec &b) {return SqrtFast(a.length2()*b.length2());} // return multiplication of vector lengths, faster version of "a.length()*b.length()"
+#endif
 /******************************************************************************/
 // ANGLES
 /******************************************************************************/
-inline Flt  Sin   (  Flt   angle) {return sinf(angle);}       // get   sine of angle, -1..1
-inline Dbl  Sin   (  Dbl   angle) {return sin (angle);}       // get   sine of angle, -1..1
-inline Flt  Cos   (  Flt   angle) {return cosf(angle);}       // get cosine of angle, -1..1
-inline Dbl  Cos   (  Dbl   angle) {return cos (angle);}       // get cosine of angle, -1..1
-       void CosSin(  Flt  &cos, Flt &sin, Flt angle);         // get cosine and sine of angle, cos=Cos(angle), sin=Sin(angle)
-       void CosSin(  Dbl  &cos, Dbl &sin, Dbl angle);         // get cosine and sine of angle, cos=Cos(angle), sin=Sin(angle)
-inline Flt  Tan   (  Flt   angle) {return tanf(angle);}       // get   tangent "sin/cos" of angle, -Inf..Inf
-inline Dbl  Tan   (  Dbl   angle) {return tan (angle);}       // get   tangent "sin/cos" of angle, -Inf..Inf
-       Vec2 Tan   (C Vec2 &angle);                            // get   tangent "sin/cos" of angle, -Inf..Inf
-inline Flt  Ctg   (  Flt   angle) {return tanf(PI_2 -angle);} // get cotangent "cos/sin" of angle, -Inf..Inf, alternative: {Flt t=tanf(angle); return t ? 1.0f/t : 0;}
-inline Dbl  Ctg   (  Dbl   angle) {return tan (PID_2-angle);} // get cotangent "cos/sin" of angle, -Inf..Inf, alternative: {Dbl t=tan (angle); return t ? 1.0 /t : 0;}
-       Flt  Acos  (  Flt   cos  );                            // get arc  cosine (angle which has specified  cosine),     0..PI
-       Dbl  Acos  (  Dbl   cos  );                            // get arc  cosine (angle which has specified  cosine),     0..PI
-       Flt  Asin  (  Flt   sin  );                            // get arc    sine (angle which has specified    sine), -PI_2..PI_2
-       Dbl  Asin  (  Dbl   sin  );                            // get arc    sine (angle which has specified    sine), -PI_2..PI_2
-inline Flt  Atan  (  Flt   tan  ) {return atanf(tan);}        // get arc tangent (angle which has specified tangent), -PI_2..PI_2
-inline Dbl  Atan  (  Dbl   tan  ) {return atan (tan);}        // get arc tangent (angle which has specified tangent), -PI_2..PI_2
-       Vec2 Atan  (C Vec2 &tan  );                            // get arc tangent (angle which has specified tangent), -PI_2..PI_2
+inline Flt Sin(Flt angle) {return sinf(angle);} // get   sine of angle, -1..1
+inline Dbl Sin(Dbl angle) {return sin (angle);} // get   sine of angle, -1..1
+inline Flt Cos(Flt angle) {return cosf(angle);} // get cosine of angle, -1..1
+inline Dbl Cos(Dbl angle) {return cos (angle);} // get cosine of angle, -1..1
 
+void CosSin(Flt &cos, Flt &sin, Flt angle); // get cosine and sine of angle, cos=Cos(angle), sin=Sin(angle)
+void CosSin(Dbl &cos, Dbl &sin, Dbl angle); // get cosine and sine of angle, cos=Cos(angle), sin=Sin(angle)
+
+inline Flt  Tan(  Flt   angle) {return tanf(angle);}                      // get tangent "sin/cos" of angle, -Inf..Inf
+inline Dbl  Tan(  Dbl   angle) {return tan (angle);}                      // get tangent "sin/cos" of angle, -Inf..Inf
+inline Vec2 Tan(C Vec2 &angle) {return Vec2(Tan(angle.x), Tan(angle.y));} // get tangent "sin/cos" of angle, -Inf..Inf
+
+inline Flt  Ctg(  Flt   angle) {return tanf(PI_2 -angle);} // get cotangent "cos/sin" of angle, -Inf..Inf, alternative: {Flt t=tanf(angle); return t ? 1.0f/t : 0;}
+inline Dbl  Ctg(  Dbl   angle) {return tan (PID_2-angle);} // get cotangent "cos/sin" of angle, -Inf..Inf, alternative: {Dbl t=tan (angle); return t ? 1.0 /t : 0;}
+
+       Flt Acos    (Flt cos);                     // get arc cosine (angle which has specified cosine),     0..PI
+       Dbl Acos    (Dbl cos);                     // get arc cosine (angle which has specified cosine),     0..PI
+       Flt Asin    (Flt sin);                     // get arc   sine (angle which has specified   sine), -PI_2..PI_2
+       Dbl Asin    (Dbl sin);                     // get arc   sine (angle which has specified   sine), -PI_2..PI_2
 inline Flt AcosFast(Flt cos) {return acosf(cos);} // get arc cosine (angle which has specified cosine),     0..PI  , returns NaN for values out of -1..1 range
 inline Dbl AcosFast(Dbl cos) {return acos (cos);} // get arc cosine (angle which has specified cosine),     0..PI  , returns NaN for values out of -1..1 range
 inline Flt AsinFast(Flt sin) {return asinf(sin);} // get arc   sine (angle which has specified   sine), -PI_2..PI_2, returns NaN for values out of -1..1 range
 inline Dbl AsinFast(Dbl sin) {return asin (sin);} // get arc   sine (angle which has specified   sine), -PI_2..PI_2, returns NaN for values out of -1..1 range
+
+inline Flt  Atan(  Flt   tan) {return atanf(tan);} // get arc tangent (angle which has specified tangent), -PI_2..PI_2
+inline Dbl  Atan(  Dbl   tan) {return atan (tan);} // get arc tangent (angle which has specified tangent), -PI_2..PI_2
+inline Vec2 Atan(C Vec2 &tan) {return Vec2(Atan(tan.x), Atan(tan.y));}
+inline Vec  Atan(C Vec  &tan) {return Vec (Atan(tan.x), Atan(tan.y), Atan(tan.z));}
+inline Vec4 Atan(C Vec4 &tan) {return Vec4(Atan(tan.x), Atan(tan.y), Atan(tan.z), Atan(tan.w));}
+
+#if EE_PRIVATE
+Flt ACosSin(Flt cos, Flt sin); // get angle which has specified cosine and sine, 0..PI (this assumes "sin>=0"), this is faster than 'Angle', however point needs to be normalized (X=cos, Y=sin), and remember that this function ignores "sin<0"
+Dbl ACosSin(Dbl cos, Dbl sin); // get angle which has specified cosine and sine, 0..PI (this assumes "sin>=0"), this is faster than 'Angle', however point needs to be normalized (X=cos, Y=sin), and remember that this function ignores "sin<0"
+#endif
 
 inline Flt Angle  (Flt x, Flt y) {return atan2f(  y,   x);} // get point angle (-PI..PI)
 inline Dbl Angle  (Dbl x, Dbl y) {return atan2 (  y,   x);} // get point angle (-PI..PI)
@@ -281,6 +397,19 @@ inline Flt AngleXZ(C Vec   &v, C Matrix  &matrix                 ) {return Angle
 
 Flt AngleFast(Flt x, Flt y); // get point angle approximation (-PI..PI)
 Flt AngleFast(C Vec2 &v   ); // get point angle approximation (-PI..PI)
+#if EE_PRIVATE
+Flt Angle1Fast(Flt x, Flt y); // get point angle approximation (-1..1)
+
+Vec2 AngleFastToPos (Flt angle_fast); // convert angle approximation (-PI..PI) into a point position
+Vec2 Angle1FastToPos(Flt angle_fast); // convert angle approximation ( -1..1 ) into a point position
+
+       Flt AngleFast  (C Vec  &v,                 C Vec &x, C Vec &y);                                                       // get point angle approximation according to given axes            (-PI..PI)
+inline Flt AngleFast  (C Vec  &v, C Vec     &pos, C Vec &x, C Vec &y) {return AngleFast(v-pos,                x,        y);} // get point angle approximation according to given axes and center (-PI..PI)
+inline Flt AngleFast  (C Vec  &v, C Matrix3 &matrix                 ) {return AngleFast(v            , matrix.x, matrix.y);} // get point angle approximation according to given matrix          (-PI..PI)
+inline Flt AngleFastXZ(C Vec  &v, C Matrix3 &matrix                 ) {return AngleFast(v            , matrix.x, matrix.z);} // get point angle approximation according to given matrix          (-PI..PI)
+inline Flt AngleFast  (C Vec  &v, C Matrix  &matrix                 ) {return AngleFast(v, matrix.pos, matrix.x, matrix.y);} // get point angle approximation according to given matrix          (-PI..PI)
+inline Flt AngleFastXZ(C Vec  &v, C Matrix  &matrix                 ) {return AngleFast(v, matrix.pos, matrix.x, matrix.z);} // get point angle approximation according to given matrix          (-PI..PI)
+#endif
 
 inline Flt AngleFull     (Flt angle       ) {return Frac(angle, PI2 );}       // normalize angle to   0..PI2 (wrap angle to   0..PI2 range)
 inline Dbl AngleFull     (Dbl angle       ) {return Frac(angle, PID2);}       // normalize angle to   0..PI2 (wrap angle to   0..PI2 range)
@@ -291,6 +420,14 @@ inline Dbl AngleDelta    (Dbl from, Dbl to) {return AngleNormalize(to-from);} //
 
 inline Flt CosSin(Flt cos_sin) {return Sqrt(1-cos_sin*cos_sin);} // convert cos<->sin, this function converts sine value to cosine value (of the same angle), and cosine value to sine value (of the same angle) at the same time
 inline Dbl CosSin(Dbl cos_sin) {return Sqrt(1-cos_sin*cos_sin);} // convert cos<->sin, this function converts sine value to cosine value (of the same angle), and cosine value to sine value (of the same angle) at the same time
+
+#if EE_PRIVATE
+inline Flt CosSin2(Flt cos_sin_2) {return Sqrt(1-cos_sin_2);} // convert cos2->sin, sin2->cos, this function converts sine value to cosine value (of the same angle), and cosine value to sine value (of the same angle) at the same time
+inline Dbl CosSin2(Dbl cos_sin_2) {return Sqrt(1-cos_sin_2);} // convert cos2->sin, sin2->cos, this function converts sine value to cosine value (of the same angle), and cosine value to sine value (of the same angle) at the same time
+
+inline Flt CosSinPrecise(Flt cos_sin) {return (Flt)CosSin(Dbl (cos_sin));} // this is more precise than regular 'CosSin' and still fast
+inline Dbl CosSinPrecise(Dbl cos_sin) {return      Sin   (Acos(cos_sin));} // this is more precise than regular 'CosSin' but slow
+#endif
 
 inline Flt CalcZ(C Vec2 &v) {return Sqrt(1 - v.x*v.x - v.y*v.y);}
 
@@ -330,16 +467,34 @@ inline Dbl    SinBetweenN(C VecD2 &a, C VecD2 &b) {return Cross(a, b)         ;}
 inline Flt AbsSinBetweenN(C Vec   &a, C Vec   &b) {return Cross(a, b).length();} //  0..1
 inline Dbl AbsSinBetweenN(C VecD  &a, C VecD  &b) {return Cross(a, b).length();} //  0..1
 
+#if EE_PRIVATE
+inline Flt    AngleBetween(C Vec2  &prev, C Vec2  &cur, C Vec2  &next) {return    AngleBetween(prev-cur, next-cur);} // -PI..PI
+inline Dbl    AngleBetween(C VecD2 &prev, C VecD2 &cur, C VecD2 &next) {return    AngleBetween(prev-cur, next-cur);} // -PI..PI
+inline Flt AbsAngleBetween(C Vec2  &prev, C Vec2  &cur, C Vec2  &next) {return AbsAngleBetween(prev-cur, next-cur);} //   0..PI
+inline Dbl AbsAngleBetween(C VecD2 &prev, C VecD2 &cur, C VecD2 &next) {return AbsAngleBetween(prev-cur, next-cur);} //   0..PI
+inline Flt AbsAngleBetween(C Vec   &prev, C Vec   &cur, C Vec   &next) {return AbsAngleBetween(prev-cur, next-cur);} //   0..PI
+inline Dbl AbsAngleBetween(C VecD  &prev, C VecD  &cur, C VecD  &next) {return AbsAngleBetween(prev-cur, next-cur);} //   0..PI
+
+inline Flt CosBetween(C Vec2  &prev, C Vec2  &cur, C Vec2  &next) {return CosBetween(prev-cur, next-cur);} // -1..1
+inline Dbl CosBetween(C VecD2 &prev, C VecD2 &cur, C VecD2 &next) {return CosBetween(prev-cur, next-cur);} // -1..1
+inline Flt CosBetween(C Vec   &prev, C Vec   &cur, C Vec   &next) {return CosBetween(prev-cur, next-cur);} // -1..1
+inline Dbl CosBetween(C VecD  &prev, C VecD  &cur, C VecD  &next) {return CosBetween(prev-cur, next-cur);} // -1..1
+#endif
+
 inline Flt AngleFlipX (Flt angle) {return PI -angle;} // flip angle so that (x, y)->(-x, y), where x=Cos(angle), y=Sin(angle)
 inline Flt AngleFlipY (Flt angle) {return PI2-angle;} // flip angle so that (x, y)->( x,-y), where x=Cos(angle), y=Sin(angle)
 inline Flt AngleFlipXY(Flt angle) {return PI +angle;} // flip angle so that (x, y)->(-x,-y), where x=Cos(angle), y=Sin(angle)
 
 // average direction
-void AvgDirU(Vec2 &dir, C CMemPtr<Vec2> &points); // get average direction from array of points, points should be located around center Vec2(0,0), direction is not normalized
+void AvgDirU(Vec2 &dir, C CMemPtr<Vec2> &points); // get average direction from array of points, points should be located around center Vec2(0,0)  , direction is not normalized
+void AvgDirU(Vec  &dir, C CMemPtr<Vec > &points); // get average direction from array of points, points should be located around center Vec (0,0,0), direction is not normalized
 /******************************************************************************/
 // BLENDING
 /******************************************************************************/
 // get smooth curves that start slowly from 0, accelerate, and slow down to 1
+#if EE_PRIVATE
+       Flt _SmoothQuintic(Flt x           ); // fast version that doesn't check for 'x' being out of 0..1 range, this function is not an approximate of 'SmoothSin', it's sharper
+#endif
        Flt  SmoothSqr    (Flt x           );
 inline Flt _SmoothCube   (Flt x           ) {return (3-2*x)*x*x;} // fast version that doesn't check for 'x' being out of 0..1 range
        Flt  SmoothCube   (Flt x           );
@@ -360,7 +515,7 @@ Flt BlendSmoothSin   (Flt x); // get smooth sine   blend value (0..1), basing on
 constexpr Int BlendSmoothCubeSum    (Int range) {return range          ;} // get sum of all weights for all "-range..range" steps, calculated using "Flt weight=0; for(Int dist=-range; dist<=range; dist++)weight+=BlendSmoothCube(dist/Flt(range));"
 constexpr Flt BlendSmoothCubeSumHalf(Int range) {return range*0.5f+0.5f;} // get sum of all weights for all "     0..range" steps, calculated using "Flt weight=0; for(Int dist=     0; dist<=range; dist++)weight+=BlendSmoothCube(dist/Flt(range));"
 
-Flt Gaussian(Flt x); // get the Probability Density Function (PDF) of the Normal (Gaussian) distribution "expf(-x*x)", this function returns highest value of 1 at "x==0" and drops towards zero when 'x' becomes more away from the '0' position, theoretically it never reaches zero value, however due to floating point numerical precision zero will be reached for 'x' values far from '0' position
+Flt Gaussian(Flt x); // get the Probability Density Function (PDF) of the Normal (Gaussian) distribution "Exp(-x*x)", this function returns highest value of 1 at "x==0" and drops towards zero when 'x' becomes more away from the '0' position, theoretically it never reaches zero value, however due to floating point numerical precision zero will be reached for 'x' values far from '0' position
 
 Flt  SmoothOffset(Flt  &offset, Flt max_length);
 Vec2 SmoothOffset(Vec2 &offset, Flt max_length);
@@ -397,6 +552,13 @@ inline VecD  Lerp(C VecD  &from, C VecD  &to,   Dbl  step) {return from+step*(to
 inline Vec4  Lerp(C VecI4 &from, C VecI4 &to,   Flt  step) {return from+step*(to-from);} // faster than "from*(1-step) + to*step"
 inline Vec4  Lerp(C Vec4  &from, C Vec4  &to,   Flt  step) {return from+step*(to-from);} // faster than "from*(1-step) + to*step"
 inline VecD4 Lerp(C VecD4 &from, C VecD4 &to,   Dbl  step) {return from+step*(to-from);} // faster than "from*(1-step) + to*step"
+inline Vec5  Lerp(C Vec5  &from, C Vec5  &to,   Flt  step) {return from+step*(to-from);} // faster than "from*(1-step) + to*step"
+#if EE_PRIVATE
+       VecB4 LerpI(C VecB4 &from, C VecB4 &to,   Flt  step);
+
+VecB4 LerpI(C VecB4 &a, C VecB4 &b, C VecB4 &c, C Vec &blend); // linear interpolation between vectors, returns a*blend.x + b*blend.y + c*blend.z
+Vec5  Lerp (C Vec5  &a, C Vec5  &b, C Vec5  &c, C Vec &blend); // linear interpolation between vectors, returns a*blend.x + b*blend.y + c*blend.z
+#endif
 
 // linear interpolation reverse, get interpolation step from value, these functions return 0 if "value==from" and 1 if "value==to", in other cases returned value is interpolated between 0..1
 inline Flt LerpR(  Int    from,   Int    to,   Int    value) {return Flt(value-from)/(to-from);}
@@ -426,6 +588,11 @@ inline Dbl LerpRS(C VecD  &from, C VecD  &to, C VecD  &value) {return Sat(LerpR(
 inline Flt LerpRS(C Vec4  &from, C Vec4  &to, C Vec4  &value) {return Sat(LerpR(from, to, value));}
 inline Dbl LerpRS(C VecD4 &from, C VecD4 &to, C VecD4 &value) {return Sat(LerpR(from, to, value));}
 
+// get linear interpolation MUL ADD (MAD) factors, x=mul, y=add, to be used in following way: "value*mul+add"
+Vec2 LerpToMad (                          Flt dest_from, Flt dest_to); // converts        0..1      to dest_from..dest_to
+Vec2 LerpToMad (Flt src_from, Flt src_to, Flt dest_from, Flt dest_to); // converts src_from..src_to to dest_from..dest_to
+Vec2 LerpRToMad(Flt src_from, Flt src_to                            ); // converts src_from..src_to to         0..1
+
 Flt LerpAngle(Flt from, Flt to, Flt step); // angle based interpolation, 'step'=0..1
 
 void Lerp4Weights(Vec4 &weights, Flt step); // get weights used for 'Lerp4' function, 'step'=0..1, sum of weights is always equal to 1
@@ -447,6 +614,12 @@ inline Flt LerpSmoothSextic(Flt from, Flt to, Flt step           ) {return Lerp(
 inline Flt LerpSmoothSin   (Flt from, Flt to, Flt step           ) {return Lerp(from, to, SmoothSin   (step       ));}
 inline Flt LerpSmoothPow   (Flt from, Flt to, Flt step, Flt pow  ) {return Lerp(from, to, SmoothPow   (step, pow  ));}
 inline Flt LerpSmoothPinch (Flt from, Flt to, Flt step, Flt pinch) {return Lerp(from, to, SmoothPinch (step, pinch));}
+
+// spherical interpolation, 'step'=0..1, vectors must be normalized
+Vec Slerp        (C Vec &from, C Vec &to,              Flt step     );
+Vec Slerp        (C Vec &from, C Vec &to, C Vec &perp, Flt step     ); // 'perp'=if 'from' 'to' are opposite then rotate towards 'perp' (must be perpendicular to 'from')
+Vec SlerpMaxAngle(C Vec &from, C Vec &to,              Flt max_angle);
+Vec SlerpMaxAngle(C Vec &from, C Vec &to, C Vec &perp, Flt max_angle); // 'perp'=if 'from' 'to' are opposite then rotate towards 'perp' (must be perpendicular to 'from')
 /******************************************************************************/
 // ADJUST VALUE
 /******************************************************************************/
@@ -508,12 +681,56 @@ inline Flt MpsToKmph   (Flt x) {return x*((60*60)/1000.0f);} // convert "Meter  
 inline Flt KmphToMps   (Flt x) {return x*(1000.0f/(60*60));} // convert "Kilometer per Hour  " To "Meter     per Second"
 inline Flt RadpsToRotpm(Flt x) {return x*(60/PI2         );} // convert "Radian    per Second" To "Rotation  per Minute"
 inline Flt RotpmToRadps(Flt x) {return x*(PI2/60         );} // convert "Rotation  per Minute" To "Radian    per Second"
+
+#if EE_PRIVATE
+inline Byte FltToByte(Flt  f) {return Mid(RoundPos(f*255), 0, 255);} // 0..1   -> 0..255, it's okay to clamp after converting to int for small values
+inline Flt  ByteToFlt(Byte b) {return              b/255.0f       ;} // 0..255 -> 0..1  , faster than using 'ByteToFltArray'
+
+inline SByte SFltToSByte(Flt f) {return Mid(Round   (f*127          ), -127, 127);} // -1..1 -> -127..127, it's okay to clamp after converting to int for small values
+inline  Byte SFltToUByte(Flt f) {return Mid(RoundPos(f*127.5f+127.5f),    0, 255);} // -1..1 ->    0..255, it's okay to clamp after converting to int for small values
+
+inline Flt SByteToSFlt(SByte b) {return (b<=-127) ? -1 : b/127.0f      ;} // -127..127 -> -1..1
+inline Flt UByteToSFlt( Byte b) {return                  b*(2.0f/255)-1;} //    0..255 -> -1..1
+
+inline Byte FltToU2(Flt  f) {return Mid(RoundPos(f*3), 0, 3);} // 0..1 -> 0..3, it's okay to clamp after converting to int for small values
+inline Flt  U2ToFlt(Byte u) {return u/3.0f                  ;} // 0..3 -> 0..1
+
+inline U16 FltToU10(Flt f) {return Mid(RoundPos(f*1023), 0, 1023);} // 0..1    -> 0..1023, it's okay to clamp after converting to int for small values
+inline Flt U10ToFlt(U16 u) {return u/1023.0f                     ;} // 0..1023 -> 0..1
+
+inline U16 FltToU12(Flt f) {return RoundU(Sat(f)*4095);} // 0..1    -> 0..4095
+inline Flt U12ToFlt(U16 u) {return u/4095.0f          ;} // 0..4095 -> 0..1
+
+inline Flt  ShortToSFlt (Short s) {return      (s<=-32767) ? -1 : s/32767.0f;} // -32767..32767 -> -1..1
+inline Short SFltToShort(Flt   f) {return Round(Mid(f, -1.0f, 1.0f)*32767)  ;} // -1..1 -> -32767..32767
+
+inline U16 FltToU16(Flt f) {return RoundU(Sat(f)*65535);} // 0..1     -> 0..65535
+inline Flt U16ToFlt(U16 u) {return u/65535.0f          ;} // 0..65535 -> 0..1
+
+inline Byte U1ToByte(Bool x) {return  x*255            ;} // 0..1   -> 0..255
+inline Byte U2ToByte(Byte x) {return (x*255/*+ 1*/)/  3;} // 0..3   -> 0..255 (this version exactly matches float with Round, +1 is not needed in this case, function will return the same value with or without it)
+inline Byte U3ToByte(Byte x) {return (x*255+   3  )/  7;} // 0..7   -> 0..255 (this version exactly matches float with Round)
+inline Byte U4ToByte(Byte x) {return (x<<4)|x          ;} // 0..15  -> 0..255 (this version exactly matches float with Round, same as   "(x*255/*+ 7*/)/ 15" but faster, +7 is not needed in this case, function will return the same value with or without it)
+inline Byte U5ToByte(Byte x) {return (x*255  +15  )/ 31;} // 0..31  -> 0..255 (this version exactly matches float with Round, can't use "(x<<3)|(x>>2)"      because it has error of "1")
+inline Byte U6ToByte(Byte x) {return (x*255  +31  )/ 63;} // 0..63  -> 0..255 (this version exactly matches float with Round, can't use "(x<<2)|(x>>4)"      because it has error of "1")
+inline Byte U7ToByte(Byte x) {return (x<<1)|(x>>6)     ;} // 0..127 -> 0..255 (this version exactly matches float with Round, same as   "(x*255  +63  )/127" but faster)
+
+inline Byte ByteToU2 (Byte x) {return (x>>6      )    ;} // 0..255 -> 0..3
+inline U16  ByteToU10(Byte x) {return (x*1023+127)/255;} // 0..255 -> 0..1023 , can't use "(x<<2)|(x>>6)"     because it has error of "1"
+inline U16  ByteToU16(Byte x) {return (x<<8)|x        ;} // 0..255 -> 0..65535, same as   "(x*65535+127)/255" but faster
+
+inline Byte SByteToByte(SByte s) {return (s<=0) ? 0 : (s<<1)|(s>>6);} // -128..0 -> 0 , 0..127 -> 0..255, same as "(s*255+63)/127" but faster
+#endif
 /******************************************************************************/
 // TIME, DISTANCE, VELOCITY, ACCELERATION
 /******************************************************************************/
-inline Flt ZeroVelTravelTime (Flt dist, Flt accel) {return 2*SqrtFast(accel*dist)/accel;} // get time needed to travel 'dist' distance using 'accel' acceleration, assuming that initial velocity is zero, first half is accelerated with 'accel', second half decelerated with 'accel' and final velocity is zero
-inline Flt ZeroVelTravelDist (Flt time, Flt accel) {return            accel*Sqr(time)/4;} // get travelled distance in 'time'          using 'accel' acceleration, assuming that initial velocity is zero, first half is accelerated with 'accel', second half decelerated with 'accel' and final velocity is zero
-inline Flt ZeroVelTravelAccel(Flt time, Flt dist ) {return            dist /Sqr(time)*4;} // get acceleration needed to travel 'dist' distance in 'time'         , assuming that initial velocity is zero, first half is accelerated with 'accel', second half decelerated with 'accel' and final velocity is zero
+inline Flt ZeroVelTravelTime (Flt dist, Flt accel) {return SqrtFast(2*accel*dist)/accel;} // get time needed to travel 'dist' distance using 'accel' acceleration, assuming that initial velocity is zero and accelerated with 'accel'
+inline Flt ZeroVelTravelDist (Flt time, Flt accel) {return            accel*Sqr(time)/2;} // get travelled distance in 'time'          using 'accel' acceleration, assuming that initial velocity is zero and accelerated with 'accel'
+inline Flt ZeroVelTravelAccel(Flt time, Flt dist ) {return            dist /Sqr(time)*2;} // get acceleration needed to travel 'dist' distance in 'time'         , assuming that initial velocity is zero and accelerated with 'accel'
+
+inline Flt ZeroVelAccelBrakeTravelTime (Flt dist, Flt accel) {return SqrtFast(4*accel*dist)/accel;} // get time needed to travel 'dist' distance using 'accel' acceleration, assuming that initial velocity is zero, first half is accelerated with 'accel', second half decelerated with 'accel' and final velocity is zero
+inline Flt ZeroVelAccelBrakeTravelDist (Flt time, Flt accel) {return            accel*Sqr(time)/4;} // get travelled distance in 'time'          using 'accel' acceleration, assuming that initial velocity is zero, first half is accelerated with 'accel', second half decelerated with 'accel' and final velocity is zero
+inline Flt ZeroVelAccelBrakeTravelAccel(Flt time, Flt dist ) {return            dist /Sqr(time)*4;} // get acceleration needed to travel 'dist' distance in 'time'         , assuming that initial velocity is zero, first half is accelerated with 'accel', second half decelerated with 'accel' and final velocity is zero
 /******************************************************************************/
 extern const Int PrimeNumbers[16]; // first 16 prime numbers = { 2, 3, 5, .. }
 /******************************************************************************/

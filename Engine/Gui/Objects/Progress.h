@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum PROGRESS_MODE : Byte // Progress Bar Mode
 {
@@ -31,10 +28,16 @@ const_mem_addr struct Progress : GuiObj // Gui ProgressBar !! must be stored in 
    // main
    virtual void draw(C GuiPC &gpc)override; // draw object
 
+#if EE_PRIVATE
+   void zero();
+#endif
+
   ~Progress() {del();}
    Progress();
 
+#if !EE_PRIVATE
 private:
+#endif
    Flt _progress;
 
 protected:

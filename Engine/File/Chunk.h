@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'ChunkWriter' and 'ChunkReader' classes to write and read binary data using chunks.
@@ -44,6 +41,11 @@ struct ChunkReader // Processes chunks from a single file
    File* operator()();                 // get next chunk for processing, null on fail
  C Str & name      ()C {return _name;} // get name    of currently processed chunk, this will contain valid data after 'operator()' was called
    UInt  ver       ()C {return _ver ;} // get version of currently processed chunk, this will contain valid data after 'operator()' was called
+
+#if EE_PRIVATE
+   void zero   ();
+   void restore();
+#endif
 
            ~ChunkReader(                      );
             ChunkReader(                      );

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum WIN_FLAG // Window Flags
 {
@@ -65,10 +62,27 @@ const_mem_addr struct Window : GuiObj // Gui Window !! must be stored in constan
    virtual void    update(C GuiPC &gpc)override; // update object
    virtual void    draw  (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   Panel* getNormalPanel()C;
+   void      focusToggle(); // this method will activate the window if it's not at the top, otherwise it will hide it
+   void             zero();
+   void         addChild(GuiObj &child);
+   void      removeChild(GuiObj &child);
+   void        setParent();
+   void        setParams();
+   void       setButtons();
+   void          setRect();
+   void    setFinalAlpha();
+   Bool           active()C {return Gui.window   ()==this && App.active();}
+   Bool              lit()C {return Gui.windowLit()==this;}
+#endif
+
   ~Window() {del();}
    Window();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool           _bar_visible;
    Byte           _fade_type, _resize;
    Int            _level;
@@ -102,13 +116,22 @@ private:
    GuiObj _background;
 };
 /******************************************************************************/
-struct Dialog : Window // Dialog (has text and custom amount of buttons, creating it automatically sets the correct rectangles for the window and its children)
+struct Dialog : ModalWindow // Dialog (has text and custom amount of buttons, creating it automatically sets the correct rectangles for the window and its children)
 {
+   Bool         modal=false; // if use 'ModalWindow'
    TextNoTest   text;
    Memx<Button> buttons;
 
    Dialog& create  (C Str &title, C Str &text, C CMemPtr<Str> &buttons, C TextStylePtr &text_style=null); // create with given parameters, this automatically calls 'set'
    Dialog& set     (C Str &title, C Str &text, C CMemPtr<Str> &buttons, C TextStylePtr &text_style=null); // adjust an already created Dialog with given parameters, this automatically calls 'autoSize'
    Dialog& autoSize(); // set window, text and buttons rectangles based on their values
+
+   Dialog& extendX            (Flt e    ); // extend width keeping elements in the center
+   Dialog& separateTextButtons(Flt space); // separate text and buttons with 'space'
+
+   virtual GuiObj* test(C GuiPC &gpc, C Vec2 &pos, GuiObj* &mouse_wheel)override;
+   virtual void nearest(C GuiPC &gpc, GuiObjNearest &gon)override;
+   virtual void  update(C GuiPC &gpc)override;
+   virtual void    draw(C GuiPC &gpc)override;
 };
 /******************************************************************************/

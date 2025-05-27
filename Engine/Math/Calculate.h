@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Calculate' functions to calculate string expressions and convert them to values.
@@ -50,6 +47,84 @@ struct CalcValue // Calculator Value
    Vec4    asVec4  (                     )C; // get value as Vec4 , (0,0,0,0) on fail
    VecD4   asVecD4 (                     )C; // get value as VecD4, (0,0,0,0) on fail
    VecI4   asVecI4 (                     )C; // get value as VecI4, (0,0,0,0) on fail
+
+#if EE_PRIVATE
+   // operations, false on fail
+   Bool notLogical(); // !
+   Bool notBitwise(); // ~
+   Bool chs       (); // change sign
+   Bool abs       (); // absolute value
+   Bool sign      (); // sign
+
+   Bool sat(              ); // saturate
+   Bool min(C CalcValue &x); // minimum
+   Bool max(C CalcValue &x); // maximum
+   Bool avg(C CalcValue &x); // average
+
+   Bool add(C CalcValue &x); // add
+   Bool sub(C CalcValue &x); // subtract
+   Bool mul(C CalcValue &x); // multiply
+   Bool div(C CalcValue &x); // divide
+   Bool mod(C CalcValue &x); // modulo
+
+   Bool sqr (              ); // square
+   Bool cube(              ); // cube
+   Bool sqrt(              ); // square root
+   Bool cbrt(              ); // cube   root
+   Bool pow (C CalcValue &x); // power
+   Bool ln  (              ); // e-base logarithm
+   Bool log2(              ); // 2-base logarithm
+   Bool log (C CalcValue &x); // x-base logarithm
+   Bool exp (              );
+   Bool exp2(              );
+
+   Bool And(C CalcValue &x); // &
+   Bool Or (C CalcValue &x); // |
+   Bool Xor(C CalcValue &x); // ^
+   Bool shl(C CalcValue &x); // <<
+   Bool shr(C CalcValue &x); // >>
+   Bool rol(C CalcValue &x); // rotate left
+   Bool ror(C CalcValue &x); // rotate right
+
+   Bool    equal    (C CalcValue &x); // ==
+   Bool notEqual    (C CalcValue &x); // !=
+   Bool equalGreater(C CalcValue &x); // >=
+   Bool equalSmaller(C CalcValue &x); // <=
+   Bool      greater(C CalcValue &x); // >
+   Bool      smaller(C CalcValue &x); // <
+
+   Bool andLogical(C CalcValue &x); // &&
+   Bool  orLogical(C CalcValue &x); // ||
+   Bool xorLogical(C CalcValue &x); // ^^
+
+   Bool trunc(); // truncate
+   Bool round(); // round
+   Bool floor(); // floor
+   Bool ceil (); // ceil
+   Bool frac (); // fraction
+
+   Bool alignTrunc(C CalcValue &x); // align to 'x' with truncation
+   Bool alignRound(C CalcValue &x); // align to 'x' with rounding
+   Bool alignFloor(C CalcValue &x); // align to 'x' with floor
+   Bool alignCeil (C CalcValue &x); // align to 'x' with ceil
+
+   Bool      sin(); //   sine
+   Bool      cos(); // cosine
+   Bool      tan(); //   tangent
+   Bool      ctg(); // cotangent
+   Bool     acos(); // arc cosine
+   Bool     asin(); // arc   sine
+   Bool     atan(); // arc tangent
+   Bool   cosSin(); // cos <-> sin
+   Bool degToRad(); // convert angle degrees to radians
+   Bool radToDeg(); // convert angle radians to degrees
+   
+   Bool length (              ); //         length
+   Bool length2(              ); // squared length
+   Bool dot    (C CalcValue &x); //   dot product
+   Bool cross  (C CalcValue &x); // cross product
+   Bool perp   (              ); // perpendicular
+#endif
 
    CalcValue() {} // needed because of union
 };

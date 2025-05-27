@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Drive' and 'GetDrives' to access your device drives information.
@@ -53,6 +50,13 @@ struct FileInfo // File Information
    DateTime  modify_time_utc; // file modification time (UTC time zone)
    Long      size           ; // file size
 
+#if EE_PRIVATE
+   #if WINDOWS
+      void from(WIN32_FIND_DATA &fd);
+   #endif
+   void zero() {Zero(T);}
+#endif
+
    Bool getSystem(C Str &name); // get info from 'name' file/folder in the system, false on fail
    Bool get      (C Str &name); // get info from 'name' file/folder              , false on fail, search is performed additionally in 'Paks' and 'DataPath'
 
@@ -89,11 +93,31 @@ struct FileFind : FileInfo // File Finder
    explicit FileFind(C Str &path, C Str &ext=S);
 
 private:
+#if EE_PRIVATE
+   enum STATE : Byte
+   {
+      NONE        ,
+      FILE_WAITING,
+      NEED_CHECK  ,
+   };
+#endif
    Str        _path, _ext;
    Byte       _state, _drive;
    DRIVE_TYPE _drive_type;
+#if EE_PRIVATE
+   PLATFORM(Ptr, DIR*) _handle;
+#else
    Ptr        _handle;
+#endif
 
+#if EE_PRIVATE
+#if WINDOWS
+   Bool findValid(WIN32_FIND_DATA &fd);
+#endif
+   void zero    ();
+   void del     ();
+   Bool findNext();
+#endif
    NO_COPY_CONSTRUCTOR(FileFind);
 };
 /******************************************************************************/
@@ -113,6 +137,9 @@ struct BackgroundFileFind
    // operations
    void find (C Str &path, Bool (*filter)(C Str &name)=null); // start finding files in path
    void clear(                                             ); // stop  current search and clear all files
+#if EE_PRIVATE
+   Bool update();
+#endif
 
             BackgroundFileFind&   del();
            ~BackgroundFileFind() {del();}
@@ -140,6 +167,9 @@ enum FILE_PATH : Byte // File Path Type
 {
    FILE_CUR , // relative to 'CurDir'
    FILE_DATA, // relative to 'DataPath'
+#if EE_PRIVATE
+   FILE_ANDROID_ASSET, // Android Asset, can be accessed by memory ('_aasset' is "AAsset*") or by stdio ('_handle' is a system handle)
+#endif
 };
 /******************************************************************************/
 C Str& DataPath(           ); // get additional search path, used for opening files
@@ -196,4 +226,16 @@ T1(TYPE) void FList(C Str &path, FILE_LIST_MODE func(C FileFind &ff, TYPE &user)
 
 Bool CreateSymLink(C Str &name, C Str &target); // create a symbolic link, link will be created at 'name' location and it will be pointing to 'target' file, this function is used only on Unix systems and only for symbolic links, if you wish to create a shortcut then please use 'CreateShortcut' function instead, false on fail
 Str  DecodeSymLink(File &f                   ); // this function is meant for resolving target file of a symbolic link, to use it pass an opened 'f' file of FSTD_LINK type to this function and it will return the target path, S on fail
+/******************************************************************************/
+#if EE_PRIVATE
+void  InitIO();
+Bool UnixReadFile(CChar8 *file, Char8 *data, Int size);
+
+#if WEB || SWITCH
+       void FlushIO();
+#else
+inline void FlushIO() {}
+#endif
+
+#endif
 /******************************************************************************/

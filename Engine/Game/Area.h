@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 namespace Game{
 /******************************************************************************/
@@ -21,15 +18,37 @@ struct AreaPath2D
    Bool        walkable(Int x, Int y               )C; // get if pixel is walkable, x=0..world.settings().path2DRes()-1, y=0..world.settings().path2DRes()-1
    AreaPath2D& walkable(Int x, Int y, Bool walkable) ; // set if pixel is walkable, x=0..world.settings().path2DRes()-1, y=0..world.settings().path2DRes()-1, after making all desired changes to paths you must call World.pathBuild once, any changes made aren't stored in the SaveGame (custom modifications need to be applied every time an Area is reloaded)
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Neighbor
    {
       Byte a, b, cost;
+#if EE_PRIVATE
+      void set(Byte a, Byte b, Byte cost) {T.a=a; T.b=b; T.cost=cost;}
+#endif
    };
    Bool           _changed;
    Byte           _groups;
    Image          _map;
    Memc<Neighbor> _neighbor;
+
+#if EE_PRIVATE
+   #define MAX_PATH_RES 64
+
+   void zero             ();
+   void del              ();
+   void create           (Int size);
+   void createFromQuarter(AreaPath2D &src, Bool right, Bool forward                     , WorldSettings &settings);
+   void createFromQuad   (AreaPath2D *lb, AreaPath2D *rb, AreaPath2D *lf, AreaPath2D *rf, WorldSettings &settings);
+   Bool fullyWalkable    ();
+   void group            ();
+   void resize           (Int size);
+
+   // io
+   Bool save(File &f)C;
+   Bool load(File &f) ;
+#endif
 
    AreaPath2D();
 };
@@ -52,6 +71,9 @@ struct Area // World Area
 
          Bool save(File &f, CChar *path=null)C; // 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
          Bool load(File &f, CChar *path=null) ; // 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+      #if EE_PRIVATE
+         Bool loadOld(File &f);
+      #endif
       };
 
       struct TerrainObj
@@ -69,13 +91,10 @@ struct Area // World Area
             Matrix matrix;
             Actor  actor ;
          };
-         Bool           shrink;
          MeshPtr        mesh;
          Int            mesh_variation;
          PhysBodyPtr    phys;
          Memc<Instance> instances;
-
-         GrassObj() {shrink=false;}
       };
 
       MeshGroup         mesh            ; // area mesh         , this can contain terrain and all terrain objects which are too big and needed to be split into smaller parts
@@ -83,9 +102,9 @@ struct Area // World Area
       Actor             actor           ; // area actor, created from the 'phys' member
       Memc<AreaObj    > objs            ; // list of all area objects which are not dynamic (their access is not OBJ_ACCESS_CUSTOM), this does not include terrain objects which are too big and needed to be split into smaller parts (those objects are stored in the 'mesh' and 'phys' members)
       Memc<TerrainObj > terrain_objs    ; // list of all area objects of OBJ_ACCESS_TERRAIN access, these objects are always taken from the 'objs' container ('terrain_objs' container is not stored in the area data file, instead it is always copied from 'objs' member at area load)
-      Box               terrain_objs_box; // this covers all 'terrain_objs'
+      Extent            terrain_objs_ext; // this covers all 'terrain_objs'
       Memc<GrassObj   > foliage_objs    ; // list of all area objects of OBJ_ACCESS_GRASS   access, these objects are always taken from the 'objs' container ('foliage_objs' container is not stored in the area data file, instead it is always copied from 'objs' member at area load)
-      Box               foliage_objs_box; // this covers all 'foliage_objs'
+      Extent            foliage_objs_ext; // this covers all 'foliage_objs'
       Image             height          , // area height   map, each pixel value stores information about the height of the terrain
                         material_map    ; // area material map, each pixel value stores information about index of the most significant material in the 'materials' container, must be in sync with 'materials' member !!
       Mems<MaterialPtr> materials       ; // list of materials used by the terrain, must be in sync with 'material_map' member !!
@@ -101,11 +120,9 @@ struct Area // World Area
          virtual void customSetShader() {} // reset shader of custom meshes stored inside area data
 
          // draw
-         virtual UInt customDrawPrepare () {return 0;} // draw custom area data
-         virtual void customDrawShadow  () {         } // draw custom area data
-         virtual void customDrawBlend   () {         } // draw custom area data in RM_BLEND    mode
-         virtual void customDrawPalette () {         } // draw custom area data in RM_PALETTE  mode
-         virtual void customDrawPalette1() {         } // draw custom area data in RM_PALETTE1 mode
+         virtual UInt customDrawPrepare() {return 0;} // draw custom area data
+         virtual void customDrawShadow () {         } // draw custom area data
+         virtual void customDrawBlend  () {         } // draw custom area data in RM_BLEND mode
 
          // switching states
          virtual void customLoad         (File &f, CChar *chunk_name, UInt chunk_ver) {} // this is called when area is switching state from (AREA_UNLOADED               ) to (AREA_CACHE                  ), in this method you should load custom data using chunks from "game world", this method will be called by the engine on secondary thread, since physics simulation may be running on the main thread - you may not create/modify any physical objects in this method (actors, joints, ragdolls, ..) the only exception are physical bodies which can be created/loaded
@@ -123,12 +140,18 @@ struct Area // World Area
 
       AreaPath2D* path2D() {return _path2D;} // get area path 2D
 
+   #if !EE_PRIVATE
    private:
+   #endif
       Area       *_area;
       Int         _path_node_offset;
       PathMesh   *_path_mesh;
       AreaPath2D *_path2D;
 
+   #if EE_PRIVATE
+      Bool save(File &f);
+      Bool load(File &f);
+   #endif
       NO_COPY_CONSTRUCTOR(Data);
    };
 
@@ -145,10 +168,27 @@ struct Area // World Area
 
    WorldManager* world()C {return _world;} // get World containing this area
 
+#if EE_PRIVATE
+   Bool loaded   ()C {return _state>AREA_CACHE;}
+   void setShader();
+
+   void drawObjAndTerrain();
+   void drawTerrainShadow();
+   void drawObjShadow    ();
+   void drawOverlay      ();
+
+   Bool saveObj (Obj &obj);
+   Bool saveObjs();
+   Bool save    (File &f, C VecI2 &xy);
+   Bool load    (File &f);
+#endif
+
    virtual ~Area(); // force virtual class to enable memory container auto-casting when extending this class with another virtual class
    explicit Area(C VecI2 &xy, Ptr grid_user);
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool          _visited, _temp;
    VecI2         _xz       ;
    AREA_STATE    _state    ;
@@ -159,6 +199,60 @@ private:
 
    NO_COPY_CONSTRUCTOR(Area);
 };
+/******************************************************************************/
+#if EE_PRIVATE
+enum PATH_NODE_TYPE
+{
+   PN_NODE  ,
+   PN_AREA  ,
+   PN_CONVEX,
+};
+struct PathNode
+{
+   Int       node_index   , // used in path finding
+             added_in_step; // used in path finding
+   UInt      iteration    , // used in path finding
+             length       ; // used in path finding
+   PathNode *src          ; // used in path finding
+
+   Byte type    , // PATH_NODE_TYPE
+        temp    , // temporary index used in path finding algorithm
+        nghb_num; // number of neighbors
+   Int  nghb_ofs, // neighbors offset in global neighbor storage
+        parent  , // parent index in global PathNode storage (-1=none)
+        sibling ; // next parents child (looped)
+
+   struct Node // PN_NODE
+   {
+      Int child;
+   };
+   struct Area // PN_AREA
+   {
+      VecI2 xy;
+      Int   index;
+   };
+   struct Convex // PN_CONVEX
+   {
+      VecI2 xy;
+      Int   index;
+   };
+   union
+   {
+      Node   node  ; // PN_NODE
+      Area   area  ; // PN_AREA
+      Convex convex; // PN_CONVEX
+   };
+
+   PathNode() {iteration=0;}
+};
+struct PathNodeNeighbor
+{
+   UInt index;
+   Byte cost;
+
+   void set(UInt index, Byte cost) {T.index=index; T.cost=cost;}
+};
+#endif
 /******************************************************************************/
 } // namespace
 /******************************************************************************/

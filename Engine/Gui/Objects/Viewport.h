@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct Viewport : GuiObj // Viewport !! must be stored in constant memory address !!
 {
@@ -26,6 +23,11 @@ const_mem_addr struct Viewport : GuiObj // Viewport !! must be stored in constan
    // main
    virtual GuiObj* test(C GuiPC &gpc, C Vec2 &pos, GuiObj* &mouse_wheel)override; // test if 'pos' screen position intersects with the object, by returning pointer to object or its children upon intersection and null in case no intersection, 'mouse_wheel' may be modified upon intersection either to the object or its children or null
    virtual void    draw(C GuiPC &gpc)override; // draw object
+
+#if EE_PRIVATE
+   void zero ();
+   void reset();
+#endif
 
   ~Viewport() {del();}
    Viewport();

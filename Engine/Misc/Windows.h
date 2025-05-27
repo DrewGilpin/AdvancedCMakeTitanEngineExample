@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'WindowCapture' to capture visual contents of a system window.
@@ -10,10 +7,26 @@
 /******************************************************************************/
 struct SysWindow // Operating System Window
 {
+#if EE_PRIVATE
+   #if WINDOWS_OLD
+      typedef HWND           Type;
+ /*#elif WINDOWS_NEW fails to compile
+      typedef Windows::UI::Core::CoreWindow ^Type;*/
+   #elif MAC
+      typedef NSWindow      *Type;
+   #elif LINUX
+      typedef XWindow        Type; ASSERT(SIZE(Type)==SIZE(unsigned long));
+   #elif ANDROID
+      typedef ANativeWindow *Type;
+   #else
+      typedef Ptr            Type;
+   #endif
+#else
 #if LINUX
    typedef unsigned long Type;
 #else
    typedef Ptr           Type;
+#endif
 #endif
 
    Str       text     (                           )C; // get      window title text
@@ -35,6 +48,7 @@ struct SysWindow // Operating System Window
    UInt      processID(                           )C; // get      window process ID
    SysWindow parent   (                           )C; // get      window          parent
    SysWindow parentTop(                           )C; // get      window most top parent
+   Int       dpi      (                           )C; // get      window DPI, <=0 if unknown
    void      sendData (CPtr data, Int size        )C; // send binary data to application of the specified window, that application can receive the data using "App.receive_data" callback function
 
    operator Bool()C {return window!=NULL;} // if window is valid
@@ -42,10 +56,29 @@ struct SysWindow // Operating System Window
    Bool operator ==(C SysWindow &w)C {return T.window==w.window;} // if pointers are equal
    Bool operator !=(C SysWindow &w)C {return T.window!=w.window;} // if pointers are different
 
+#if EE_PRIVATE
+   Bool operator ==(C Type &w)C {return T.window==w;} // if pointers are equal
+   Bool operator !=(C Type &w)C {return T.window!=w;} // if pointers are different
+
+   operator Type()C {return window;} // auto cast
+
+#if WINDOWS_NEW
+   typedef Windows::UI::Core::CoreWindow ^Type1;
+ C Type1& operator()()C {return (Type1&)window;}
+ C Type1& operator->()C {return (Type1&)window;}
+   void release(               )C {(Type1&)T.window=null  ;}
+   void set    (C Type1& window)C {(Type1&)T.window=window;}
+#else
+   Type operator()()C {return window;}
+#endif
+#endif
+
    SysWindow(null_t=null) {T.window=NULL  ;}
    SysWindow(Type window) {T.window=window;}
 
+#if !EE_PRIVATE
 private:
+#endif
    Type window;
 };
 /******************************************************************************/

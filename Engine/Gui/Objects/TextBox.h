@@ -1,11 +1,9 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct TextBox : GuiObj // Gui TextBox !! must be stored in constant memory address !!
 {
-   Bool     kb_lit     ; // if highlight when has keyboard focus       , default=true
-   Str      hint       ; // hint displayed when there's no text entered, default=""
+   Bool     kb_lit     ; // if highlight when has keyboard focus        , default=true
+   Flt      min_height ; // minimum height when using 'autoHeight'      , default=0.3
+   Str      hint       ; // hint displayed when there's no text entered , default=""
    Button   view       ; // view button
    SlideBar slidebar[2]; // 2 SlideBars (0=horizontal, 1=vertical)
 
@@ -17,8 +15,9 @@ const_mem_addr struct TextBox : GuiObj // Gui TextBox !! must be stored in const
 
    // get / set
    Int   maxLength ()C {return _max_length   ;}   TextBox& maxLength   (  Int  max_length                        ); // get/set maximum allowed text length (-1=no limit), default=-1
-   Int   cursor    ()C {return _edit.cur     ;}   TextBox& cursor      (  Int  position                          ); // get/set cursor position
+   Int   cursor    ()C {return _edit.cur     ;}   TextBox& cursor      (  Int  position, Bool margin=true        ); // get/set cursor position
    Bool  wordWrap  ()C {return _word_wrap    ;}   TextBox& wordWrap    (  Bool wrap                              ); // get/set word wrapping, default=true
+   Bool  autoHeight()C {return _auto_height  ;}   TextBox& autoHeight  (  Bool auto_height                       ); // get/set auto height adjustment to fit full text, default=false
  C Str&  operator()()C {return _text         ;}   TextBox& set         (C Str &text, SET_MODE mode=SET_DEFAULT   ); // get/set text
                                                   TextBox& clear       (             SET_MODE mode=SET_DEFAULT   ); // clear   text
    Flt slidebarSize()C {return _slidebar_size;}   TextBox& slidebarSize(  Flt  size                              ); // set/get slidebar size, default=0.05
@@ -36,6 +35,10 @@ const_mem_addr struct TextBox : GuiObj // Gui TextBox !! must be stored in const
    TextBox& selectNone(); // select no  text
    TextBox& selectAll (); // select all text
 
+   TextBox& cut  (); // perform operation "cut"
+   TextBox& copy (); // perform operation "copy"
+   TextBox& paste(); // perform operation "paste"
+
    TextBox& scrollX   (Flt delta       , Bool immediate=false) {slidebar[0].scroll   (delta   , immediate); return T;} // horizontal scroll by delta
    TextBox& scrollToX (Flt pos         , Bool immediate=false) {slidebar[0].scrollTo (pos     , immediate); return T;} // horizontal scroll to pos
    TextBox& scrollFitX(Flt min, Flt max, Bool immediate=false) {slidebar[0].scrollFit(min, max, immediate); return T;} // horizontal scroll to fit min..max range
@@ -44,16 +47,45 @@ const_mem_addr struct TextBox : GuiObj // Gui TextBox !! must be stored in const
    TextBox& scrollToY (Flt pos         , Bool immediate=false) {slidebar[1].scrollTo (pos     , immediate); return T;} // vertical scroll to pos
    TextBox& scrollFitY(Flt min, Flt max, Bool immediate=false) {slidebar[1].scrollFit(min, max, immediate); return T;} // vertical scroll to fit min..max range
 
+   TextBox& scrollToCursor(Bool margin=true); // scroll to focus on cursor, 'margin'=if apply some margin
+
    // main
    virtual GuiObj* test  (C GuiPC &gpc, C Vec2 &pos, GuiObj* &mouse_wheel)override; // test if 'pos' screen position intersects with the object, by returning pointer to object or its children upon intersection and null in case no intersection, 'mouse_wheel' may be modified upon intersection either to the object or its children or null
    virtual void    update(C GuiPC &gpc)override; // update object
    virtual void    draw  (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   void           zero();
+   void           call();
+   void setRectAndButtons();
+   void      setParent();
+   void      setParams();
+   Bool     setChanged(C Str &text, SET_MODE mode=SET_DEFAULT);
+   Bool  cursorChanged(Int position, Bool margin=true);
+   void     moveCursor(Int lines, Int pages);
+   void setVirtualSize(C Rect *rect=null);
+   void setTextInput  ()C;
+
+   Rect localTextRect(Int index             )C;
+   Rect localTextRect(Int index0, Int index1)C;
+   Rect localSelRect (                      )C;
+
+   Flt    clientWidth ()C {return      _crect.w          ()            ;} // get client  width
+   Flt    clientHeight()C {return      _crect.h          ()            ;} // get client  height
+   Vec2   clientSize  ()C {return      _crect.size       ()            ;} // get client  size
+ C Rect&  clientRect  ()C {return      _crect                          ;} // get client  rectangle
+   Flt   virtualWidth ()C {return slidebar[0].lengthTotal()            ;} // get virtual width
+   Flt   virtualHeight()C {return slidebar[1].lengthTotal()            ;} // get virtual height
+   Vec2  virtualSize  ()C {return Vec2(virtualWidth(), virtualHeight());} // get virtual size
+#endif
+
   ~TextBox() {del();}
    TextBox();
 
+#if !EE_PRIVATE
 private:
-   Bool       _word_wrap, _can_select, _func_immediate;
+#endif
+   Bool       _word_wrap, _auto_height, _can_select, _func_immediate;
    Int        _max_length;
    Flt        _slidebar_size, _text_space;
    Str        _text;

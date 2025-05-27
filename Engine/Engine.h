@@ -1,10 +1,7 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 #pragma once // include the header only once
 /******************************************************************************/
-#define ENGINE_BUILD           72 // this is an integer value specifying build iteration of the Engine, this gets incremented with each new release
+#define ENGINE_BUILD           73 // this is an integer value specifying build iteration of the Engine, this gets incremented with each new release
 #define ENGINE_NAME           "Titan"
 #define ENGINE_DEVELOPER_NAME "Esenthel"
 /******************************************************************************
@@ -37,6 +34,13 @@
    #define X64 1 // 64-bit
 #else
    #define X64 0 // 32-bit
+#endif
+
+// x86
+#if (defined _M_IX86 || defined __i386__) || (defined _M_X64 || defined __x86_64__)
+   #define X86 1
+#else
+   #define X86 0
 #endif
 
 // ARM
@@ -123,12 +127,18 @@
    #error Unsupported platform detected
 #endif
 /******************************************************************************/
+#if EE_PRIVATE>=2
+   #include "Engine Config.h" // include Engine configuration created by "Engine Builder" or the default one if not available, this needs to be done after platform detection
+#endif
 #include "_/headers.h"
 #include "_/types.h"
 /******************************************************************************/
 namespace EE // Esenthel Engine namespace
 {
    /******************************************************************************/
+   #if EE_PRIVATE
+      #include "../Source/Shaders/!Header CPU.h"
+   #endif
    #pragma pack(push, 4)
    #include "_/defines.h"
    #include "_/structs.h"
@@ -160,6 +170,7 @@ namespace EE // Esenthel Engine namespace
    #include "Memory/Mem Extended.h"
    #include "Memory/_Meml.h"
    #include "Memory/Mem List.h"
+   #include "Memory/Mem Tree.h"
    #include "Misc/String Borrowed.h"
    #include "Memory/Node.h"
    #include "Misc/Date Time.h"
@@ -199,17 +210,18 @@ namespace EE // Esenthel Engine namespace
    // MATH
    /******************************************************************************/
    #include "Math/Shapes/Plane.h"
+   #include "Math/Shapes/Ball.h"
    #include "Math/Shapes/Edge.h"
    #include "Math/Shapes/Triangle.h"
    #include "Math/Shapes/Quad.h"
    #include "Math/Shapes/Box.h"
    #include "Math/Shapes/Circle.h"
-   #include "Math/Shapes/Ball.h"
    #include "Math/Shapes/Capsule.h"
    #include "Math/Shapes/Tube.h"
    #include "Math/Shapes/Cone.h"
    #include "Math/Shapes/Pyramid.h"
    #include "Math/Shapes/Torus.h"
+   #include "Animation/Skeleton.h"
    #include "Mesh/Mesh Base.h"
    #include "Math/Shapes/Polygon.h"
    #include "Math/Shape.h"
@@ -221,7 +233,6 @@ namespace EE // Esenthel Engine namespace
    /******************************************************************************/
    // ANIMATION
    /******************************************************************************/
-   #include "Animation/Skeleton.h"
    #include "Animation/Animation Keys.h"
    #include "Animation/Animation.h"
    #include "Animation/Motion.h"
@@ -302,12 +313,12 @@ namespace EE // Esenthel Engine namespace
    #include "Misc/Pathfind.h"
    #include "Misc/Video.h"
    #include "Misc/Member.h"
+   #include "Graphics/Effects 3D.h"
    #include "Graphics/Water.h"
    #include "Graphics/Sky.h"
    #include "Graphics/Fog.h"
    #include "Graphics/Clouds.h"
    #include "Graphics/Particle.h"
-   #include "Graphics/Effects 3D.h"
    #include "Misc/Object.h"
    #include "Mesh/Heightmap.h"
    #include "Mesh/Blocks.h"
@@ -407,6 +418,11 @@ namespace EE // Esenthel Engine namespace
    #include "Graphics/Renderer Instancing.h"
    #include "Input/Touch.h"
    #include "_/inline.h"
+   #if EE_PRIVATE
+      #if SWITCH
+         #include "../../NintendoSwitch/Switch.h"
+      #endif
+   #endif
    /******************************************************************************/
    #pragma pack(pop)
    /******************************************************************************/

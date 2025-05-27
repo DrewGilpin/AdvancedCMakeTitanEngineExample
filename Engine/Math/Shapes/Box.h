@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Box'  to handle box          shapes, Flt type
@@ -16,8 +13,8 @@ struct Box // Box Shape
    Box& zero(                                                                ) {min.zero(); max.zero(); return T;}
    Box& set (C Vec &min, C Vec &max                                          ) {T.min=min;  T.max=max;  return T;}
    Box& set (Flt min_x, Flt min_y, Flt min_z, Flt max_x, Flt max_y, Flt max_z) {min.set(min_x       , min_y       , min_z       ); max.set(max_x       , max_y       , max_z       ); return T;}
-   Box& set (Flt r,               C Vec &pos=VecZero                         ) {min.set(pos.x-r     , pos.y-r     , pos.z-r     ); max.set(pos.x+r     , pos.y+r     , pos.z+r     ); return T;}
-   Box& set (Flt w, Flt h, Flt d, C Vec &pos=VecZero                         ) {min.set(pos.x-w*0.5f, pos.y-h*0.5f, pos.z-d*0.5f); max.set(pos.x+w*0.5f, pos.y+h*0.5f, pos.z+d*0.5f); return T;}
+   Box& setC(Flt r,               C Vec &pos=VecZero                         ) {min.set(pos.x-r     , pos.y-r     , pos.z-r     ); max.set(pos.x+r     , pos.y+r     , pos.z+r     ); return T;} // set center
+   Box& setC(Flt w, Flt h, Flt d, C Vec &pos=VecZero                         ) {min.set(pos.x-w*0.5f, pos.y-h*0.5f, pos.z-d*0.5f); max.set(pos.x+w*0.5f, pos.y+h*0.5f, pos.z+d*0.5f); return T;} // set center
    Box& setR(Flt w, Flt h, Flt d, C Vec &pos=VecZero                         ) {min.set(pos.x-w     , pos.y-h*0.5f, pos.z-d*0.5f); max.set(pos.x       , pos.y+h*0.5f, pos.z+d*0.5f); return T;} // set right
    Box& setL(Flt w, Flt h, Flt d, C Vec &pos=VecZero                         ) {min.set(pos.x       , pos.y-h*0.5f, pos.z-d*0.5f); max.set(pos.x+w     , pos.y+h*0.5f, pos.z+d*0.5f); return T;} // set left
    Box& setU(Flt w, Flt h, Flt d, C Vec &pos=VecZero                         ) {min.set(pos.x-w*0.5f, pos.y-h     , pos.z-d*0.5f); max.set(pos.x+w*0.5f, pos.y       , pos.z+d*0.5f); return T;} // set up
@@ -113,24 +110,35 @@ struct Box // Box Shape
    Box& includeZ (  Flt  z); // extend box to include 'z'
    Box& include  (C Vec &v); // extend box to include vector
    Box& include  (C Box &b); // extend box to include box
-   Box& from     (C Vec &a    , C Vec &b                    ); // set box from 2 points
-   Bool from     (C Vec *point, Int points                  ); // set box from an array of points                        , false on fail (if there are no points)
-   Bool from     (C Vec *point, Int points, C Matrix &matrix); // set box from an array of points transformed by 'matrix', false on fail (if there are no points)
+   Box& include  (C Extent &ext, C Matrix &matrix); // extend box to include 'ext' transformed by 'matrix'
+   Box& from     (C Vec &a    , C Vec &b                     ); // set box from 2 points
+   Bool from     (C Vec *point, Int points                   ); // set box from an array of points                        , false on fail (if there are no points)
+   Bool from     (C Vec *point, Int points, C Matrix3 &matrix); // set box from an array of points transformed by 'matrix', false on fail (if there are no points)
+   Bool from     (C Vec *point, Int points, C Matrix  &matrix); // set box from an array of points transformed by 'matrix', false on fail (if there are no points)
    void toCorners(  Vec (&v)[8])C; // convert to 8 corner points
+
+   Box& validIncludeX(  Flt  x); // extend box to include 'x'   , this method is faster than 'includeX' but assumes box is valid
+   Box& validIncludeY(  Flt  y); // extend box to include 'y'   , this method is faster than 'includeY' but assumes box is valid
+   Box& validIncludeZ(  Flt  z); // extend box to include 'z'   , this method is faster than 'includeZ' but assumes box is valid
+   Box& validInclude (C Vec &v); // extend box to include vector, this method is faster than 'include'  but assumes box is valid
 
    Box& mirrorX(); // mirror in X axis
    Box& mirrorY(); // mirror in Y axis
    Box& mirrorZ(); // mirror in Z axis
 
+#if EE_PRIVATE
+   void rightToLeft(); // convert from right hand to left hand coordinate system
+#endif
+
    // draw
    void draw(C Color &color=WHITE, Bool fill=false)C; // this relies on active object matrix which can be set using 'SetMatrix' function
 
               Box() {}
+              Box(C VecH     &vec                                                         ) {min=max=vec                                  ;}
+              Box(C VecSSN   &vec                                                         ) {min=max=vec                                  ;}
               Box(C Vec      &vec                                                         ) {min=max=vec                                  ;}
               Box(C Vec      &min, C Vec &max                                             ) {set(min, max                                );}
               Box(  Flt       min_x, Flt min_y, Flt min_z, Flt max_x, Flt max_y, Flt max_z) {set(min_x, min_y, min_z, max_x, max_y, max_z);}
-              Box(  Flt       r,               C Vec &pos=VecZero                         ) {set(r,       pos                            );}
-              Box(  Flt       w, Flt h, Flt d, C Vec &pos=VecZero                         ) {set(w, h, d, pos                            );}
    CONVERSION Box(C Rect     &rect    );
    CONVERSION Box(C Circle   &circle  );
    CONVERSION Box(C Edge     &edge    );
@@ -160,6 +168,7 @@ struct Box_U : Box {  Box_U(Flt w, Flt h, Flt d, C Vec &pos=VecZero) {setU(w, h,
 struct Box_D : Box {  Box_D(Flt w, Flt h, Flt d, C Vec &pos=VecZero) {setD(w, h, d, pos);}  }; // down
 struct Box_F : Box {  Box_F(Flt w, Flt h, Flt d, C Vec &pos=VecZero) {setF(w, h, d, pos);}  }; // forward
 struct Box_B : Box {  Box_B(Flt w, Flt h, Flt d, C Vec &pos=VecZero) {setB(w, h, d, pos);}  }; // back
+struct Box_C : Box {  Box_C(Flt w, Flt h, Flt d, C Vec &pos=VecZero) {setC(w, h, d, pos);}  Box_C(Flt r, C Vec &pos=VecZero) {setC(r, pos);}  }; // center
 /******************************************************************************/
 struct BoxD // Box Shape (double precision)
 {
@@ -168,8 +177,8 @@ struct BoxD // Box Shape (double precision)
    BoxD& zero(                                                                ) {min.zero(); max.zero(); return T;}
    BoxD& set (C VecD &min, C VecD &max                                        ) {T.min=min;  T.max=max;  return T;}
    BoxD& set (Dbl min_x, Dbl min_y, Dbl min_z, Dbl max_x, Dbl max_y, Dbl max_z) {min.set(min_x      , min_y      , min_z      ); max.set(max_x      , max_y      , max_z      ); return T;}
-   BoxD& set (Dbl r,               C VecD &pos=VecDZero                       ) {min.set(pos.x-r    , pos.y-r    , pos.z-r    ); max.set(pos.x+r    , pos.y+r    , pos.z+r    ); return T;}
-   BoxD& set (Dbl w, Dbl h, Dbl d, C VecD &pos=VecDZero                       ) {min.set(pos.x-w*0.5, pos.y-h*0.5, pos.z-d*0.5); max.set(pos.x+w*0.5, pos.y+h*0.5, pos.z+d*0.5); return T;}
+   BoxD& setC(Dbl r,               C VecD &pos=VecDZero                       ) {min.set(pos.x-r    , pos.y-r    , pos.z-r    ); max.set(pos.x+r    , pos.y+r    , pos.z+r    ); return T;} // set center
+   BoxD& setC(Dbl w, Dbl h, Dbl d, C VecD &pos=VecDZero                       ) {min.set(pos.x-w*0.5, pos.y-h*0.5, pos.z-d*0.5); max.set(pos.x+w*0.5, pos.y+h*0.5, pos.z+d*0.5); return T;} // set center
 
    BoxD& operator|=(C VecD &v) {return include(v);}
    BoxD& operator|=(C BoxD &b) {return include(b);}
@@ -215,12 +224,15 @@ struct BoxD // Box Shape (double precision)
    BoxD& from    (C VecD &a, C VecD &b); // set box from 2 points
    Bool  from    (C VecD *v,   Int   n); // set box from 'n' 'v' points, false on fail
 
+   BoxD& validIncludeX(  Dbl   x); // extend box to include 'x'   , this method is faster than 'includeX' but assumes box is valid
+   BoxD& validIncludeY(  Dbl   y); // extend box to include 'y'   , this method is faster than 'includeY' but assumes box is valid
+   BoxD& validIncludeZ(  Dbl   z); // extend box to include 'z'   , this method is faster than 'includeZ' but assumes box is valid
+   BoxD& validInclude (C VecD &v); // extend box to include vector, this method is faster than 'include'  but assumes box is valid
+
               BoxD() {}
               BoxD(C VecD  &vec                                                         ) {min=max=vec                                  ;}
               BoxD(C VecD  &min, C VecD &max                                            ) {set(min, max                                );}
               BoxD(  Dbl    min_x, Dbl min_y, Dbl min_z, Dbl max_x, Dbl max_y, Dbl max_z) {set(min_x, min_y, min_z, max_x, max_y, max_z);}
-              BoxD(  Dbl    r,               C VecD &pos=VecDZero                       ) {set(r,       pos                            );}
-              BoxD(  Dbl    w, Dbl h, Dbl d, C VecD &pos=VecDZero                       ) {set(w, h, d, pos                            );}
    CONVERSION BoxD(C EdgeD    &edge   );
    CONVERSION BoxD(C TriD     &tri    );
    CONVERSION BoxD(C QuadD    &quad   );
@@ -260,11 +272,11 @@ struct BoxI // Box Shape (integer)
    Bool includes (C VecI &v)C {return includesX(v.x) && includesY(v.y) && includesZ(v.z);} // if box includes vector
 
    Int  centerXI()C {return AvgI(min.x, max.x);} // get center X (Int)
-   Flt  centerXF()C {return AvgF(min.x, max.x);} // get center X (Flt)
+   Flt  centerXF()C {return Avg (min.x, max.x);} // get center X (Flt)
    Int  centerYI()C {return AvgI(min.y, max.y);} // get center Y (Int)
-   Flt  centerYF()C {return AvgF(min.y, max.y);} // get center Y (Flt)
+   Flt  centerYF()C {return Avg (min.y, max.y);} // get center Y (Flt)
    Int  centerZI()C {return AvgI(min.z, max.z);} // get center Z (Int)
-   Flt  centerZF()C {return AvgF(min.z, max.z);} // get center Z (Flt)
+   Flt  centerZF()C {return Avg (min.z, max.z);} // get center Z (Flt)
    VecI centerI ()C {return VecI(centerXI(), centerYI(), centerZI());} // get center (VecI)
    Vec  centerF ()C {return Vec (centerXF(), centerYF(), centerZF());} // get center (Vec )
 
@@ -289,6 +301,11 @@ struct BoxI // Box Shape (integer)
    BoxI& includeZ(  Int   z); // extend box to include 'z'
    BoxI& include (C VecI &v); // extend box to include vector
    BoxI& include (C BoxI &b); // extend box to include box
+
+   BoxI& validIncludeX(  Int   x); // extend box to include 'x'   , this method is faster than 'includeX' but assumes box is valid
+   BoxI& validIncludeY(  Int   y); // extend box to include 'y'   , this method is faster than 'includeY' but assumes box is valid
+   BoxI& validIncludeZ(  Int   z); // extend box to include 'z'   , this method is faster than 'includeZ' but assumes box is valid
+   BoxI& validInclude (C VecI &v); // extend box to include vector, this method is faster than 'include'  but assumes box is valid
 
    BoxI() {}
    BoxI(C VecI &vec                                                     ) {min=max=vec                                  ;}
@@ -384,6 +401,7 @@ struct Extent // similar to 'Box' however it operates on center position and ext
    friend Extent operator/ (C Extent &ext, C Vec     &v) {return Extent(ext)/=v;}
    friend Extent operator* (C Extent &ext, C Matrix3 &m) {return Extent(ext)*=m;}
    friend Extent operator* (C Extent &ext, C Matrix  &m) {return Extent(ext)*=m;}
+   friend Extent operator| (C Extent &ext, C Box     &b) {return Extent(ext)|=b;}
 
    // get
    Flt minX()C {return pos.x-ext.x;} // get minimum position X
@@ -439,6 +457,10 @@ struct Extent // similar to 'Box' however it operates on center position and ext
    Extent& mirrorY() {CHS(pos.y); return T;} // mirror in Y axis
    Extent& mirrorZ() {CHS(pos.z); return T;} // mirror in Z axis
 
+#if EE_PRIVATE
+   void rightToLeft(); // convert from right hand to left hand coordinate system
+#endif
+
    // draw
    void draw(C Color &color=WHITE, Bool fill=false)C; // this relies on active object matrix which can be set using 'SetMatrix' function
 
@@ -459,12 +481,14 @@ struct Boxes // Boxes, allows space partitioning divided into "cells.x * cells.y
    void set(C Box &box,   Int   elms ); // set partitioning according to 'box' space divided into approximately "elms"          cells, 'cells' will be calculated automatically
 
    // get
-   VecI coords(C Vec  &pos )C; // get cell coordinates of 'pos' world position, coordinates are automatically clamped to 0..cells-1 range
-   BoxI coords(C Box  &box )C; // get cell coordinates of 'box' world box     , coordinates are automatically clamped to 0..cells-1 range
-   Box  getBox(C VecI &cell)C; // get world box from 'cell' coordinates
-   Int  index (C VecI &pos )C {return pos.x + cells.x*(pos.y + cells.y*pos.z);} // get cell index of cell  position
-   Int  index (C Vec  &pos )C {return index(coords(pos));                     } // get cell index of world position
-   Int  num   (            )C {return cells.mul();                            } // get total number of cells
+   VecI coords(C Vec   &pos )C; // get cell coordinates of 'pos' world position, coordinates are automatically clamped to 0..cells-1 range
+   VecI coords(C VecD  &pos )C; // get cell coordinates of 'pos' world position, coordinates are automatically clamped to 0..cells-1 range
+   BoxI coords(C Box   &box )C; // get cell coordinates of 'box' world box     , coordinates are automatically clamped to 0..cells-1 range
+   Box  getBox(C VecI  &cell)C; // get world box from 'cell' coordinates
+   Int  index (C VecUS &pos )C {return pos.x + cells.x*(pos.y + cells.y*pos.z);} // get cell index of cell  position
+   Int  index (C VecI  &pos )C {return pos.x + cells.x*(pos.y + cells.y*pos.z);} // get cell index of cell  position
+   Int  index (C Vec   &pos )C {return index(coords(pos));                     } // get cell index of world position
+   Int  num   (             )C {return cells.mul();                            } // get total number of cells
 
    // draw
    void draw(C Color &color=WHITE)C; // this relies on active object matrix which can be set using 'SetMatrix' function
@@ -494,6 +518,7 @@ Flt Dist (C Box  &a    , C Box    &b    ); //         distance between box   and
 Flt Dist (C Box  &box  , C Plane  &plane); //         distance between box   and a  plane
 Flt Dist (C OBox &obox , C Plane  &plane); //         distance between box   and a  plane
 
+Flt Dist2(C VecD &point, C Extent &ext, C Matrix3 &ext_matrix); // squared distance between point and an extent transformed by matrix
 Flt Dist2(C VecD &point, C Extent &ext, C Matrix  &ext_matrix); // squared distance between point and an extent transformed by matrix
 Flt Dist2(C VecD &point, C Extent &ext, C MatrixM &ext_matrix); // squared distance between point and an extent transformed by matrix
 

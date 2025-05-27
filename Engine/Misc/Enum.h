@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Enum' to handle operating on C++ style enums.
@@ -52,6 +49,11 @@ struct Enum // Enum helper class !! Enum doesn't support manual value assigning,
    Bool load     (C Str  &name) ; // load binary                 , false on fail
    Bool saveH    (C Str  &name)C; // save text (C++ header style), false on fail
 
+#if EE_PRIVATE
+   void       sort();
+   UInt* nameOrder()C {return _order              ;} // get array of element indexes sorted by their name
+   UInt*   idOrder()C {return _order+elms().elms();} // get array of element indexes sorted by their id
+#endif
               Enum&   del();
              ~Enum() {del();}
               Enum() {}
@@ -65,5 +67,8 @@ private:
 /******************************************************************************/
 extern Cache<Enum> Enums; // Enum Cache
 /******************************************************************************/
+#if EE_PRIVATE
+void ShutEnum();
+#endif
 inline Int Elms(C Enum &e) {return e.elms().elms();}
 /******************************************************************************/

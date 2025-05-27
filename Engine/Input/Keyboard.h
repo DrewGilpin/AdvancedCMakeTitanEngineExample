@@ -1,7 +1,4 @@
 ﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
-/******************************************************************************
 
    Use 'Keyboard' to access Keyboard input.
 
@@ -45,26 +42,49 @@ struct KeyboardKey
 };
 struct KeyboardClass // Keyboard Input
 {
+   void (*screen_changed)(); // pointer to custom function (may be null) called when screen keyboard has changed (its visibility or rectangle)
+
    // get
+#if EE_PRIVATE
+   KeyboardKey k;
+#else
    const KeyboardKey k; // key pressed in this frame
+#endif
    Bool kf(KB_KEY k)C {return T.k.first(k);} // if key 'k' is pressed and it's the first press
 
    Bool b (KB_KEY k)C {return ButtonOn(_button[k]);} // if key 'k' is on
    Bool bp(KB_KEY k)C {return ButtonPd(_button[k]);} // if key 'k' pushed   in this frame
    Bool br(KB_KEY k)C {return ButtonRs(_button[k]);} // if key 'k' released in this frame
    Bool bd(KB_KEY k)C {return ButtonDb(_button[k]);} // if key 'k' double clicked
+#if EE_PRIVATE
+   void _assert() {ASSERT(1<<(8*SIZE(KB_KEY))==ELMS(_button));} // because we use 'KB_KEY' as index to '_button' in methods above
+#endif
 
    Bool ctrl ()C {return _ctrl ;} // if any Ctrl  is on (this is equal to "b(KB_LCTRL ) || b(KB_RCTRL )")
    Bool shift()C {return _shift;} // if any Shift is on (this is equal to "b(KB_LSHIFT) || b(KB_RSHIFT)")
    Bool alt  ()C {return _alt  ;} // if any Alt   is on (this is equal to "b(KB_LALT  ) || b(KB_RALT  )")
    Bool win  ()C {return _win  ;} // if any Win   is on (this is equal to "b(KB_LWIN  ) || b(KB_RWIN  )")
+#if EE_PRIVATE // this checks the most recent state, to be used while receiving inputs from the system (unlike methods above which use cached values at the start of the frame)
+   Bool anyCtrl ()C {return ButtonOn(_button[KB_LCTRL ]|_button[KB_RCTRL ]);}
+   Bool anyShift()C {return ButtonOn(_button[KB_LSHIFT]|_button[KB_RSHIFT]);}
+   Bool anyAlt  ()C {return ButtonOn(_button[KB_LALT  ]|_button[KB_RALT  ]);}
+   Bool anyWin  ()C {return ButtonOn(_button[KB_LWIN  ]|_button[KB_RWIN  ]);}
+#endif
 
    Char   keyChar  (KB_KEY key)C; // get key character, example: keyChar  (KB_SPACE) -> ' '    , keyChar  (KB_UP) -> '\0'
   CChar8* keyName  (KB_KEY key)C; // get key name     , example: keyName  (KB_SPACE) -> "Space", keyName  (KB_UP) -> "Up"
   CChar * keySymbol(KB_KEY key)C; // get key symbol   , example: keySymbol(KB_SPACE) -> "Space", keySymbol(KB_UP) -> "⯅", Warning: this function might return "⯇⯈⯆⯅", if you want to display symbols on the screen be sure to include these characters in your Font
+#if EE_PRIVATE
+   Char   keyChar  (KB_KEY key, Bool shift, Bool caps)C;
+#endif
 
-   Bool hardware(          )C {return _hardware;} // if hardware keyboard is available
-   Bool rect    (Rect &rect)C;                    // get on-screen keyboard rectangle, false if no on-screen keyboard is currently displayed
+   Bool hardware(          )C {return _hardware;} // if  hardware keyboard is available
+   Bool visible (          )C {return _visible ;} // if  screen   keyboard is currently displayed
+   Bool rect    (Rect &rect)C;                    // get screen   keyboard rectangle, false if no on-screen keyboard is currently displayed
+#if EE_PRIVATE
+   void set(C RectI &rect);
+   void screenChanged();
+#endif
 
    KB_KEY qwerty(KB_KEY qwerty)C; // convert key from QWERTY layout to layout of current keyboard
 
@@ -75,25 +95,60 @@ struct KeyboardClass // Keyboard Input
    void eat(KB_KEY key); // eat 'key'  input from this frame so it will not be processed by the remaining codes in frame, this disables all BS_FLAG states (BS_PUSHED, BS_RELEASED, etc.) except BS_ON
    void eatKey(       ); // eat 'Kb.k' input from this frame so it will not be processed by the remaining codes in frame, this disables all BS_FLAG states (BS_PUSHED, BS_RELEASED, etc.) except BS_ON
 
+#if EE_PRIVATE
+   void         nextInQueue(); // proceed to next key from the buffer, same like 'nextKey' but without 'eatKey'
+   KeyboardKey* nextKeyPtr (); // get next key in the queue, without calling 'eatKey' and without moving it to 'Kb.k' but just return a pointer to it, null if none
+#endif
    void nextKey(); // specify that you've processed 'Kb.k' and would like to proceed to the next key in the queue
 
    void queue(C KeyboardKey &key); // manually add 'key' to the buffer to be processed later
 
    Bool exclusive()C {return _exclusive;}   void exclusive(Bool on); // get/set keyboard exclusive mode (which disables Windows key on Windows platform), default=false
 
+#if EE_PRIVATE
+   void setVisible    ();
+   void resetTextInput();
+#endif
+
    // IMM (Windows Input Method Manager) control
+#if EE_PRIVATE
+   Bool       imm         ()C;   void imm      (Bool enable); // get/set if disable/enable the ability to use Windows Input Method Manager, this method is automatically called be the engine when keyboard focus is switched to text editing capable gui object
+#endif
    Bool       immNative   ()C;   void immNative(Bool native); // get/set if native typing mode is currently enabled
    Int        immCursor   ()C {return _imm_cursor   ;}        // get     IMM cursor position
  C VecI2    & immSelection()C {return _imm_selection;}        // get     IMM clause selection range, where x=min index, y=max index
  C Str      & immBuffer   ()C {return _imm_buffer   ;}        // get     IMM text buffer
  C Memc<Str>& immCandidate()C {return _imm_candidate;}        // get     IMM candidate list
 
+#if EE_PRIVATE
+   // manage
+   void init   ();
+   void del    ();
+   void create ();
+   void acquire(Bool on);
+   void setLayout();
+
+   // operations
+   void clear  ();
+   void push   (KB_KEY key, Int scan_code);
+   void queue  (Char   chr, Int scan_code);
+   void release(KB_KEY key);
+   void queue  (KB_KEY key, Char chr);
+   void tap    (KB_KEY key, Char chr); // push and release
+   void update ();
+   void setModifiers();
+
+   void swapCtrlCmd(Bool swapped);   Bool swapCtrlCmd()C {return _swap_ctrl_cmd;} // set/get swap Ctrl with Cmd key on Mac, enable this method if you want to swap Ctrl with Cmd key input, this method is used only on Mac, default=false
+#endif
+
    Bool    ctrlCmd    ()C {return APPLE ? _win  : _ctrl ;} // if any Ctrl is on (on platforms other than Apple), and if any Command is on (on Apple platforms)
    Bool    winCtrl    ()C {return APPLE ? _ctrl : _win  ;} // if any Win  is on (on platforms other than Apple), and if any Control is on (on Apple platforms)
    CChar8* ctrlCmdName()C {return APPLE ? "Cmd" : "Ctrl";}
    CChar8* winCtrlName()C {return APPLE ? "Ctrl": "Win" ;}
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool        _ctrl, _shift, _alt, _win, _cur_hidden, _swap_ctrl_cmd, _visible, _imm, _imm_candidate_hidden, _exclusive, _hardware;
    Byte        _key_buffer_pos, _key_buffer_len;
    BS_FLAG     _button[256];
@@ -110,8 +165,16 @@ private:
    CChar8     *_key_name  [256];
    CChar      *_key_symbol[256];
 #if WINDOWS_OLD
+#if EE_PRIVATE && KB_DIRECT_INPUT
+   IDirectInputDevice8 *_device;
+#else
    Ptr         _device;
+#endif
+#if EE_PRIVATE
+   HIMC        _imc;
+#else
    Ptr         _imc;
+#endif
 #endif
 
 	KeyboardClass();
@@ -152,9 +215,37 @@ struct KbSc // Keyboard Shortcut
    // operations
    void eat()C; // eat this shortcut keys input from this frame so it will not be processed by the remaining codes in frame
 
+#if EE_PRIVATE
+   Bool testFlag    ()C;
+   Bool testFlagChar()C;
+#endif
+
    KbSc(                       ) {T.index=0           ; T.flag=0   ; T.mode=KBSC_NONE;}
    KbSc(Char8  c  , Byte flag=0) {T.index=Char8To16(c); T.flag=flag; T.mode=KBSC_CHAR;}
    KbSc(Char   c  , Byte flag=0) {T.index=c           ; T.flag=flag; T.mode=KBSC_CHAR;}
    KbSc(KB_KEY key, Byte flag=0) {T.index=key         ; T.flag=flag; T.mode=KBSC_KEY ;}
 };
+#if EE_PRIVATE
+struct ScreenKeyboard
+{
+ C Str *text;
+   Int  start, end, max_length;
+   Bool multi_line, pass, number, email, url;
+
+   void set();
+
+   static Bool Set(CChar *text);
+   static Bool Set(Int cur, Int sel);
+};
+#endif
+/******************************************************************************/
+#if EE_PRIVATE
+#if WINDOWS_NEW
+extern Windows::UI::Text::Core::CoreTextEditContext ^TextEditContext;
+#elif MAC
+extern const KB_KEY ScanCodeToQwertyKey[0x80]; extern KB_KEY ScanCodeToKey[Elms(ScanCodeToQwertyKey)];
+#elif LINUX
+extern const KB_KEY ScanCodeToQwertyKey[0x90]; extern KB_KEY ScanCodeToKey[Elms(ScanCodeToQwertyKey)];
+#endif
+#endif
 /******************************************************************************/

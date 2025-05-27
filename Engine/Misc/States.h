@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'States' to handle different application states, for which you can specify custom functions for:
@@ -20,7 +17,14 @@ struct State // Application State
 
    State(Bool (*update)(), void (*draw)(), Bool (*init)()=null, void (*shut)()=null); // 'init' and 'shut' may be set to null
 
+#if EE_PRIVATE
+   void shutDo() {     if(shut)   shut();}
+   Bool initDo() {return !init || init();}
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    Bool (*update)();
    Bool (*init  )();
    void (*shut  )();
@@ -29,4 +33,11 @@ private:
    StateMain  , // main   state                                (Update, Draw, null, null)
   *StateActive, // active state
   *StateNext  ; // next   state that will be activated in the next frame, default=&StateMain
+/******************************************************************************/
+#if EE_PRIVATE
+void   InitState();
+void   ShutState();
+Bool UpdateState();
+Bool   DrawState();
+#endif
 /******************************************************************************/

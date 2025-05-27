@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'World' to automatically manage the game world and game objects.
@@ -41,6 +38,9 @@ T1(TYPE) struct ObjMap // Container for Game Objects, this is the same thing as 
 
 private:
    Map<UID, TYPE> _map;
+#if EE_PRIVATE
+   friend struct WorldManager; // allow full functionality only to 'WorldManager'
+#endif
 };
 /******************************************************************************/
 enum WORLD_MODE // World Mode
@@ -60,6 +60,18 @@ struct WorldSettings // World Settings
 
    // operations
    WorldSettings& reset(); // reset to default values
+#if EE_PRIVATE
+   WorldSettings& shr();
+   WorldSettings& shl();
+
+   // get
+   Str asText()C;
+
+   Bool compatible(C WorldSettings &settings)C; // check if settings are compatible
+
+   Bool operator==(C WorldSettings &settings)C;
+   Bool operator!=(C WorldSettings &settings)C {return !(T==settings);}
+#endif
 
    // io
    Bool save(File &f, CChar *path=null)C; // save to   file, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
@@ -132,6 +144,22 @@ struct WorldManager // World Manager
 
    void setShader();
 
+#if EE_PRIVATE
+   ObjMap<Obj>* objMap    (  Int    type) {return InRange(type, _obj_container) ? _obj_container[type].map : null;} // get object container responsible for 'type' object types
+   Int          objType   (  Obj   &obj );                                                                          // get OBJ_TYPE of 'obj', this method is safer than 'Obj.type()' because it verifies the typeid, if it doesn't match, then all containers are searched
+   AREA_STATE   rangeState(C VecI2 &xzi );                                                                          // get desired area state of given area coordinates
+
+   // set
+   void setRanges();
+
+   // background
+   void threadFunc();
+
+   // load
+   Bool loadObj(Area &area, Bool active, Area::Data::AreaObj &area_obj, Bool _const);
+   Bool loadObj(Area &area, Bool active, Int                  obj_type, File &f    );
+#endif
+
    // area
    struct AreaState
    {
@@ -147,6 +175,20 @@ struct WorldManager // World Manager
    Area* areaActive   (  Int    i )C; // get i-th      active area                         , if the index is out of range                                  then null is returned
    Area* areaActive   (C VecI2 &xz)C; // get           active area at 'xz' area coordinates, if the area doesn't exist or isn't active at that coordinates then null is returned (which means that only area with                          AREA_ACTIVE state can be returned)
    Area* areaLoaded   (C VecI2 &xz)C; // get           loaded area at 'xz' area coordinates, if the area doesn't exist or isn't loaded at that coordinates then null is returned (which means that only area with AREA_CACHE AREA_INACTIVE AREA_ACTIVE state can be returned)
+#if EE_PRIVATE
+   void areaUnload       (Area &area);
+   void areaUnloadToCache(Area &area);
+   void areaCache        (Area &area, Bool inc_progress, File &file_area);
+   void areaLoad         (Area &area, Bool active      , File &file_area);
+   void areaActivate     (Area &area);
+   void areaDeactivate   (Area &area);
+   void areaUpdateState  (Area &area, AREA_STATE state , File &file_area);
+   void areaUpdateState  (Area &area,                    File &file_area);
+   void areaUpdateState  ();
+   void areaSetLoadedRect();
+   void areaSetVisibility(Memc<Area*> &area_draw, Bool sort);
+   Bool areaInsertObject (Area &area, Obj &obj, AREA_STATE obj_state);
+#endif
 
    // heightmap
    Flt          hmHeight  (C Vec2 &xz, Bool smooth=true); // get world heightmap height   at 'xz' world 2D position,    0 on fail, this method is fast because it uses lookup table (Game.Area.Data.height      Image), see also 'Game.Area.hmHeight', 'smooth'=if calculate smooth value using linear interpolation
@@ -188,8 +230,21 @@ struct WorldManager // World Manager
    AreaPath2D* path2DGet     (C VecI2 &xz ); // get pointer to Area paths at given Area coordinates, returns null when path's don't exist at specified coordinates
    Bool        path2DWalkable(C Vec   &pos); // check if path is walkable at specified world position
    void        path2DBuild   (            ); // call this once after making changes to AreaPath2D's to rebuild the path database
+#if EE_PRIVATE
+   Int  pathGetNode  (C Vec &pos   , VecI2 &path_xy);
+   Bool pathFindFast (Int node_from, Int   node_to, Memc<UInt> &path);
+   Bool pathFind     (Int node_from, Int   node_to, Memc<UInt> &path);
+   void pathDraw     (Int node     , C Color &color=YELLOW);
+   void pathDrawNghb (Int node     , C Color &color=ORANGE);
+   void pathDrawBlock(               C Color &color=RED   );
+   void pathDrawArea (Area &area   , Byte  index, C Color &color);
+#endif
 
    // update
+#if EE_PRIVATE
+   void updateObjectAreas();
+   void updateObjects    ();
+#endif
    Bool updated       (           ) {return _updated        ;} // if current world has been updated at least once since it was loaded, you can use this method to startup loading screen
    Flt  updateProgress(           ) {return _update_progress;} // get update progress (0..1), this can be called in a secondary thread to access the progress of updating the world using 'update' method
    void updateBreak   (           );                           // break updating, this can be called from a secondary thread to break any current world updating, for example if during loading a world the user requests quitting the game, you can break the loading and exit immediately
@@ -203,15 +258,23 @@ struct WorldManager // World Manager
 
    // draw
    void draw(); // call this inside Render function for every RENDER_MODE
+#if EE_PRIVATE
+   void drawDrawnAreas(C Color &color=WHITE, C Color &color_shd=YELLOW);
+#endif
 
   ~WorldManager();
    WorldManager();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct ObjContainer
    {
       CPtr         type;
       ObjMap<Obj> *map ;
+   #if EE_PRIVATE
+      void set(ObjMap<Obj> *map, CPtr type);
+   #endif
    };
 
    UID        _id;
@@ -243,7 +306,12 @@ private:
 
    UInt     _path_iteration;
    PathFind _path_find;
+#if EE_PRIVATE
+   Memc<PathNode        > _path_node;
+   Memc<PathNodeNeighbor> _path_neighbor;
+#else
   _Memc     _path_node, _path_neighbor;
+#endif
 
    SyncLock  _lock;
    Thread    _thread;
@@ -267,9 +335,15 @@ private:
 
        _time_obj_update;
 
+#if EE_PRIVATE
+private:
+#endif
    T1(TYPE) static Area::Data& NewAreaData(Area::Data* &data, Area &area) {data=new TYPE(area); return *data;}
    T1(TYPE) WorldManager& _setAreaData() {ASSERT_BASE_EXTENDED<Area::Data, TYPE>(); _area_data=NewAreaData<TYPE>; return T;}
             WorldManager& _setObjType (ObjMap<Obj> *obj_map, Int obj_type, CPtr c_type);
+#if EE_PRIVATE
+   void linkReferences();
+#endif
    T1(TYPE) friend struct EE::Reference;
    NO_COPY_CONSTRUCTOR(WorldManager);
 }extern

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct MP4
 {
@@ -51,6 +48,11 @@ struct MP4
    Long        duration;
    Memc<Track> tracks;
 
+#if EE_PRIVATE
+   Track* findTrack(Int id);
+   void zero();
+   Bool read(File &f, Long max_pos, Track *track, Long moof_pos);
+#endif
    Bool read(File &f);
 
    MP4();

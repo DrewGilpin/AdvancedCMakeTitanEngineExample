@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Cache' to quickly access custom data by loading it from specified file.
@@ -34,6 +31,15 @@ enum CACHE_MODE : Byte // Cache Mode
    CACHE_ALL_DUMMY , // don't load data, always return dummy (pointer to empty data with correct path, initialized with constructor but without the 'load' method)
    CACHE_DUMMY_NULL, // don't load data,        return dummy (pointer to empty data with correct path, initialized with constructor but without the 'load' method) if a file exists at specified path, if a file does not exist then null is returned
 };
+#if EE_PRIVATE
+enum CACHE_ELM_FLAG // Cache Element Flag
+{
+   CACHE_ELM_DUMMY       =1<<0, // if element was not found but created anyway
+   CACHE_ELM_LOADING     =1<<1, // if element is still being loaded (for example, during loading of element A, it loads element B, which tries to access A which didn't finish loading yet)
+   CACHE_ELM_STD_PTR     =1<<2, // if element was accessed by standard C++ pointer (not reference counted pointer)
+   CACHE_ELM_DELAY_REMOVE=1<<3, // if element reached zero references and was added to the '_delay_remove'
+};
+#endif
 /******************************************************************************/
 // CACHE
 /******************************************************************************/
@@ -46,13 +52,14 @@ T1(TYPE) struct Cache : _Cache // Cache - container for dynamically loaded data,
    };
 
    // manage
-   CACHE_MODE mode          (CACHE_MODE mode); // set cache mode, returns previous mode
-   Cache&     caseSensitive (Bool  sensitive); // set if cache should use case sensitive paths for accessing resources, default=false
-   Cache&     delayRemove   (Flt   time     ); // set amount of time (in seconds) after which unused elements are removed from cache (<=0 value specifies immediate unloading), default=0
-   Cache&     delayRemoveNow(               ); // immediately remove all elements that were marked for delay removal at a later time to free as much memory as possible
-   Cache&     delayRemoveInc(               ); // increase the cache "delay remove" counter thanks to which elements will not be immediately removed when they're no longer referenced, 'delayRemoveDec' should be called after this method
-   Cache&     delayRemoveDec(               ); // decrease the cache "delay remove" counter thanks to which elements will not be immediately removed when they're no longer referenced, this should be called after 'delayRemoveInc', once the counter goes back to zero then all non referenced elements will be removed
-   Cache&     reserve       (Int   num      ); // pre-allocate memory for storage of 'num' total elements
+   CACHE_MODE mode          (CACHE_MODE mode);                              // set cache mode, returns previous mode
+   Cache&     caseSensitive (Bool  sensitive);                              // set if cache should use case sensitive paths for accessing resources, default=false
+   Flt        delayRemove   (               )C {return _delay_remove_time;} // get amount of time (in seconds) after which unused elements are removed from cache (<=0 value specifies immediate unloading), default=0
+   Cache&     delayRemove   (Flt   time     );                              // set amount of time (in seconds) after which unused elements are removed from cache (<=0 value specifies immediate unloading), default=0
+   Cache&     delayRemoveNow(               );                              // immediately remove all elements that were marked for delay removal at a later time to free as much memory as possible
+   Cache&     delayRemoveInc(               );                              // increase the cache "delay remove" counter thanks to which elements will not be immediately removed when they're no longer referenced, 'delayRemoveDec' should be called after this method
+   Cache&     delayRemoveDec(               );                              // decrease the cache "delay remove" counter thanks to which elements will not be immediately removed when they're no longer referenced, this should be called after 'delayRemoveInc', once the counter goes back to zero then all non referenced elements will be removed
+   Cache&     reserve       (Int   num      );                              // pre-allocate memory for storage of 'num' total elements
 
    // get object and store it forever (as long as the Cache lives)
    TYPE* find      (C Str &file, CChar *path=null); // find    object by its file name   , don't load if not found, null on fail
@@ -69,12 +76,17 @@ T1(TYPE) struct Cache : _Cache // Cache - container for dynamically loaded data,
    template<Cache<TYPE> &CACHE>  CChar* name(C CacheElmPtr<TYPE,CACHE> &data, CChar *path)C {return name(data(), path);} // get object file name, null on fail
 
    // get object file name ID (this will return ID of the object file name assuming that the object is stored in the cache and its file name was created using 'EncodeFileName')
-                                 UID id(C             TYPE        *data)C;                     // get object file name ID, 'UIDZero' on fail
-   template<Cache<TYPE> &CACHE>  UID id(C CacheElmPtr<TYPE,CACHE> &data)C {return id(data());} // get object file name ID, 'UIDZero' on fail
+                                 UID  id(C             TYPE        *data)C;                     // get object file name ID, 'UIDZero' on fail
+   template<Cache<TYPE> &CACHE>  UID  id(C CacheElmPtr<TYPE,CACHE> &data)C {return id(data());} // get object file name ID, 'UIDZero' on fail
+                                 UID _id(C             TYPE        *data)C;                     // get object file name ID, 'UIDZero' on fail, this method is faster however it's unsafe, 'data' MUST belong to cache or be null !!
 
    // get
    Int elms()C; // get number of elements in container
 
+#if EE_PRIVATE
+                                 Bool has     (C Str &file, CChar *path=null              )C;                                  // check if cache contains      object, returns true even if element is still loading
+                                 Bool has     (C             TYPE        *data            )C;                                  // check if cache contains this object, returns true even if element is still loading
+#endif
                                  Bool contains(C             TYPE        *data            )C;                                  // check if cache contains this object
    template<Cache<TYPE> &CACHE>  Bool contains(C CacheElmPtr<TYPE,CACHE> &data            )C {return contains(data()       );} // check if cache contains this object
                                  Int  ptrCount(C             TYPE        *data            )C;                                  // check if cache contains this object and return current number of active pointer references to it, -1 is returned if object is not stored in this cache
@@ -90,6 +102,9 @@ T1(TYPE) struct Cache : _Cache // Cache - container for dynamically loaded data,
    TYPE&  lockedData(Int i) ; // access i-th element data from container, this   can  be used   after locking and before unlocking the container
  C TYPE&  lockedData(Int i)C; // access i-th element data from container, this   can  be used   after locking and before unlocking the container
    void unlock      (     )C; // unlock      elements          container, this   must be called after locking the container
+#if EE_PRIVATE
+   void canBeRemoved(Bool CanBeRemoved(C TYPE &data)) {lock(); _can_be_removed=(Bool(*)(CPtr))CanBeRemoved; unlock();}
+#endif
 
    void removeData(C TYPE *data); // manually remove object from cache, this is ignored for objects which still are accessed by some CacheElmPtr's
 
@@ -103,6 +118,8 @@ T1(TYPE) struct Cache : _Cache // Cache - container for dynamically loaded data,
 
    Cache& clear(); // remove all elements
    Cache& del  (); // remove all elements and free helper memory
+
+   Cache& cleanup(); // release unused memory, this does not call 'delayRemoveNow', instead it releases memory that is completely unused, in order to release as much memory as possible - 'delayRemoveNow' should be called before 'cleanup'
 
    explicit Cache(CChar8 *name=null, Int block_elms=64); // 'name'=cache name (this value is optional, it will be used when displaying an error message when cache element failed to load)
 };
@@ -140,6 +157,9 @@ template<typename TYPE, Cache<TYPE> &CACHE>   struct CacheElmPtr // Cache Elemen
    CacheElmPtr& operator=(  TYPE        * data); // set       pointer to 'data', this automatically decreases the reference count of current data and increases the reference count of the new data
    CacheElmPtr& operator=(C CacheElmPtr & eptr); // set       pointer to 'eptr', this automatically decreases the reference count of current data and increases the reference count of the new data
    CacheElmPtr& operator=(  CacheElmPtr &&eptr); // set       pointer to 'eptr', this automatically decreases the reference count of current data and increases the reference count of the new data
+#if EE_PRIVATE
+   CacheElmPtr& setContained(TYPE       * data); // set       pointer to 'data', this automatically decreases the reference count of current data and increases the reference count of the new data !! THIS ASSUMES THAT 'data' IS IN CACHE !!
+#endif
 
    // get object and store it temporarily (as long as it is referenced by at least one 'CacheElmPtr')
    CacheElmPtr& find     (CChar  *file, CChar *path=null); // find    object by its file name   , don't load if not found, null on fail
@@ -188,9 +208,32 @@ private:
 C _Cache &_cache;
    NO_COPY_CONSTRUCTOR(CacheLock);
 };
+
+struct CacheLockEx // Cache Lock Extended
+{
+   void on () {if(!_on){_on=true ; _cache.  lock();}} // manually   lock
+   void off() {if( _on){_on=false; _cache.unlock();}} // manually unlock
+
+   void set(Bool on) {if(on!=_on){if(_on=on)_cache.lock();else _cache.unlock();}} // set if lock should be enabled
+
+   Bool isOn ()C {return  _on;}
+   Bool isOff()C {return !_on;}
+
+   explicit CacheLockEx(C _Cache &cache, Bool on=true) : _cache(cache) {if(_on=on)_cache.  lock();}
+           ~CacheLockEx(                             )                 {if(_on   )_cache.unlock();}
+
+private:
+   Bool   _on;
+C _Cache &_cache;
+   NO_COPY_CONSTRUCTOR(CacheLockEx);
+};
 /******************************************************************************/
 #define DECLARE_CACHE(TYPE, cache_name, ptr_name            )   extern Cache<TYPE> cache_name            ;   typedef CacheElmPtr<TYPE, cache_name> ptr_name; // this declares a Cache and a CacheElmPtr in a header, the cache stores 'TYPE' data, the cache name is 'cache_name' and the name for the pointer to elements is 'ptr_name'
 #define  DEFINE_CACHE(TYPE, cache_name, ptr_name, debug_name)          Cache<TYPE> cache_name(debug_name);   typedef CacheElmPtr<TYPE, cache_name> ptr_name; // this defines  a Cache and a CacheElmPtr in C++ file
+#if EE_PRIVATE
+#define  DEFINE_CACHE_EX(TYPE, cache_name, ptr_name, debug_name, block_elms)   Cache<TYPE> cache_name(debug_name, block_elms);   typedef CacheElmPtr<TYPE, cache_name> ptr_name; // this defines a Cache and a CacheElmPtr in C++ file
+#endif
 /******************************************************************************/
 void CachesDelayRemove(Flt time); // set amount of time (in seconds) after which unused elements are removed from all Engine Caches (<=0 value specifies immediate unloading), default=0
+void CachesUpdate     (        ); // manually update all Engine Caches (this should be called if APP_MANUAL_CACHES_UPDATE is enabled), this can be called on any thread
 /******************************************************************************/

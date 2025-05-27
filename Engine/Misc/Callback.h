@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct Callback
 {
@@ -30,6 +27,9 @@ struct CallbackUser
 /******************************************************************************/
 struct Callbacks
 {
+#if EE_PRIVATE
+   Bool initialized()C {return _callbacks.initialized();}
+#endif
             void add(void func(          )                 );                                  // add custom function to the queue, it will be called in the 'update' method
             void add(void func(Ptr   user), Ptr   user=null);                                  // add custom function to the queue, it will be called in the 'update' method
    T1(TYPE) void add(void func(TYPE *user), TYPE *user=null) {add((void(*)(Ptr))func,  user);} // add custom function to the queue, it will be called in the 'update' method
@@ -57,6 +57,9 @@ private:
 /******************************************************************************/
 struct ThreadSafeCallbacks : private Callbacks
 {
+#if EE_PRIVATE
+   Bool initialized()C {return super::initialized();}
+#endif
             void add(void func(          )                 );                                  // add custom function to the queue, it will be called in the 'update' method
             void add(void func(Ptr   user), Ptr   user=null);                                  // add custom function to the queue, it will be called in the 'update' method
    T1(TYPE) void add(void func(TYPE *user), TYPE *user=null) {add((void(*)(Ptr))func,  user);} // add custom function to the queue, it will be called in the 'update' method

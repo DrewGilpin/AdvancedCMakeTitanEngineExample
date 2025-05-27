@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Number' for handling numbers with very big precision.
@@ -14,6 +11,9 @@ struct Number // Number with big precision (NUMBER_DIGS*16 bit precision)
    UShort d[NUMBER_DIGS]; // digits
 
    // get / set
+#if EE_PRIVATE
+   Int digits()C; // get number of used digits (this is the highest non zero digit index +1)
+#endif
    Number& zero(); // set to zero
 
    Int   asInt  ()C; // return as Int
@@ -71,6 +71,12 @@ struct Number // Number with big precision (NUMBER_DIGS*16 bit precision)
    friend Number  operator>> (C Number &a, Int bits); // shift  bits right
           Number&         rol(             Int bits); // rotate bits left
           Number&         ror(             Int bits); // rotate bits right
+#if EE_PRIVATE
+          Number&   setShlDig(C Number &N, Int digs); // shift digits left  "T  =N<<(d*16)"
+          Number&   setShrDig(C Number &N, Int digs); // shift digits right "T  =N>>(d*16)"
+          Number&      shlDig(             Int digs); // shift digits left  "T<<=   (d*16)"
+          Number&      shrDig(             Int digs); // shift digits right "T>>=   (d*16)"
+#endif
 
    Number() {}
    Number& operator=(  Int   i);   Number(Int   i) {T=i;}
@@ -81,7 +87,24 @@ struct Number // Number with big precision (NUMBER_DIGS*16 bit precision)
    Number& operator=(  Dbl   f);   Number(Dbl   f) {T=f;}
    Number& operator=(C Str  &s); // set from string
 
+#if EE_PRIVATE
+   Int rawCompare(C Number &N)C;
+   Int rawCompare(  UInt    N)C;
+   Int absCompare(C Number &N)C;
+   Int absCompare(  UInt    N)C;
+   Int absCompare(  Int     N)C {return absCompare((UInt)Abs(N));}
+
+   Number& rawAdd(C Number &N);
+   Number& rawSub(C Number &N);
+   Number& absAdd(C Number &N);
+   Number& absAdd(  UInt    N);
+   Number& absSub(C Number &N);
+   Number& absSub(  UInt    N);
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    Bool _real;
 };
 /******************************************************************************/

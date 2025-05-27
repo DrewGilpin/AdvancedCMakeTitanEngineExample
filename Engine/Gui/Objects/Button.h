@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum BUTTON_MODE : Byte // Button Mode
 {
@@ -33,6 +30,10 @@ enum BUTTON_TYPE : Byte // Button Type
    BUTTON_TYPE_WINDOW_MINIMIZE,
    BUTTON_TYPE_WINDOW_MAXIMIZE,
    BUTTON_TYPE_WINDOW_CLOSE,
+#if EE_PRIVATE
+   BUTTON_TYPE_TAB_CORNER_START=BUTTON_TYPE_TAB_TOP_LEFT,
+   BUTTON_TYPE_TAB_CORNER_END  =BUTTON_TYPE_TAB_BOTTOM_RIGHT,
+#endif
 };
 /******************************************************************************/
 const_mem_addr struct Button : GuiObj // Gui Button !! must be stored in constant memory address !!
@@ -60,6 +61,7 @@ const_mem_addr struct Button : GuiObj // Gui Button !! must be stored in constan
            Button& set       (Bool on, SET_MODE mode=SET_DEFAULT);                                   // set button state, this method is valid only for BUTTON_TOGGLE mode
            Button& push      (                                  );                                   // push manually
            Button& fitText   (                                  );                                   // minimize text size if text is too big
+           Button& fitText   (  Flt       text_size             );                                   // minimize text size if text is too big, according to base 'text_size'
            Button& setText   (C Str      &text                  );                                   // set text
            Button& setImage  (C ImagePtr &image                 );                                   // set image
            Button& subType   (BUTTON_TYPE type                  );           BUTTON_TYPE subType()C {return                  _sub_type;} // set/get button type, default=BUTTON_TYPE_DEFAULT
@@ -68,8 +70,8 @@ const_mem_addr struct Button : GuiObj // Gui Button !! must be stored in constan
            Button& focusable (Bool on                           );           Bool      focusable()C {return                 _focusable;} // set/get if can catch keyboard focus, default=true
            Button& setSkin   (C GuiSkinPtr &skin                );           GuiSkin*    getSkin()C {return skin ? skin() : Gui.skin();} //     get actual skin
 
-   Flt        textWidth (                                C Flt *height=null)C; // calculate button text width     , 'height'=if calculate based on custom button height (if null then current button height is used)
-   TextStyle* textParams(Flt &text_size, Flt &text_padd, C Flt *height=null)C; // calculate button text parameters, 'height'=if calculate based on custom button height (if null then current button height is used)
+   Flt        textWidth (                                C Flt *height=null, Bool padd=false)C; // calculate button text width     , 'height'=if calculate based on custom button height (if null then current button height is used), 'padd'=if include padding
+   TextStyle* textParams(Flt &text_size, Flt &text_padd, C Flt *height=null                 )C; // calculate button text parameters, 'height'=if calculate based on custom button height (if null then current button height is used)
 
             Button& func(void (*func)(Ptr   user), Ptr   user=null, Bool immediate=false);                                                       // set function called when button state has changed, with 'user' as its parameter, 'immediate'=if call the function immediately when a change occurs (this will happen inside object update function where you cannot delete any objects) if set to false then the function will get called after all objects finished updating (there you can delete objects)
    T1(TYPE) Button& func(void (*func)(TYPE *user), TYPE *user     , Bool immediate=false) {return T.func((void(*)(Ptr))func,  user, immediate);} // set function called when button state has changed, with 'user' as its parameter, 'immediate'=if call the function immediately when a change occurs (this will happen inside object update function where you cannot delete any objects) if set to false then the function will get called after all objects finished updating (there you can delete objects)
@@ -88,10 +90,17 @@ const_mem_addr struct Button : GuiObj // Gui Button !! must be stored in constan
    virtual void    update(C GuiPC &gpc)override; // update object
    virtual void    draw  (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   void zero();
+   void setParams();
+#endif
+
   ~Button() {del();}
    Button();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool        _push_button, _on, _vertical, _focusable, _pixel_align, _func_immediate;
    BUTTON_TYPE _sub_type;
    Flt         _lit;
@@ -101,5 +110,8 @@ private:
 protected:
    virtual Bool save(File &f, CChar *path=null)C override;
    virtual Bool load(File &f, CChar *path=null)  override;
+#if EE_PRIVATE
+   friend struct ComboBox;   friend struct _List;   friend struct Region;   friend struct SlideBar;   friend struct Tabs;   friend struct TextBox;   friend struct TextLine;   friend struct Window;
+#endif
 };
 /******************************************************************************/

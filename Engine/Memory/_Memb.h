@@ -1,9 +1,8 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct _Memb // Block Based Container Base - Do not use this class, use 'Memb' instead
 {
+   static constexpr Bool Continuous=false; // Memb memory is NOT continuous
+
    void del  ();
    void clear();
 
@@ -42,6 +41,16 @@ struct _Memb // Block Based Container Base - Do not use this class, use 'Memb' i
 
    Bool saveRaw(File &f)C;
    Bool loadRaw(File &f) ;
+
+#if EE_PRIVATE
+   UInt mask()C {return _block_elms-1;} // '_block_elms' is always a power of 2, so -1 can be used as an index mask for all elements in a block
+
+   void moveElmLeftUnsafe(Int elm, Int new_index, Ptr temp);
+
+   void copyTo  ( Ptr dest)C;
+   void copyFrom(CPtr src ) ;
+   void reset   (         ) ;
+#endif
 
  ~_Memb() {del();}
 

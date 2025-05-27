@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Here is a list of miscellaneous helper functions.
@@ -13,6 +10,24 @@ enum ALIGN_TYPE // Align Type
    ALIGN_CENTER, // align to center
    ALIGN_MAX   , // align to maximum
 };
+#if EE_PRIVATE
+enum FADE_TYPE : Byte // Fade Type
+{
+   FADE_NONE, // no fading
+   FADE_IN  , // fading in
+   FADE_OUT , // fading out
+};
+#if WINDOWS_NEW
+struct OSUserGetter
+{
+   Windows::System::User ^user;
+   Bool                   is;
+
+   Windows::System::User^C& get();
+}extern
+   OSUser;
+#endif
+#endif
 /******************************************************************************/
 constexpr SByte Signed(SByte  x) {return x;}
 constexpr SByte Signed(Byte   x) {return x;}
@@ -36,27 +51,52 @@ T2(TYPE, RET_TYPE) constexpr ENABLE_IF_ENUM(TYPE, RET_TYPE) Unsigned(TYPE x) {re
 /******************************************************************************/
 template<typename TYPE, Int elms>   constexpr Int Elms(C TYPE (&Array)[elms]) {return elms;} // get number of elements in array
 
-constexpr Bool InRange(Int   i, Byte  elms) {return UInt (i)<UInt (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
-constexpr Bool InRange(Int   i, Int   elms) {return UInt (i)<UInt (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
-constexpr Bool InRange(Int   i, UInt  elms) {return UInt (i)<UInt (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
-constexpr Bool InRange(UInt  i, Int   elms) {return UInt (i)<UInt (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
-constexpr Bool InRange(UInt  i, UInt  elms) {return UInt (i)<UInt (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
-constexpr Bool InRange(Long  i, Long  elms) {return ULong(i)<ULong(elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
-constexpr Bool InRange(Long  i, ULong elms) {return ULong(i)<ULong(elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
-constexpr Bool InRange(ULong i, ULong elms) {return ULong(i)<ULong(elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+// !! HERE HAVE TO MAXIMIZE TYPE !! For example: SByte i, UShort elms. can't convert to Byte and UShort, because SByte i=-1, would become Byte 255, but we need UShort to get i=65535.
+constexpr Bool InRange(SByte  i, Int    elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Byte   i, Byte   elms) {return Byte  (i)<Byte  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Byte   i, Int    elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Byte   i, UInt   elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(UShort i, Byte   elms) {return UShort(i)<Byte  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(UShort i, UShort elms) {return UShort(i)<UShort(elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(UShort i, Int    elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Int    i, Byte   elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Int    i, Int    elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Int    i, UInt   elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(UInt   i, Byte   elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(UInt   i, Int    elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(UInt   i, UInt   elms) {return UInt  (i)<UInt  (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Long   i, Byte   elms) {return ULong (i)<ULong (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Long   i, Int    elms) {return ULong (i)<ULong (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Long   i, Long   elms) {return ULong (i)<ULong (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(Long   i, ULong  elms) {return ULong (i)<ULong (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
+constexpr Bool InRange(ULong  i, ULong  elms) {return ULong (i)<ULong (elms);} // if 'i' index is in range "0..elms-1", this assumes that "elms>=0"
 
-T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(Int  i, TYPE   elms) {return Unsigned(i)<Unsigned(elms);} // template specialization for enums
-T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(UInt i, TYPE   elms) {return Unsigned(i)<Unsigned(elms);} // template specialization for enums
-T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(Long i, TYPE   elms) {return Unsigned(i)<Unsigned(elms);} // template specialization for enums
-T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE i, Int    elms) {return Unsigned(i)<Unsigned(elms);} // template specialization for enums
-T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE i, UInt   elms) {return Unsigned(i)<Unsigned(elms);} // template specialization for enums
-T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE i, ULong  elms) {return Unsigned(i)<Unsigned(elms);} // template specialization for enums
-T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE i, TYPE   elms) {return Unsigned(i)<Unsigned(elms);} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(SByte  i, TYPE   elms) {return InRange(                i , ENUM_TYPE(TYPE)(elms));} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(Byte   i, TYPE   elms) {return InRange(                i , ENUM_TYPE(TYPE)(elms));} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(Short  i, TYPE   elms) {return InRange(                i , ENUM_TYPE(TYPE)(elms));} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(UShort i, TYPE   elms) {return InRange(                i , ENUM_TYPE(TYPE)(elms));} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(Int    i, TYPE   elms) {return InRange(                i , ENUM_TYPE(TYPE)(elms));} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(UInt   i, TYPE   elms) {return InRange(                i , ENUM_TYPE(TYPE)(elms));} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(Long   i, TYPE   elms) {return InRange(                i , ENUM_TYPE(TYPE)(elms));} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(ULong  i, TYPE   elms) {return InRange(                i , ENUM_TYPE(TYPE)(elms));} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, SByte  elms) {return InRange(ENUM_TYPE(TYPE)(i),                 elms );} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, Byte   elms) {return InRange(ENUM_TYPE(TYPE)(i),                 elms );} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, Short  elms) {return InRange(ENUM_TYPE(TYPE)(i),                 elms );} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, UShort elms) {return InRange(ENUM_TYPE(TYPE)(i),                 elms );} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, Int    elms) {return InRange(ENUM_TYPE(TYPE)(i),                 elms );} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, UInt   elms) {return InRange(ENUM_TYPE(TYPE)(i),                 elms );} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, Long   elms) {return InRange(ENUM_TYPE(TYPE)(i),                 elms );} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, ULong  elms) {return InRange(ENUM_TYPE(TYPE)(i),                 elms );} // template specialization for enums
+T1(TYPE) constexpr ENABLE_IF_ENUM(TYPE, Bool) InRange(TYPE   i, TYPE   elms) {return InRange(ENUM_TYPE(TYPE)(i), ENUM_TYPE(TYPE)(elms));} // template specialization for enums
 
-T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Int   i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
-T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(UInt  i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
-T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Long  i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
-T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(ULong i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(SByte  i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Byte   i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Short  i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(UShort i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Int    i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(UInt   i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Long   i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(ULong  i, C TYPE &container); // if 'i' index is in range of container, 'container' can be of many types, for example a C++ array (x[]), memory container ('Memc', 'Memb', ..) or any other type for which 'Elms' function was defined
 
 constexpr Bool Greater( Int a,  Int b) {return      a >     b ;}
 constexpr Bool Greater(UInt a, UInt b) {return      a >     b ;}
@@ -95,6 +135,24 @@ Str GetStartNot (C Str &name); // get not path start                 , sample us
 
 Str GetRelativePath(Str src, Str dest); // get relative path from 'src' location to 'dest' file, sample usage: GetRelativePath("C:/Folder", "C:/dest.txt") -> "../dest.txt"
 
+#if EE_PRIVATE
+INLINE Bool IsSlash(Char8 c) {return c=='/' || c=='\\';}
+INLINE Bool IsSlash(Char  c) {return c=='/' || c=='\\';}
+
+CChar * _GetBase     (CChar  *name, Bool tail_slash= 0, Char  (&dest)[MAX_LONG_PATH]=NoTemp(TempChar <MAX_LONG_PATH>()).c); // 'tail_slash'=if keep   tail slash
+CChar * _GetBaseNoExt(CChar  *name,                     Char  (&dest)[MAX_LONG_PATH]=NoTemp(TempChar <MAX_LONG_PATH>()).c);
+CChar * _GetExt      (CChar  *name,                     Char  (&dest)[MAX_LONG_PATH]=NoTemp(TempChar <MAX_LONG_PATH>()).c);
+CChar * _GetExtNot   (CChar  *name,                     Char  (&dest)[MAX_LONG_PATH]=NoTemp(TempChar <MAX_LONG_PATH>()).c);
+CChar * _GetPath     (CChar  *name, Int  tail_slash=-1, Char  (&dest)[MAX_LONG_PATH]=NoTemp(TempChar <MAX_LONG_PATH>()).c); // 'tail_slash'=if insert tail slash (1=always, 0=never, -1=if name had a tail slash)
+ Char8* _GetStart    (CChar8 *name,                     Char8 (&dest)[MAX_LONG_PATH]=NoTemp(TempChar8<MAX_LONG_PATH>()).c);
+ Char * _GetStart    (CChar  *name,                     Char  (&dest)[MAX_LONG_PATH]=NoTemp(TempChar <MAX_LONG_PATH>()).c);
+CChar * _GetStartNot (CChar  *name);
+
+Str  WindowsPath    (C Str &path); // replace '/'  with '\\'
+Str     UnixPath    (C Str &path); // replace '\\' with '/'
+Str8    UnixPathUTF8(C Str &path); // return UnixPath in UTF-8 format
+#endif
+
 Bool  IsDrive (CChar *path);   Bool  IsDrive (CChar8 *path); // if path is a     drive  path, sample usage:  IsDrive ("x:/"     ) -> true,  IsDrive("x:/data/0.bmp") -> false,  IsDrive("data/0.bmp") -> false
 Bool HasDrive (CChar *path);   Bool HasDrive (CChar8 *path); // if path contains drive  path, sample usage: HasDrive ("x:/"     ) -> true, HasDrive("x:/data/0.bmp") -> true , HasDrive("data/0.bmp") -> false
 Bool HasRemote(CChar *path);   Bool HasRemote(CChar8 *path); // if path contains remote path, sample usage: HasRemote("\\\\comp") -> true
@@ -115,9 +173,11 @@ constexpr Long  DivRound(Long  x, Long  y) {return (x>=0) ? (x+y/2)/y : (x-y/2)/
 constexpr UInt  DivRound(UInt  x, UInt  y) {return          (x+y/2)/y            ;} // integer divide with round
 constexpr ULong DivRound(ULong x, ULong y) {return          (x+y/2)/y            ;} // integer divide with round
 
-constexpr Int     Mod(Int  x, Int  y          ) {if(!y)return 0; Int  z=x%y; return (z>=0) ? z : z+y;} // safe modulo "x%y" , returns always a positive number between   "0..y-1"
-constexpr Long    Mod(Long x, Long y          ) {if(!y)return 0; Long z=x%y; return (z>=0) ? z : z+y;} // safe modulo "x%y" , returns always a positive number between   "0..y-1"
-          Int  MidMod(Int  x, Int min, Int max);                                                       // safe middle modulo, returns always a          number between "min..max"
+constexpr Int     Mod(Int   x, Int  y          ) {if(!y)return 0; Int  z=x%y; return (z>=0) ? z : z+y;} // safe modulo "x%y" , returns always a positive number between   "0..y-1"
+constexpr Long    Mod(Long  x, Long y          ) {if(!y)return 0; Long z=x%y; return (z>=0) ? z : z+y;} // safe modulo "x%y" , returns always a positive number between   "0..y-1"
+constexpr Int     Mod(UInt  x, Int  y          ) {return y ? x%Unsigned(y) : 0                       ;} // safe modulo "x%y" , returns always a positive number between   "0..y-1"
+constexpr Long    Mod(ULong x, Long y          ) {return y ? x%Unsigned(y) : 0                       ;} // safe modulo "x%y" , returns always a positive number between   "0..y-1"
+          Int  MidMod(Int   x, Int min, Int max);                                                       // safe middle modulo, returns always a          number between "min..max"
 
 UInt Ceil2      (UInt   x); // rounds 'x' to the nearest multiple of 2  , which is equal or greater than 'x'
 UInt Ceil4      (UInt   x); // rounds 'x' to the nearest multiple of 4  , which is equal or greater than 'x'
@@ -140,6 +200,29 @@ Int  BitHi      (UInt   x); // get index of highest non-zero bit  in 'x' ( 0 if 
 Int  BitHi      (ULong  x); // get index of highest non-zero bit  in 'x' ( 0 if none)
 Int  ByteHi     (UInt   x); // get index of highest non-zero byte in 'x' ( 0 if none)
 Int  ByteHi     (ULong  x); // get index of highest non-zero byte in 'x' ( 0 if none)
+#if EE_PRIVATE
+       Int Log2Ceil (UInt  x); // returns Ceil (Log2(x))
+       Int Log2Ceil (ULong x); // returns Ceil (Log2(x))
+       Int Log2Round(UInt  x); // returns Round(Log2(x))
+       Int Log2Round(ULong x); // returns Round(Log2(x))
+inline Int DivCeil2 (UInt  x) {return DivCeil(x,  2u);}
+inline Int DivCeil4 (UInt  x) {return DivCeil(x,  4u);}
+inline Int DivCeil8 (UInt  x) {return DivCeil(x,  8u);}
+inline Int DivCeil16(UInt  x) {return DivCeil(x, 16u);}
+
+inline UInt CeilGL(UInt x) {return Ceil128(x);} // use 'Ceil128' because of crash when setting/getting data due to internal system memmove which reads ahead
+
+Byte FltToByteScale (Flt  x);
+Byte FltToByteScale2(Flt  x);
+Flt  ByteScaleToFlt (Byte x);
+Flt  ByteScale2ToFlt(Byte x);
+
+Int   ByteScaleRes(  Int    res, Byte byte_scale);
+VecI2 ByteScaleRes(C VecI2 &res, Byte byte_scale);
+
+Int   ByteScale2Res(  Int    res, Byte byte_scale);
+VecI2 ByteScale2Res(C VecI2 &res, Byte byte_scale);
+#endif
 
 UInt Shl(UInt x, Int i); // safe "x<<i", works ok on negative 'i', and 'i' greater than 32
 UInt Shr(UInt x, Int i); // safe "x>>i", works ok on negative 'i', and 'i' greater than 32
@@ -147,6 +230,7 @@ UInt Shr(UInt x, Int i); // safe "x>>i", works ok on negative 'i', and 'i' great
 UInt Rol(UInt x, Int i); // safe "x ROL i" (Rotate Left ), works ok on negative 'i', and 'i' greater than 32
 UInt Ror(UInt x, Int i); // safe "x ROR i" (Rotate Right), works ok on negative 'i', and 'i' greater than 32
 
+Str SizeText (Long size, Char dot='.'); // return size               as text in a shortened version, example: SizeText (1024) -> "1.0K"  , SizeText (1024*1024) ->   "1.0M"  , SizeText (1024*1024*1024) ->       "1.0G"
 Str SizeBytes(Long size, Char dot=','); // return size in      Bytes as text in a shortened version, example: SizeBytes(1024) -> "1,0 KB", SizeBytes(1024*1024) ->   "1,0 MB", SizeBytes(1024*1024*1024) ->       "1,0 GB"
 Str SizeKB   (Long size, Char dot=','); // return size in Kilo-Bytes as text in a shortened version, example: SizeKB   (1024) -> "1,0 KB", SizeKB   (1024*1024) -> "1 024 KB", SizeKB   (1024*1024*1024) -> "1 048 576 KB"
 Str SizeMB   (Long size, Char dot=','); // return size in Mega-Bytes as text in a shortened version, example: SizeMB   (1024) -> "0,0 MB", SizeMB   (1024*1024) ->   "1,0 MB", SizeMB   (1024*1024*1024) ->     "1 024 MB"
@@ -197,10 +281,8 @@ Bool DecodeFileName(C Str &src ,  Ptr dest, Int size); // decode       binary da
 T1(TYPE) Str  EncodeFileName(             C TYPE &elm) {return EncodeFileName(      &elm, SIZE(elm));}
 T1(TYPE) void EncodeFileName(  Str &dest, C TYPE &elm) {return EncodeFileName(dest, &elm, SIZE(elm));}
 T1(TYPE) Bool DecodeFileName(C Str &src ,   TYPE &elm) {return DecodeFileName(src , &elm, SIZE(elm));}
-         Bool DecodeFileName(CChar *src ,   UID  &elm);                                     // UID optimized version
-  inline Bool DecodeFileName(C Str &src ,   UID  &elm) {return DecodeFileName(src(), elm);} // UID optimized version
 
-UID FileNameID(C Str &name); // convert base of 'name' (obtained using 'GetBase') to ID using 'DecodeFileName', 'UIDZero' on fail, this works like "UID id; DecodeFileName(GetBase(name), id); return id;"
+UID FileNameID(C Str &name); // convert base of 'name' (obtained using 'GetBase') to ID using 'fromFileName', 'UIDZero' on fail, this works like "UID id; id.fromFileName(GetBase(name)); return id;"
 
 Str  EncodeRaw(              CPtr src , Int size); // encode 'src' binary data of 'size' size, into        string, this is the most efficient encoding (2-bytes per character), warning: string may contain '\0' null characters
 void EncodeRaw(  Str  &dest, CPtr src , Int size); // encode 'src' binary data of 'size' size, into 'dest' string, this is the most efficient encoding (2-bytes per character), warning: string may contain '\0' null characters
@@ -220,6 +302,14 @@ Bool ValidEmail     (C Str &email); // test if 'email' is in correct email      
 Bool ValidURL       (C Str &url  ); // test if 'url'   is in correct url         format - "http://domain.com"
 Bool ValidLicenseKey(C Str &key  ); // test if 'key'   is in correct license key format - "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
 
+Str ShortEmail(C Str &email); // will remove all '.' from gmail addresses                            , example "test.email@gmail.com"       -> "testemail@gmail.com"
+Str  BaseEmail(C Str &email); // will remove all '.' from gmail addresses and "+*" from all addresses, example "test.email+extra@gmail.com" -> "testemail@gmail.com"
+
+CChar * SkipHttpWww(CChar  *url); // skip any "http://", "https://", "www." from url, example "http://www.domain.com" ->     "domain.com"
+CChar8* SkipHttpWww(CChar8 *url); // skip any "http://", "https://", "www." from url, example "http://www.domain.com" ->     "domain.com"
+CChar * SkipHttp   (CChar  *url); // skip any "http://", "https://"         from url, example "http://www.domain.com" -> "www.domain.com"
+CChar8* SkipHttp   (CChar8 *url); // skip any "http://", "https://"         from url, example "http://www.domain.com" -> "www.domain.com"
+
 Str         CString(C Str &str); // get string as if it would be stored for the C++ language (preceeding '\' and '"' characters with '\'                                ), for example:         CString("abc"def\ghi"     ) -> ("abc\"def\\ghi")
 Str       XmlString(C Str &str); // get string as if it would be stored for the XML text     (replacing   & -> &amp;   < -> &lt;   > -> &gt;   ' -> &apos;   " -> &quot;), for example:       XmlString("abc"def\ghi"     ) -> ("abc&quot;def\ghi")
 Str DecodeXmlString(C Str &str); // decode string back from the                 XML text     (replacing   &amp; -> &   &lt; -> <   &gt; -> >   &apos; -> '   &quot; -> "), for example: DecodeXmlString("abc&quot;def\ghi") -> ("abc"def\ghi")
@@ -228,6 +318,9 @@ UID   DeviceID          (Bool per_user); // get a unique ID of this device, 'per
 Str   DeviceManufacturer(); // get Device Manufacturer , available only on Windows, Android and Apple
 Str   DeviceModel       (); // get Device Model        , available only on Windows, Android
 Str8  DeviceSerialNumber(); // get Device Serial Number, available only on Windows
+#if EE_PRIVATE
+UID   DeviceUUID        (); // get Device Unique ID    , available only on Windows
+#endif
 ULong AndroidID         (); // get Android ID - https://developer.android.com/reference/android/provider/Settings.Secure.html#ANDROID_ID
 
 Str MicrosoftWindowsStoreLink(C Str &app_id); // return a website link to Microsoft Windows Store page for the specified App ID, 'app_id' example = "9NBLGGH4QC8G"
@@ -236,6 +329,23 @@ Str       GooglePlayStoreLink(C Str &app_id); // return a website link to Google
 
 void Break(              ); // calling this function will force breakpoint exception, use for debugging
 void Exit (C Str &error=S); // immediately exit the application with 'error' message
+#if EE_PRIVATE
+void ExitNow         (                 ); // exit now without reporting any messages
+void ExitEx          (CChar *error=null); // does not require memory allocation for error message, however does not check for call stack
+Bool GetCallStack    (Str   &stack     );
+Bool GetCallStackFast(Str   &stack     );
+void InitMisc        (                 );
+
+// display a message box and always return false
+Bool Error     (C Str &msg             );
+Bool ErrorDel  (C Str &file            );
+Bool ErrorRead (C Str &file            );
+Bool ErrorWrite(C Str &file            );
+Bool ErrorCopy (C Str &src, C Str &dest);
+Bool ErrorMove (C Str &src, C Str &dest);
+
+CChar* _EncodeFileName(C UID &id, Char (&name)[24+1]=NoTemp(TempChar<24+1>()).c); // have to use 'CChar' instead of 'CChar8' because this function is passed to _Cache._find,_get,_require
+#endif
 /******************************************************************************/
 struct ExeSection
 {
@@ -287,6 +397,10 @@ enum SYSTEM_PATH // System Path Type
    SP_ALL_APP_DATA   , // All Users/App Data  (typically "C:/ProgramData")
    SP_PUBLIC         , // for Android this is the path to the public folder which is visible when connected to a computer
    SP_SD_CARD        , // for Android this is the path to SD Card
+#if EE_PRIVATE
+   SP_FRAMEWORKS     , // User/Frameworks     (typically "/Users/*/Library/Frameworks") used only on Mac
+   SP_TRASH          , // User/Trash          (typically "/home/*/.local/share/Trash" ) used only on Linux
+#endif
 };
 Str SystemPath(SYSTEM_PATH type); // get system path, Sample Usage: SystemPath(SP_PROG_FILES) -> "C:/Program Files"
 /******************************************************************************/
@@ -297,9 +411,15 @@ enum PERMISSION // Permissions
    PERMISSION_SOUND_RECORD      , // allow recording sounds           using 'SoundRecord'                  [Supported Platforms: Android]
    PERMISSION_USER_NAME         , // allow accessing system user name using 'OSUserName' and 'OSUserEmail' [Supported Platforms: Android]
    PERMISSION_USER_COMMUNICATION, // allow communication between users                                     [Supported Platforms: NintendoSwitch]
+#if EE_PRIVATE
+   PERMISSION_NUM               , // number of permissions
+#endif
 };
 Bool HasPermission(PERMISSION permission); // check if Application has specified 'permission'
 void GetPermission(PERMISSION permission); // request                  specified 'permission'
+#if EE_PRIVATE
+void RequirePermission(PERMISSION permission); // if(!HasPermission(permission))GetPermission(permission)
+#endif
 /******************************************************************************/
 enum EXTENSION_TYPE // Extension Type
 {
@@ -312,7 +432,7 @@ enum EXTENSION_TYPE // Extension Type
 };
 EXTENSION_TYPE ExtType(C Str &ext); // get extension type from given extension name, Sample Usage : ExtType("bmp") -> EXT_IMAGE
 
-#define SUPPORTED_IMAGE_EXT "bmp|png|jpg|jpeg|webp|heif|tga|tif|tiff|dds|psd|ico|cur|hdr|img"
+#define SUPPORTED_IMAGE_EXT "bmp|png|jpg|jpeg|jxl|webp|avif|heif|tga|tif|tiff|dds|psd|ico|cur|hdr|img"
 #define SUPPORTED_SOUND_EXT "wav|flac|ogg|opus|weba|webm|mp3|mp4|m4a"
 #define SUPPORTED_MESH_EXT  "fbx|dae|ase|obj|3ds|b3d|ms3d|psk|mesh"
 /******************************************************************************/
@@ -337,6 +457,12 @@ UInt         GetRegUInt(REG_KEY_GROUP reg_key_group, C Str &name, Bool       *su
 Bool         SetRegStr (REG_KEY_GROUP reg_key_group, C Str &name, C Str      &value         ); // set registry key value as String         , false        on fail
 Bool         SetRegUInt(REG_KEY_GROUP reg_key_group, C Str &name, UInt        value         ); // set registry key value as UInt           , false        on fail
 Bool         SetRegData(REG_KEY_GROUP reg_key_group, C Str &name, CPtr        data, Int size); // set registry key value as binary data    , false        on fail
+#if EE_PRIVATE
+#if APPLE
+Boolean GetDictionaryBoolean(CFDictionaryRef dict, const void *key);
+long    GetDictionaryLong   (CFDictionaryRef dict, const void *key);
+#endif
+#endif
 /******************************************************************************/
 struct CyclicUShort
 {
@@ -345,11 +471,11 @@ struct CyclicUShort
    Bool operator==(C CyclicUShort &c)C {return v==c.v;}
    Bool operator!=(C CyclicUShort &c)C {return v!=c.v;}
 
-   Bool operator>=(C CyclicUShort &c)C {return UShort(v-c.v) <USHORT_MAX/2;}
-   Bool operator> (C CyclicUShort &c)C {return UShort(c.v-v)>=USHORT_MAX/2;}
+   Bool operator>=(C CyclicUShort &c)C {return Short(v-c.v)>=0;}
+   Bool operator> (C CyclicUShort &c)C {return Short(v-c.v)> 0;}
 
-   Bool operator<=(C CyclicUShort &c)C {return UShort(c.v-v)< USHORT_MAX/2;}
-   Bool operator< (C CyclicUShort &c)C {return UShort(v-c.v)>=USHORT_MAX/2;}
+   Bool operator<=(C CyclicUShort &c)C {return Short(v-c.v)<=0;}
+   Bool operator< (C CyclicUShort &c)C {return Short(v-c.v)< 0;}
 
    CyclicUShort& operator++(   ) {++v; return T;}
    void          operator++(int) {++v;}
@@ -366,11 +492,11 @@ struct CyclicUInt
    Bool operator==(C CyclicUInt &c)C {return v==c.v;}
    Bool operator!=(C CyclicUInt &c)C {return v!=c.v;}
 
-   Bool operator>=(C CyclicUInt &c)C {return UInt(v-c.v) <UINT_MAX/2;}
-   Bool operator> (C CyclicUInt &c)C {return UInt(c.v-v)>=UINT_MAX/2;}
+   Bool operator>=(C CyclicUInt &c)C {return Int(v-c.v)>=0;}
+   Bool operator> (C CyclicUInt &c)C {return Int(v-c.v)> 0;}
 
-   Bool operator<=(C CyclicUInt &c)C {return UInt(c.v-v)< UINT_MAX/2;}
-   Bool operator< (C CyclicUInt &c)C {return UInt(v-c.v)>=UINT_MAX/2;}
+   Bool operator<=(C CyclicUInt &c)C {return Int(v-c.v)<=0;}
+   Bool operator< (C CyclicUInt &c)C {return Int(v-c.v)< 0;}
 
    CyclicUInt& operator++(   ) {++v; return T;}
    void        operator++(int) {++v;}
@@ -393,6 +519,22 @@ struct IndexWeight
    IndexWeight() {}
    IndexWeight(Int index, Flt weight) {set(index, weight);}
 };
+#if EE_PRIVATE
+struct IndexWeightBB
+{
+   Byte index;
+   Byte weight;
+
+   void set(Byte index, Byte weight) {T.index=index; T.weight=weight;}
+};
+struct IndexWeightBI
+{
+   Byte index;
+   Int  weight;
+
+   void set(Byte index, Int weight) {T.index=index; T.weight=weight;}
+};
+#endif
 inline Int Compare(C IndexWeight &a, C IndexWeight &b)
 {
    if(Int c=Compare(b.weight, a.weight))return c; // first compare by weight, reverse order to list most important first
@@ -432,6 +574,13 @@ T2(BASE, EXTENDED)   void ASSERT_BASE_EXTENDED   (                )   {int i=0; 
 
 T1(TYPE) CPtr CType(       ) {return (CPtr)&typeid(TYPE);} // convert C++ type into pointer
 T1(TYPE) CPtr CType(TYPE &x) {return (CPtr)&typeid(x   );} // convert C++ type into pointer
+
+#if EE_PRIVATE
+#if WINDOWS
+T1(TYPE) Bool IsVirtual(         ) {return std::is_polymorphic<TYPE>();}
+T1(TYPE) Bool IsVirtual(C TYPE &x) {return std::is_polymorphic<TYPE>();}
+#endif
+#endif
 /******************************************************************************/
 struct Notification
 {
@@ -446,13 +595,18 @@ struct Notification
    void hide  (); // remove this notification from the status bar
    void remove(); // remove this notification from the status bar and 'Notifications' container, after making this call you may no longer operate on this object as it will point to invalid memory
 
+#if !EE_PRIVATE // make constructors private to prevent from manually creating 'Notification' objects as they should be created only through 'Notifications.New'
 private:
+#endif
    Bool _dismissable=false, _visible=false;
    Str  _title, _text;
 
   ~Notification();
 };
 extern Memx<Notification> Notifications; // list of active notifications
+#if EE_PRIVATE
+void HideNotifications();
+#endif
 /******************************************************************************/
 struct DataRangeRel
 {
@@ -651,6 +805,8 @@ enum LANG_TYPE : Byte
    LANG_ZULU         =0x35,
 #endif
    LANG_NONE=LANG_NEUTRAL,
+
+   LANG_ENGLISH_K=0xFF,
 
    EN=LANG_ENGLISH   ,
    CN=LANG_CHINESE   ,

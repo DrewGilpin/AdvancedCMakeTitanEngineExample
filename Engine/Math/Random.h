@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Random' to generate random values.
@@ -117,6 +114,9 @@ struct Randomizer // Randomizer is multi-threaded safe
    Randomizer(UInt  s0, UInt  s1, UInt s2, UInt s3);
    Randomizer(ULong s0, ULong s1                  );
    Randomizer(C UID &seed                         );
+#if EE_PRIVATE
+   void fix();
+#endif   
 }extern
    Random; // Main Randomizer
 /******************************************************************************/
@@ -155,7 +155,8 @@ struct PerlinNoise
    Flt tiledNoise2Bloom(Dbl x, Dbl y,        VecI2 tile, Int octaves, Flt bloom=1.0f, Flt sharpness=0.7f)C;
    Flt tiledNoise3Bloom(Dbl x, Dbl y, Dbl z, VecI  tile, Int octaves, Flt bloom=1.0f, Flt sharpness=0.7f)C;
 
-   Flt mask2(Dbl x, Dbl y, Int octaves, Flt sharpness=0.5f)C;
+   Flt mask2(Dbl x, Dbl y,        Int octaves, Flt sharpness=0.5f)C;
+   Flt mask3(Dbl x, Dbl y, Dbl z, Int octaves, Flt sharpness=0.5f)C;
 
    PerlinNoise(UInt seed=0);
 
@@ -192,12 +193,43 @@ struct SimplexNoise // Open Simplex Noise
    Flt tiledNoise3Bloom(Dbl x, Dbl y, Dbl z,        VecI  tile, Int octaves, Flt bloom=1.0f, Flt sharpness=0.7f)C;
    Flt tiledNoise4Bloom(Dbl x, Dbl y, Dbl z, Dbl w, VecI4 tile, Int octaves, Flt bloom=1.0f, Flt sharpness=0.7f)C;
 
-   Flt mask2(Dbl x, Dbl y, Int octaves, Flt sharpness=0.5f)C;
+   Flt mask2(Dbl x, Dbl y,        Int octaves, Flt sharpness=0.5f)C;
+   Flt mask3(Dbl x, Dbl y, Dbl z, Int octaves, Flt sharpness=0.5f)C;
+
+   // wrappers
+   Flt Noise(  Flt    v)C {return noise(v);}
+   Flt Noise(  Dbl    v)C {return noise(v);}
+   Flt Noise(C Vec2  &v)C {return noise(v.x, v.y);}
+   Flt Noise(C VecD2 &v)C {return noise(v.x, v.y);}
+   Flt Noise(C Vec   &v)C {return noise(v.x, v.y, v.z);}
+   Flt Noise(C VecD  &v)C {return noise(v.x, v.y, v.z);}
+   Flt Noise(C Vec4  &v)C {return noise(v.x, v.y, v.z, v.w);}
+   Flt Noise(C VecD4 &v)C {return noise(v.x, v.y, v.z, v.w);}
+
+   Flt Noise(  Flt    v, Int octaves, Flt gain=0.5f, Flt Transform(Flt noise)=null)C {return noise1(v  ,                octaves, gain, Transform);}
+   Flt Noise(  Dbl    v, Int octaves, Flt gain=0.5f, Flt Transform(Flt noise)=null)C {return noise1(v  ,                octaves, gain, Transform);}
+   Flt Noise(C Vec2  &v, Int octaves, Flt gain=0.5f, Flt Transform(Flt noise)=null)C {return noise2(v.x, v.y,           octaves, gain, Transform);}
+   Flt Noise(C VecD2 &v, Int octaves, Flt gain=0.5f, Flt Transform(Flt noise)=null)C {return noise2(v.x, v.y,           octaves, gain, Transform);}
+   Flt Noise(C Vec   &v, Int octaves, Flt gain=0.5f, Flt Transform(Flt noise)=null)C {return noise3(v.x, v.y, v.z,      octaves, gain, Transform);}
+   Flt Noise(C VecD  &v, Int octaves, Flt gain=0.5f, Flt Transform(Flt noise)=null)C {return noise3(v.x, v.y, v.z,      octaves, gain, Transform);}
+   Flt Noise(C Vec4  &v, Int octaves, Flt gain=0.5f, Flt Transform(Flt noise)=null)C {return noise4(v.x, v.y, v.z, v.w, octaves, gain, Transform);}
+   Flt Noise(C VecD4 &v, Int octaves, Flt gain=0.5f, Flt Transform(Flt noise)=null)C {return noise4(v.x, v.y, v.z, v.w, octaves, gain, Transform);}
+
+   Flt Mask(C Vec2  &v, Int octaves, Flt sharpness=0.5f)C {return mask2(v.x, v.y,      octaves, sharpness);}
+   Flt Mask(C VecD2 &v, Int octaves, Flt sharpness=0.5f)C {return mask2(v.x, v.y,      octaves, sharpness);}
+   Flt Mask(C Vec   &v, Int octaves, Flt sharpness=0.5f)C {return mask3(v.x, v.y, v.z, octaves, sharpness);}
+   Flt Mask(C VecD  &v, Int octaves, Flt sharpness=0.5f)C {return mask3(v.x, v.y, v.z, octaves, sharpness);}
 
    SimplexNoise(UInt seed=0);
 
 private:
 	U16 p[256], permGradIndex3D[256];
+
+#if EE_PRIVATE
+   Dbl extrapolate2(int xsb, int ysb, Dbl dx, Dbl dy)C;
+   Dbl extrapolate3(int xsb, int ysb, int zsb, Dbl dx, Dbl dy, Dbl dz)C;
+   Dbl extrapolate4(int xsb, int ysb, int zsb, int wsb, Dbl dx, Dbl dy, Dbl dz, Dbl dw)C;
+#endif
 };
 /******************************************************************************/
 Flt SkewNormalAvg  (Flt shape); // calculate average value for Skew Normal distribution

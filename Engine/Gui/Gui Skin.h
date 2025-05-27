@@ -1,6 +1,7 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
+/******************************************************************************/
+#if EE_PRIVATE
+   #define DEFAULT_FONT_FROM_CUSTOM_SKIN 0
+#endif
 /******************************************************************************/
 struct GuiSkin
 {

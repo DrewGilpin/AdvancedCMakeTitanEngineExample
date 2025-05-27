@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'SyncLock'      for multi-threaded synchronization
@@ -14,6 +11,9 @@
    Use 'Proc' functions for OS processes management.
 
 /******************************************************************************/
+#if EE_PRIVATE
+   #define SYNC_LOCK_SAFE 0 // if 'SyncLock' methods should check if it was initialized first, 0=faster and less safe, 1=slower and more safe
+#endif
 struct SyncLock // Synchronization Lock (multi-threaded safe)
 {
    Bool created()C; // if           lock is still created and not yet deleted in the constructor
@@ -27,9 +27,35 @@ struct SyncLock // Synchronization Lock (multi-threaded safe)
    SyncLock();
 
 private:
+#if EE_PRIVATE
+   union
+   {
+   #if WINDOWS
+      struct // total 40 bytes
+      {
+         mutable CRITICAL_SECTION _lock; // SIZE(_lock)==40 on x64
+      };
+      ULong _b[5]; // 5 ULong = 40 bytes = max possible size of union
+   #else
+      struct // total 80 bytes
+      {
+         mutable pthread_mutex_t _lock      ; // SIZE(_lock)==64 on x64
+         mutable Int             _lock_count; // SIZE(     )== 4
+         mutable UIntPtr         _owner     ; // SIZE(     )== 8 on x64
+         mutable UInt            _is        ; // SIZE(_is  )== 4
+      };
+      ULong _b[10]; // 10 ULong = 80 bytes = max possible size of union
+   #endif
+   };
+   // !! use ULong above and below to force ULong alignment, if Byte[] is set, it could cause crash !! "struct A {Bool b; SyncLock lock;}" would have different alignments
+#else
    ULong _lock[PLATFORM(5, 10)];
+#endif
    NO_COPY_CONSTRUCTOR(SyncLock);
 };
+#if EE_PRIVATE
+   ASSERT(SIZE(SyncLock)==SIZE(ULong)*PLATFORM(5, 10));
+#endif
 
 struct SyncLocker // Synchronization Locker (automatically locks and unlocks the Synchronization Lock at object creation and destruction)
 {
@@ -50,6 +76,9 @@ struct SyncLockerEx // Synchronization Locker Extended
 
    Bool tryOn() {if(!_on && _lock.tryOn())_on=true; return _on;} // try entering locking, false on fail
 
+   Bool isOn ()C {return  _on;}
+   Bool isOff()C {return !_on;}
+
    explicit SyncLockerEx(C SyncLock &lock, Bool on=true) : _lock(lock) {if(_on=on)_lock.on ();}
            ~SyncLockerEx(                              )               {if(_on   )_lock.off();}
 
@@ -58,6 +87,66 @@ private:
  C SyncLock &_lock;
    NO_COPY_CONSTRUCTOR(SyncLockerEx);
 };
+#if EE_PRIVATE
+
+#if SYNC_LOCK_SAFE
+   typedef SyncLocker   SafeSyncLocker;
+   typedef SyncLockerEx SafeSyncLockerEx;
+#else
+   struct SafeSyncLocker
+   {
+      explicit SafeSyncLocker(C SyncLock &lock) {if(lock.created()){_lock=&lock; lock. on ();}else _lock=null;}
+              ~SafeSyncLocker(                ) {                      if(_lock)_lock->off();}
+
+   private:
+    C SyncLock *_lock;
+      NO_COPY_CONSTRUCTOR(SafeSyncLocker);
+   };
+   struct SafeSyncLockerEx
+   {
+      void on () {if(!_on && _lock){_on=true ; _lock->on ();}} // manually   lock
+      void off() {if( _on && _lock){_on=false; _lock->off();}} // manually unlock
+
+      void set(Bool on) {if(on!=_on && _lock){if(_on=on)_lock->on();else _lock->off();}} // set if lock should be enabled
+
+      Bool tryOn() {if(!_on && _lock && _lock->tryOn())_on=true; return _on;} // try entering locking, false on fail
+
+      explicit SafeSyncLockerEx(C SyncLock &lock, Bool on=true) {if(lock.created()){_lock=&lock; if(_on=on)lock.on();}else{_lock=null; _on=false;}}
+              ~SafeSyncLockerEx(                              ) {off();}
+
+   private:
+      Bool      _on;
+    C SyncLock *_lock;
+      NO_COPY_CONSTRUCTOR(SafeSyncLockerEx);
+   };
+#endif
+
+#define SYNC_UNLOCK_SINGLE 0 // can't use single because locks can be locked multiple times, and we need to unlock all
+
+#if SYNC_UNLOCK_SINGLE // single
+struct SyncUnlocker
+{
+   explicit SyncUnlocker(C SyncLock &lock) : _lock(lock) {if(_owned=lock.owned())_lock.off();}
+           ~SyncUnlocker(                )               {if(_owned             )_lock.on ();}
+
+private:
+   Bool      _owned;
+ C SyncLock &_lock;
+   NO_COPY_CONSTRUCTOR(SyncUnlocker);
+};
+#else // multi
+struct SyncUnlocker
+{
+   explicit SyncUnlocker(C SyncLock &lock) : _lock(lock) {for(_owned=0; lock.owned(); _owned++)_lock.off();}
+           ~SyncUnlocker(                )               {REP(_owned                          )_lock.on ();}
+
+private:
+   Int       _owned;
+ C SyncLock &_lock;
+   NO_COPY_CONSTRUCTOR(SyncUnlocker);
+};
+#endif
+#endif
 /******************************************************************************/
 struct SyncEvent // Synchronization Event (multi-threaded safe)
 {
@@ -69,10 +158,25 @@ struct SyncEvent // Synchronization Event (multi-threaded safe)
            ~SyncEvent();
    explicit SyncEvent(Bool auto_off=true); // 'auto_off'=if automatically call 'off' upon a successful 'wait'
 
+#if EE_PRIVATE
+   Bool is()C {return _handle!=null;} // if created
+   #if WINDOWS
+      HANDLE handle()C {return _handle;}
+   #endif
+#endif
+
 private:
+#if EE_PRIVATE
+   PLATFORM(HANDLE, pthread_cond_t*) _handle;
+#else
    Ptr _handle;
+#endif
 #if !WINDOWS
+#if EE_PRIVATE
+   PLATFORM(Ptr, pthread_mutex_t*) _mutex;
+#else
    Ptr _mutex;
+#endif
    mutable Bool _condition, _auto_off;
 #endif
    NO_COPY_CONSTRUCTOR(SyncEvent);
@@ -89,10 +193,25 @@ struct SyncCounter // Synchronization Counter (multi-threaded safe)
   ~SyncCounter();
    SyncCounter();
 
+#if EE_PRIVATE
+   Bool is()C {return _handle!=null;} // if created
+   #if WINDOWS
+      HANDLE handle()C {return _handle;}
+   #endif
+#endif
+
 private:
+#if EE_PRIVATE
+   PLATFORM(HANDLE, pthread_cond_t*) _handle;
+#else
    Ptr _handle;
+#endif
 #if !WINDOWS
+#if EE_PRIVATE
+   PLATFORM(Ptr, pthread_mutex_t*) _mutex;
+#else
    Ptr _mutex;
+#endif
    mutable Int _counter;
 #endif
    NO_COPY_CONSTRUCTOR(SyncCounter);
@@ -157,6 +276,22 @@ private:
    ReadWriteSync &_lock;
    NO_COPY_CONSTRUCTOR(WriteLockEx);
 };
+
+#if EE_PRIVATE
+   #if SYNC_LOCK_SAFE
+      typedef WriteLock SafeWriteLock;
+   #else
+      struct SafeWriteLock
+      {
+         explicit SafeWriteLock(ReadWriteSync &lock) {if(lock.created()){_lock=&lock; lock. enterWrite();}else _lock=null;}
+                 ~SafeWriteLock(                   ) {                      if(_lock)_lock->leaveWrite();}
+
+      private:
+         ReadWriteSync *_lock;
+         NO_COPY_CONSTRUCTOR(SafeWriteLock);
+      };
+   #endif
+#endif
 /******************************************************************************/
 struct SimpleReadWriteSync // !! NOT REENTRANT - does not support 'enterWrite' if already 'enterRead' was called on the same thread - deadlock will occur !!
 {
@@ -245,17 +380,30 @@ const_mem_addr struct Thread // Thread !! must be stored in constant memory addr
    void pause     (                   ); // pause  thread, 'func' will no longer be called until the thread is resumed
    void resume    (                   ); // resume thread from paused state
    void priority  (Int priority       ); // set    thread priority, 'priority'=-3..3
+   void mask      (ULong mask         ); // set    CPU HW Threads on which this thread is allowed to run (every bit specifies different HW Thread)
    void kill      (                   ); // kill   thread, immediately shut down the thread, usage of this method is not recommended because it may cause memory leaks
    Bool wait      (Int milliseconds=-1); // wait   until the thread finishes processing (<0 = infinite wait), false on timeout
+
+#if EE_PRIVATE
+   void zero ();
+   void func ();
+   Int  sleep()C {return 0;} // get thread sleeping (0..Inf), amount of time (in milliseconds) to sleep between function calls
+#endif
 
            ~Thread() {del();}
             Thread();
    explicit Thread(Bool func(Thread &thread), Ptr user=null, Int priority=0, Bool paused=false); // create, 'func'=function which will be called in the created thread, 'user'=custom user data, 'priority'=thread priority (-3..3), 'paused'=if start the thread in paused mode, threads have a default stack size of 1MB, if the thread will require performing operations on GPU data, then you must call 'ThreadMayUseGPUData' inside the thread, please check that function comments for more info
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool      _want_stop, _want_pause, _paused, _active;
    SByte     _priority;
+#if EE_PRIVATE
+   PLATFORM(HANDLE, pthread_t) _handle;
+#else
    Ptr       _handle;
+#endif
    Bool    (*_func)(Thread &thread);
    SyncEvent _resume;
 #if !WINDOWS
@@ -281,6 +429,16 @@ const_mem_addr struct Threads // Worker Threads, allow to process data on multip
 
       void _set(Ptr data, void func(Ptr data, Ptr user, Int thread_index), Ptr user=null) {T.data=data; T.user=user; T.func=func;}
       void clear() {_set(null, null);}
+   #if EE_PRIVATE
+      void call (Int thread_index)C {func(data, user, thread_index);}
+
+      Bool is        (         )C {return func!=null;}
+      Bool operator==(C Call &c)C {return data==c.data && user==c.user && func==c.func;}
+      Bool isFuncUser(void func(Ptr data, Ptr user, Int thread_index), Ptr user)C {return T.func==func && T.user==user;}
+
+      Call() {}
+      Call(Ptr data, void func(Ptr data, Ptr user, Int thread_index), Ptr user=null) {_set(data, func, user);}
+   #endif
    };
 
    void del          (                                                                        ); // delete the threads without finishing all queued work
@@ -386,6 +544,7 @@ const_mem_addr struct Threads // Worker Threads, allow to process data on multip
    T2(DATA, USER_DATA)   Int cancelFunc(void func(DATA &data, USER_DATA *user, Int thread_index)) {return _cancel((void (*)(Ptr data, Ptr user, Int thread_index))func);}
    T2(DATA, USER_DATA)   Int cancelFunc(void func(DATA &data, USER_DATA &user, Int thread_index)) {return _cancel((void (*)(Ptr data, Ptr user, Int thread_index))func);}
 
+   Int cancel(C CMemPtr<Call> &calls); // cancel multiple calls, returns the number of canceled calls, please note that call that's already in progress can't be canceled
    Threads& cancel(); // cancel all queued calls
 
    // wait until queued calls on 'func' function with 'data' and 'user' parameters have finished processing
@@ -409,6 +568,7 @@ const_mem_addr struct Threads // Worker Threads, allow to process data on multip
    T2(DATA, USER_DATA)   void waitFunc(void func(DATA &data, USER_DATA *user, Int thread_index)) {_wait((void (*)(Ptr data, Ptr user, Int thread_index))func);}
    T2(DATA, USER_DATA)   void waitFunc(void func(DATA &data, USER_DATA &user, Int thread_index)) {_wait((void (*)(Ptr data, Ptr user, Int thread_index))func);}
 
+   void     wait (C CMemPtr<Call> &calls); // wait for multiple calls
    Threads& wait (); // wait until all queued calls have finished processing
    Threads& wait1(); // wait until all queued calls have finished processing, process calls on current thread while waiting, 'thread_index' will always be 0..'threads' (inclusive), which means if you're using per-thread data, then make sure to allocate 'threads'+1 per-thread data (use 'threads1' method to get the number of elements)
 
@@ -464,11 +624,14 @@ const_mem_addr struct Threads // Worker Threads, allow to process data on multip
    Int      threads1()C {return _threads.elms()+1;}              // get     how many threads were created for this object + 1, use this method when allocating per-thread data to be used for 'process1' methods
    Int activeThreads()C;   Threads& activeThreads(Int active  ); // get/set how many threads should be active (remaining threads will be paused)
    Int      priority()C;   Threads& priority     (Int priority); // get/set threads priority, 'priority'=-3..3
+                           Threads& mask         (ULong mask  ); //     set CPU HW Threads on which Threads is allowed to run (every bit specifies different HW Thread)
 
   ~Threads() {del();}
    Threads();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct ThreadEx : Thread
    {
       Call call;
@@ -492,6 +655,16 @@ private:
    Bool           _ordered, _created;
    Int            _left, _processed, _elms, _elm_size, _calls_pos, _waiting;
 
+#if EE_PRIVATE
+   void zero     ();
+   Bool callsLeft();
+   void free     ();
+   void checkEnd ();
+#endif
+
+#if EE_PRIVATE // "if" on purpose because there's already 'private' above, but we want to set it as private even in engine mode
+private:
+#endif
    void _process(             Int elms,               void func(IntPtr elm_index, Ptr user, Int thread_index), Ptr user, Int max_threads, Bool allow_processing_on_this_thread);
    void _process( Ptr   data, Int elms, Int elm_size, void func(Ptr    data     , Ptr user, Int thread_index), Ptr user, Int max_threads, Bool allow_processing_on_this_thread, Bool data_ptr);
    void _process(_Memb &data,                         void func(Ptr    data     , Ptr user, Int thread_index), Ptr user, Int max_threads, Bool allow_processing_on_this_thread);
@@ -536,11 +709,17 @@ struct ConsoleProcess // allows running console processes and reading their outp
   ~ConsoleProcess() {del(); _thread.del();} // make sure 'thread' is deleted before other members
    ConsoleProcess() {_binary=_thread_exiting=_proc_exited=false; _exit_code=-1; _proc_id=0; _proc=_out_read=_in_write=PLATFORM(null, 0);}
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool               _binary, _thread_exiting, _proc_exited;
    Int                _exit_code;
    UInt               _proc_id;
+#if EE_PRIVATE
+PLATFORM(HANDLE, Int) _proc, _out_read, _in_write;
+#else
    PLATFORM(Ptr, Int) _proc, _out_read, _in_write;
+#endif
    Str8               _data;
    SyncLock           _lock;
    Thread             _thread;
@@ -565,10 +744,12 @@ UInt  AtomicSub(UInt  &x, UInt  y); // decrease value of 'x' by 'y' in an atomic
 Long  AtomicSub(Long  &x, Long  y); // decrease value of 'x' by 'y' in an atomic operation and return its previous value, this is a thread-safe version of function "Long  old=x; x-=y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
 ULong AtomicSub(ULong &x, ULong y); // decrease value of 'x' by 'y' in an atomic operation and return its previous value, this is a thread-safe version of function "ULong old=x; x-=y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
 
-Int AtomicAnd    (Int &x, Int y); // and value of 'x' by  'y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x&= y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
-Int AtomicDisable(Int &x, Int y); // and value of 'x' by '~y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x&=~y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
-Int AtomicOr     (Int &x, Int y); // or  value of 'x' by  'y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x|= y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
-Int AtomicXor    (Int &x, Int y); // xor value of 'x' by  'y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x^= y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
+Int  AtomicAnd    (Int  &x, Int  y); // and value of 'x' by  'y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x&= y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
+Int  AtomicDisable(Int  &x, Int  y); // and value of 'x' by '~y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x&=~y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
+UInt AtomicDisable(UInt &x, UInt y); // and value of 'x' by '~y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x&=~y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
+Int  AtomicOr     (Int  &x, Int  y); // or  value of 'x' by  'y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x|= y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
+UInt AtomicOr     (UInt &x, UInt y); // or  value of 'x' by  'y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x|= y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
+Int  AtomicXor    (Int  &x, Int  y); // xor value of 'x' by  'y' in an atomic operation and return its previous value, this is a thread-safe version of function "Int old=x; x^= y; return old;" (this allows to modify the value across multiple threads without usage of Synchronization Locks)
 
 Bool  AtomicGet(C Bool  &x         ); // get value of 'x'        in an atomic operation, this is a thread-safe version of function "return x;" (this allows to access the value across multiple threads without usage of Synchronization Locks)
 Byte  AtomicGet(C Byte  &x         ); // get value of 'x'        in an atomic operation, this is a thread-safe version of function "return x;" (this allows to access the value across multiple threads without usage of Synchronization Locks)
@@ -600,6 +781,7 @@ T1(TYPE) Bool AtomicCAS(TYPE *&x, TYPE *compare, TYPE *new_value) {return Atomic
 
 // Thread functions
 UIntPtr GetThreadID  (                                             ); // get current thread ID
+Int     GetCPU       (                                             ); // get current CPU thread index 0..Cpu.threads-1
 void    SetThreadName(C Str8 &name, UIntPtr thread_id=GetThreadID()); // set custom thread name for debugging purpose
 
 void ThreadMayUseGPUData       (); // call    this from a secondary thread if you expect the thread to perform any operations on GPU data (like Mesh, Material, Image, Shaders, ..., this includes any operation like creating, editing, loading, saving, deleting, ...). This function is best called at the start of the thread, it needs to be called at least once, further calls are ignored. Once the function is called, the thread locks a secondary OpenGL context (if no context is available, then the function waits until other threads finish processing and release their context lock, amount of OpenGL contexts is specified in 'D.secondaryOpenGLContexts'). Context lock is automatically released once the thread exits. This call is required only for OpenGL renderer.
@@ -667,4 +849,47 @@ struct ProcessAccess
    Bool write  ; // if the handle has write permission
 };
 Bool GetProcessesAccessingThisProcess(MemPtr<ProcessAccess> proc, Bool write_only=false, Mems<Byte> *temp=null); // get a list of processes that are accessing this process (you may need to run with admin rights to detect all processes), 'write_only'=if only detect processes that have write permission, 'temp'=optional container for temporary memory allocation that can be reused instead of allocating new memory each time, false on fail
+/******************************************************************************/
+#if EE_PRIVATE
+struct ThreadEmulation
+{
+   void include(Thread &thread);
+   void exclude(Thread &thread);
+
+   void update();
+
+   ThreadEmulation();
+
+private:
+   struct DelayedThread
+   {
+      Int     waited;
+      Thread *thread;
+
+      DelayedThread() {waited=0;}
+   };
+   Int                  _process_left;
+   UInt                 _process_type, _time;
+   Memc<       Thread*>      _rt_threads;
+   Memc<DelayedThread > _delayed_threads;
+}extern
+   EmulatedThreads;
+
+#if HAS_THREADS
+   INLINE void UpdateThreads() {}
+#else
+   INLINE void UpdateThreads() {EmulatedThreads.update();}
+#endif
+
+     INLINE UIntPtr _GetThreadID() {return PLATFORM(GetCurrentThreadId       (), (UIntPtr)pthread_self());}
+   #if !APPLE
+     INLINE Int     _GetCPU     () {return PLATFORM(GetCurrentProcessorNumber(),          sched_getcpu());}
+   #else
+     INLINE Int     _GetCPU     () {return 0;}
+   #endif
+#define GetThreadID _GetThreadID // use this macro so all engine functions access '_GetThreadID' directly
+#define GetCPU      _GetCPU      // use this macro so all engine functions access '_GetCPU'      directly
+
+INLINE void Yield() {std::this_thread::yield();}
+#endif
 /******************************************************************************/

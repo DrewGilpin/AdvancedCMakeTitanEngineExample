@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Mems' for simple continuous memory based dynamic array container.
@@ -21,6 +18,8 @@
 /******************************************************************************/
 T1(const_mem_addr TYPE) struct Mems // Simple Continuous Memory Based Container
 {
+   static constexpr Bool Continuous=true; // Mems memory is continuous
+
    // manage
    Mems& clear(); // remove all elements and free helper memory
    Mems& del  (); // remove all elements and free helper memory
@@ -106,6 +105,14 @@ T1(const_mem_addr TYPE) struct Mems // Simple Continuous Memory Based Container
    Bool operator==(C Mems<TYPE> &x)C;
    Bool operator!=(C Mems<TYPE> &x)C;
 
+#if EE_PRIVATE
+   void  copyTo  (  TYPE *dest)C; // copy raw memory of all elements to   'dest'
+   Mems& copyFrom(C TYPE *src ) ; // copy raw memory of all elements from 'src'
+   void   setFrom(  TYPE* &data, Int elms); // this takes ownership of 'data' and sets that pointer to null
+   void   setTemp(  TYPE*  data, Int elms); // this is not safe !!
+   void   minNumDiscard(Int num); // set at least 'num' elements, if reallocating then discard previous elements
+#endif
+
    // io
    Bool save(File &f);   Bool save(File &f)C; // save elements with their own 'save' method, this method first saves number of current elements, and then for each element calls its 'save' method, false on fail
    Bool load(File &f);                        // load elements with their own 'load' method, this method first loads number of saved   elements, and then for each element calls its 'load' method, false on fail
@@ -121,6 +128,14 @@ T1(const_mem_addr TYPE) struct Mems // Simple Continuous Memory Based Container
    Bool saveRawData(File &f)C; // save raw memory of elements (                     elements raw memory), false on fail
    Bool loadRawData(File &f) ; // load raw memory of elements (                     elements raw memory), false on fail
 
+#if EE_PRIVATE
+   Int   saveRawSize()C; // get number of bytes needed for 'saveRaw'
+   Bool _saveRaw(File &f)C; // save raw memory of elements (number of elements + elements raw memory), false on fail, deprecated - do not use
+   Bool _loadRaw(File &f) ; // load raw memory of elements (number of elements + elements raw memory), false on fail, deprecated - do not use
+   Bool _save   (File &f)C; // save elements with their own 'save' method, this method first saves number of current elements, and then for each element calls its 'save' method, false on fail, deprecated - do not use
+   Bool _load   (File &f) ; // load elements with their own 'load' method, this method first loads number of saved   elements, and then for each element calls its 'load' method, false on fail, deprecated - do not use
+#endif
+
            ~Mems(            );
             Mems(            );
    explicit Mems(  Int   elms);
@@ -132,7 +147,11 @@ private:
    Int   _elms;
 };
 /******************************************************************************/
+#if EE_PRIVATE
+T1(const_mem_addr TYPE) struct FixedMems : Mems<TYPE> // Unresizable Mems container
+#else
 T1(const_mem_addr TYPE) struct FixedMems : private Mems<TYPE> // Unresizable Mems container
+#endif
 {
    // get / set
    Int     elms    ()C {return super::elms    ();} // number of elements

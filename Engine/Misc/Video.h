@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Video' to display video files.
@@ -12,6 +9,23 @@ enum VIDEO_CODEC : Byte
    VIDEO_THEORA, // doesn't support random seeking
    VIDEO_VP9   , // doesn't support random seeking
 };
+#if EE_PRIVATE
+struct VideoCodec
+{
+   enum RESULT
+   {
+      ERROR,
+      OK   ,
+      END  ,
+   };
+
+   virtual Bool   create      (Video &video           ) {return false;}
+   virtual RESULT nextFrame   (Video &video, Flt &time) {return ERROR;}
+   virtual void   frameToImage(Video &video           ) {}
+
+   virtual ~VideoCodec() {} // set virtual destructor so 'Delete' can be used together with extended classes
+};
+#endif
 /******************************************************************************/
 struct Video // Video Decoder
 {
@@ -56,10 +70,22 @@ struct Video // Video Decoder
    void drawAlphaFit(C Video &alpha, C Rect &rect         )C; // 'alpha'=video to use as opacity, draw to fit best in given space, while preserving video proportions
    void drawAlpha   (C Video &alpha, C Rect &rect         )C; // 'alpha'=video to use as opacity, draw to specified rectangle
 
+#if EE_PRIVATE
+   void zero        ();
+   void release     ();
+   Bool frameToImage(Int w, Int h, Int w_uv, Int h_uv, CPtr lum_data, CPtr u_data, CPtr v_data, Int lum_pitch, Int u_pitch, Int v_pitch);
+   Bool frameToImage(Int w, Int h, Int w_uv, Int h_uv, CPtr lum_data, CPtr uv_data, Int lum_pitch, Int uv_pitch);
+   void frameToImage();
+   Bool nextFrame   ();
+   Bool createTex   ();
+#endif
+
   ~Video() {del();}
    Video();
 
+#if !EE_PRIVATE
 private:
+#endif
    VIDEO_CODEC _codec;
    MODE        _mode;
    Bool        _loop;
@@ -68,7 +94,11 @@ private:
    File        _file;
    Image       _lum, _u, _v;
    ImageRT     _tex;
+#if EE_PRIVATE
+   VideoCodec *_d;
+#else
    Ptr         _d;
+#endif
 
    NO_COPY_CONSTRUCTOR(Video);
 };

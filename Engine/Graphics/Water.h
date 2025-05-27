@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct WaterMtrlParams // Water Material Parameters
 {
@@ -42,6 +39,9 @@ struct WaterMtrl : WaterMtrlParams // Water Material
    // operations
    WaterMtrl& reset   (); // reset to default values
    WaterMtrl& validate(); // this needs to be called after manually changing the parameters/textures
+#if EE_PRIVATE
+   void set()C;
+#endif
 
    // io
    Bool save(C Str &name)C; // save, false on fail
@@ -52,13 +52,21 @@ struct WaterMtrl : WaterMtrlParams // Water Material
 
    WaterMtrl();
 
+#if !EE_PRIVATE
 private:
+#endif
    ImagePtr _color_map, _normal_map, _bump_map;
 };
 /******************************************************************************/
 DECLARE_CACHE(WaterMtrl, WaterMtrls, WaterMtrlPtr); // Water Material Cache
+#if EE_PRIVATE
+extern const WaterMtrl   *WaterMtrlLast; // Last set Water Material
+extern       WaterMtrlPtr WaterMtrlNull;
+
+#define WATER_TRANSITION 0.1f // transition between above and under surface. this is in meters, this value is added on top of water surfaces. So underwater effect starts fading from water_surface+water_up*WATER_TRANSITION (intensity=0) to water_surface (intensity=1)
+#endif
 /******************************************************************************/
-struct WaterClass : WaterMtrl // Main water control
+struct WaterClass : WaterMtrl, BlendObject // Main water control
 {
    Bool   draw                 , // if draw the water plane      , true/false, default=false                  , it can be drawn only after setting 'draw' to true, and setting valid water images in parameters
           reflection_allow     , // if allow rendering reflection, true/false, default=true (false for Mobile)
@@ -66,21 +74,54 @@ struct WaterClass : WaterMtrl // Main water control
    Byte   reflection_resolution; // reflection resolution        ,    0..4   , default=1                      , the bigger value the worse quality but faster rendering
    PlaneM plane                ; // water plane                  ,           , default=(pos(0,0,0), normal(0,1,0))
 
-   WaterClass& reflectionRenderer(RENDER_TYPE type);   RENDER_TYPE reflectionRenderer()C {return _reflect_renderer;} // set/get Renderer used for rendering the reflaction , default=RT_DEFERRED
-   WaterClass& max1Light         (Bool          on);   Bool        max1Light         ()C {return _max_1_light     ;} // set/get if use only up to 1 light for water surface, default=true (this greatly increases water rendering performance, however allows only 1 directional light affecting water surface), this affects only RT_DEFERRED renderer, all other renderers are always limited to only 1 directional light
+   WaterClass& reflectionRenderer(RENDER_TYPE type);   RENDER_TYPE reflectionRenderer()C {return SUPPORT_RT_FORWARD ? _reflect_renderer : RT_DEFERRED;} // set/get Renderer used for rendering the reflaction , default=RT_DEFERRED
+   WaterClass& max1Light         (Bool          on);   Bool        max1Light         ()C {return _max_1_light                                        ;} // set/get if use only up to 1 light for water surface, default=true (this greatly increases water rendering performance, however allows only 1 directional light affecting water surface), this affects only RT_DEFERRED renderer, all other renderers are always limited to only 1 directional light. If this is disabled then some water material parameters are taken from global 'Water' instead of per water mesh material.
+
+   // Environment
+   WaterClass& envColor (C Vec      &color, C Vec &color_add=VecZero); C Vec     & envColor   ()C {return _env_color    ;} // set/get Environment color     (0..1, default=1), the change is         instant, you can call it real-time
+                                                                       C Vec     & envColorAdd()C {return _env_color_add;} // set/get Environment color add (0..1, default=0), the change is         instant, you can call it real-time
+   WaterClass& envMap   (C ImagePtr &cube                           ); C ImagePtr& envMap     ()C {return _env_map      ;} // set/get Environment map                        , the change may not be instant, avoid   calling real-time, default=ImagePtr().get("Img/Environment.img"), images passed to this method must be created with IC_ENV_CUBE flag enabled in the 'Image.copy*' functions or have "Environment" mode selected in the "Engine Editor \ Image Editor"
 
    WaterClass& update(C Vec2 &vel); // update wave movement, 'vel'=velocity
 
+#if EE_PRIVATE
+   enum MODE : Byte
+   {
+      MODE_DRAW      ,
+      MODE_REFLECTION,
+      MODE_UNDERWATER,
+   };
+
+   Bool    bump  ();
+   Shader* shader();
+
+   void del              ();
+   void create           ();
+   void prepare          ();
+   void begin            (); // this is called just before       WaterPlane and WaterMesh drawing
+   void end              (); // this is called at the end of all WaterPlane and WaterMesh drawing
+   void under            (C PlaneM &plane, WaterMtrl &mtrl, Flt view_depth); // set if camera is under custom water plane
+   void setImages        (Image *src, Image *depth);
+   void endImages        ();
+   void drawSurfaces     ();
+   void setEyeViewportCam();
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    Bool         _max_1_light, _draw_plane_surface, _use_secondary_rt, _began, _swapped_ds;
-   Byte         _mode, _shader_shadow, _shader_soft, _shader_reflect_env, _shader_reflect_mirror;
+   Byte         _mode, _shader_shadow_maps, _shader_soft, _shader_reflect_env, _shader_reflect_mirror;
    RENDER_TYPE  _reflect_renderer;
-   Flt          _under_step, _offset_nrm, _offset_bump;
+   Flt          _under_step, _under_view_depth, _offset_nrm, _offset_bump;
    Vec2         _offset_col, _y_mul_add;
+   Vec          _env_color, _env_color_add;
    Quad         _quad;
-   PlaneM       _under_plane;
+   Plane        _under_view_plane;
    MeshRender   _mshr;
    WaterMtrlPtr _under_mtrl;
+   ImagePtr     _env_map;
+   void drawBlend()override; // used for under water
 
    WaterClass();
 }extern
@@ -97,6 +138,11 @@ struct WaterMesh // manually specified water mesh, water meshes don't support wa
  C MeshBase    & mesh    (                           )C {return _mshb     ;} // get water mesh
  C Box         & box     (                           )C {return _box      ;} // get water box (not including depth)
  C WaterMtrlPtr& material(                           )C {return _material ;} // get water material
+#if EE_PRIVATE
+   Shader      * shader     ()C;
+   WaterMtrl   * getMaterial()C {return _material ? _material() : &Water;}
+   void          zero();
+#endif
 
    // manage
    void del();
@@ -111,13 +157,39 @@ struct WaterMesh // manually specified water mesh, water meshes don't support wa
 
    WaterMesh();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool         _lake    ;
    Box          _box     ;
    MeshBase     _mshb    ;
    MeshRender   _mshr    ;
    WaterMtrlPtr _material;
 };
+/******************************************************************************/
+struct WaterBall : BallM // BallM.r = water ball radius, BallM.pos = world-space position
+{
+   WaterMtrlPtr material;
+
+   void draw()C; // draw this water ball object, this should be called only in RM_PREPARE mode !! OBJECT MUST REMAIN IN CONSTANT MEMORY ADDRESS UNTIL RENDERING HAS FINISHED !!
+
+   WaterBall() {_uv_plane.zero();}
+
+private:
+   mutable Matrix3 _uv_plane;
+};
+#if EE_PRIVATE
+struct WaterBallDraw
+{
+ C WaterBall *src;
+   Ball       view; // view-space ball
+   Flt        dist;
+   Vec        uv_plane_x, uv_plane_y;
+
+   void draw()C;
+};
+extern Memc<WaterBallDraw> WaterBalls;
+#endif
 /******************************************************************************/
 TEX_FLAG  CreateWaterBaseTextures(  Image &base_0, Image &base_1, Image &base_2, C ImageSource &color, C ImageSource &alpha, C ImageSource &bump, C ImageSource &normal, C ImageSource &smooth, C ImageSource &reflect, C ImageSource &glow, Bool resize_to_pow2=true, Bool flip_normal_y=false, Bool smooth_is_rough=false); // create 'base_0', 'base_1' and 'base_2' base material textures from given images, textures will be created as IMAGE_R8G8B8A8_SRGB, IMAGE_R8G8_SIGN IMAGE_SOFT, 'flip_normal_y'=if flip normal map Y channel, 'smooth_is_rough'=if smoothness map is actually roughness map, returns bit combination of used textures
 TEX_FLAG ExtractWaterBase0Texture(C Image &base_0, Image *color ); // returns bit combination of used textures

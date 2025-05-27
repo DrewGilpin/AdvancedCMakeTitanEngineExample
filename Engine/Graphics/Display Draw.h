@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    'DisplayDraw' contains all the basic 2D drawing options.
@@ -36,13 +33,22 @@ struct DisplayDraw // Display Drawing Functions, this class methods can be calle
    static void text(                       C Vec2 &p   , CChar8 *t, C StrData *data=null, Int datas=0) {text(    p.x, p.y, t, data, datas);}
 
    // draw text in rectangle area
-   static void text(C TextStyleParams &ts, C Rect &rect, CChar  *t, C StrData *data=null, Int datas=0, Bool auto_line=false, C Flt *width=null);
-   static void text(C TextStyleParams &ts, C Rect &rect, CChar8 *t, C StrData *data=null, Int datas=0, Bool auto_line=false, C Flt *width=null);
+   static void text(C TextStyleParams &ts, C Rect &rect, CChar  *t, C StrData *data=null, Int datas=0, Bool auto_line=false, C Flt *width=null); // 'width'=optional width used for calculating lines (how much text can fit in 1 line) this should be similar to "rect.w()", this parameter is needed in case you've previously calculated text lines/size/rect and now you want to draw it with the calculated settings, because when moving 'rect' on the screen, its "rect.w()" might slightly change due to floating numerical precision issues and these small changes might result in text lines being split in a different way, using 'width' will guarantee that the width always remains the same and produce the same results, even when 'rect' is being moved.
+   static void text(C TextStyleParams &ts, C Rect &rect, CChar8 *t, C StrData *data=null, Int datas=0, Bool auto_line=false, C Flt *width=null); // 'width'=optional width used for calculating lines (how much text can fit in 1 line) this should be similar to "rect.w()", this parameter is needed in case you've previously calculated text lines/size/rect and now you want to draw it with the calculated settings, because when moving 'rect' on the screen, its "rect.w()" might slightly change due to floating numerical precision issues and these small changes might result in text lines being split in a different way, using 'width' will guarantee that the width always remains the same and produce the same results, even when 'rect' is being moved.
    static void text(                       C Rect &rect, CChar  *t, C StrData *data=null, Int datas=0, Bool auto_line=false);
    static void text(                       C Rect &rect, CChar8 *t, C StrData *data=null, Int datas=0, Bool auto_line=false);
 
    // set text depth
    static void textDepth(Bool use, Flt depth=0); // this function can be optionally called before drawing text, to specify depth of the text (Z value for the Depth Buffer), if enabled then the text will be drawn with depth buffer test enabled and will be occluded by objects with depth smaller than 'depth'
+
+   // set text gamma
+   static void textBackgroundAuto (); // specify auto text background
+   static void textBackgroundBlack(); // specify that text will mostly be drawn on black background
+   static void textBackgroundWhite(); // specify that text will mostly be drawn on white background
+#if EE_PRIVATE
+   static void textBackgroundReset(ShaderParam *&sp,   Vec &col);
+   static void textBackgroundSet  (ShaderParam * sp, C Vec &col);
+#endif
 
    // draw shadow
    static void drawShadowBorders(Byte alpha, C Rect &rect, Flt shadow_radius=0.05f);
@@ -52,7 +58,9 @@ struct DisplayDraw // Display Drawing Functions, this class methods can be calle
    static void       fxBegin(); // begin drawing to secondary render target, this can be called only outside of Render function, after calling this function a secondary render target will be set, it will not be initialized to any color, therefore you may want to clear it using 'D.clearCol'
    static ImageRTPtr fxEnd  (); // end   drawing to secondary render target and restore the main render target, helper render target is returned which can be used as Image for drawing, including the use of custom shaders
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool _text_depth;
 
    DisplayDraw();

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct Desktop : GuiObj // Gui Desktop !! must be stored in constant memory address !!
 {
@@ -14,10 +11,22 @@ const_mem_addr struct Desktop : GuiObj // Gui Desktop !! must be stored in const
    void    update(); // update object
    void    draw  (); // draw   object
 
+#if EE_PRIVATE
+   void        zero();
+   void    addChild(GuiObj &child);
+   void removeChild(GuiObj &child);
+   void nearest(GuiObjNearest &gon);
+#endif
+
   ~Desktop() {del();}
    Desktop();
 
+#if !EE_PRIVATE
 private:
+#endif
    GuiObjChildren _children;
+#if EE_PRIVATE
+   friend struct GUI;
+#endif
 };
 /******************************************************************************/

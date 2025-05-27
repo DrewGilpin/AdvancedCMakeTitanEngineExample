@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 namespace Edit{
 /******************************************************************************/
@@ -121,12 +118,14 @@ struct ObjData
       Param() {id.zero(); removed=inherited=false;}
    };
 
-   UID         elm_obj_class_id; // ID of ELM_OBJ_CLASS element in the project (this is the project element object class of this object)
+   UID         elm_obj_class_id; // ID of ELM_OBJ_CLASS            element in the project (this is the project element object class of this object)
+   UID                  base_id; // ID of ELM_OBJ_CLASS or ELM_OBJ element in the project that this element is based on
    OBJ_ACCESS  access; // access mode of the object
    OBJ_PATH    path  ; // path   mode of the object
    Memc<Param> params; // parameters  of the object
 
-   Param* findParam(C Str &name, PARAM_TYPE type=PARAM_NUM, Bool include_removed=false, Bool include_inherited=true); // find the first parameter from 'params' of 'name' and 'type' (use PARAM_NUM to accept all parameter types), 'include_removed'=if return removed parameters as well, 'include_inherited'=if return inherited parameters as well, null on fail (if not found)
+   Param* findParam(C Str &name, PARAM_TYPE type=PARAM_NUM, Bool include_removed=false, Bool include_inherited=true) ; // find the first parameter from 'params' of 'name' and 'type' (use PARAM_NUM to accept all parameter types), 'include_removed'=if return removed parameters as well, 'include_inherited'=if return inherited parameters as well, null on fail (if not found)
+ C Param* findParam(C Str &name, PARAM_TYPE type=PARAM_NUM, Bool include_removed=false, Bool include_inherited=true)C; // find the first parameter from 'params' of 'name' and 'type' (use PARAM_NUM to accept all parameter types), 'include_removed'=if return removed parameters as well, 'include_inherited'=if return inherited parameters as well, null on fail (if not found)
 
    Bool save(File &f)C;
    Bool load(File &f);
@@ -197,12 +196,13 @@ struct MaterialMap
 {
    void create(Int resolution); // create using specified image resolution (the image will be created as square "resolution x resolution")
 
-   Int resolution()C;
+   Bool is        ()C {return _res>0;}
+   Int  resolution()C {return _res  ;}
 
-   void set(Int x, Int y, C UID &m0, C UID &m1, C UID &m2, C UID &m3, C VecB4 &blend); // set 'm0 m1 m2 m3' ID's of project ELM_MTRL materials, with their corresponding 'blend' intensities (range of 0..255), at 'x, y' image coordinates
-   void set(Int x, Int y, C UID &m0, C UID &m1, C UID &m2, C UID &m3, C Vec4  &blend); // set 'm0 m1 m2 m3' ID's of project ELM_MTRL materials, with their corresponding 'blend' intensities (range of 0..  1), at 'x, y' image coordinates
-   void get(Int x, Int y,   UID &m0,   UID &m1,   UID &m2,   UID &m3,   VecB4 &blend); // get 'm0 m1 m2 m3' ID's of project ELM_MTRL materials, with their corresponding 'blend' intensities (range of 0..255), at 'x, y' image coordinates
-   void get(Int x, Int y,   UID &m0,   UID &m1,   UID &m2,   UID &m3,   Vec4  &blend); // get 'm0 m1 m2 m3' ID's of project ELM_MTRL materials, with their corresponding 'blend' intensities (range of 0..  1), at 'x, y' image coordinates
+   void set(Int x, Int y, C UID &m0, C UID &m1, C UID &m2, C UID &m3, C UID &m4, C VecB5 &blend) ; // set 'm0 m1 m2 m3 m4' ID's of project ELM_MTRL materials, with their corresponding 'blend' intensities (range of 0..255), at 'x, y' image coordinates
+   void set(Int x, Int y, C UID &m0, C UID &m1, C UID &m2, C UID &m3, C UID &m4, C Vec5  &blend) ; // set 'm0 m1 m2 m3 m4' ID's of project ELM_MTRL materials, with their corresponding 'blend' intensities (range of 0..  1), at 'x, y' image coordinates
+   void get(Int x, Int y,   UID &m0,   UID &m1,   UID &m2,   UID &m3,   UID &m4,   VecB5 &blend)C; // get 'm0 m1 m2 m3 m4' ID's of project ELM_MTRL materials, with their corresponding 'blend' intensities (range of 0..255), at 'x, y' image coordinates
+   void get(Int x, Int y,   UID &m0,   UID &m1,   UID &m2,   UID &m3,   UID &m4,   Vec5  &blend)C; // get 'm0 m1 m2 m3 m4' ID's of project ELM_MTRL materials, with their corresponding 'blend' intensities (range of 0..  1), at 'x, y' image coordinates
 
    void resize(Int resolution);
 
@@ -213,8 +213,17 @@ struct MaterialMap
   ~MaterialMap() {del();}
 
 private:
-   Image _m, _i;
-   IDPalette _ip;
+   struct Pixel
+   {
+      VecB5 m, i;
+   };
+   Int         _res=0;
+   Mems<Pixel> _m;
+   IDPalette   _ip;
+#if EE_PRIVATE
+   Pixel& m(Int x, Int y)  {return _m[x+y*_res];}
+ C Pixel& m(Int x, Int y)C {return _m[x+y*_res];}
+#endif
 };
 /******************************************************************************/
 struct Material
@@ -239,7 +248,6 @@ struct Material
                       smooth_map, metal_map,
                       glow_map,
                       detail_color, detail_bump, detail_normal, detail_smooth,
-                      macro_map,
                       emissive_map;
 
    Bool hasColorMap ()C {return  color_map  .elms()>0;}
@@ -303,6 +311,9 @@ struct EditorInterface
       UID       newElm  (ELM_TYPE type, C Str &name,                                       C UID &parent_id=UIDZero); // create a new element in the project of 'type', 'name' and assigned to 'parent_id' parent (use 'UIDZero' for no parent), this method does not support following types: ELM_MESH, ELM_SKEL, ELM_PHYS, ELM_WORLD (for creating worlds please use 'newWorld' method)      , ID of the newly created element will be returned or 'UIDZero' if failed
       UID       newWorld(               C Str &name, Int area_size=64, Int terrain_res=64, C UID &parent_id=UIDZero); // create a new world   in the project            'name' and assigned to 'parent_id' parent (use 'UIDZero' for no parent), 'area_size'=size of a single area (in meters, valid values are: 32, 64, 128), 'terrain_res'=terrain resolution (valid values are: 32, 64, 128), ID of the newly created element will be returned or 'UIDZero' if failed
 
+#if EE_PRIVATE
+      Bool setElmCmd          (Byte cmd, C CMemPtr< IDParam<Bool> > &elms);
+#endif
       Bool setElmName         (C CMemPtr< IDParam<Str > > &elms); // set 'name'          for elements, where 'IDParam.id'=element ID, 'IDParam.value'=element name
       Bool setElmRemoved      (C CMemPtr< IDParam<Bool> > &elms); // set 'removed' state for elements, where 'IDParam.id'=element ID, 'IDParam.value'=element removed state
       Bool setElmPublish      (C CMemPtr< IDParam<Bool> > &elms); // set 'publish' state for elements, where 'IDParam.id'=element ID, 'IDParam.value'=element publish state
@@ -365,8 +376,8 @@ struct EditorInterface
          Bool worldDrawLines(C CMemPtr<Line> &lines); // request the world editor to draw specified lines, after you make this call, the world editor will draw the lines in each frame, if you no longer wish to draw lines, then call this method with empty container, false on fail
 
       // image
-      Bool getImage(C UID &elm_id,   Image &image); // get image of 'elm_id' ELM_IMAGE element in the project, false on fail
-      Bool setImage(C UID &elm_id, C Image &image); // set image of 'elm_id' ELM_IMAGE element in the project, false on fail
+      Bool getImage(C UID &elm_id,   Image &image                ); // get image of 'elm_id' ELM_IMAGE element in the project, false on fail
+      Bool setImage(C UID &elm_id, C Image &image, Bool raw=false); // set image of 'elm_id' ELM_IMAGE element in the project, false on fail, 'raw'=if store image in its type exactly as it was given (this disables internal compression however allows half/float high precision quality)
 
       Bool setImageMipMaps(C UID &elm_id, Bool mip_maps); // set if 'elm_id' ELM_IMAGE element in the project should have mip-maps, false on fail
 
@@ -386,7 +397,7 @@ struct EditorInterface
       Bool    curMaterial              (C UID &elm_id                                                                ); // open     material editor            of 'elm_id' ELM_MTRL                element in the project, if 'UIDZero' is passed then editor will close the material editor, false on fail
       Bool    getMaterial              (C UID &elm_id,   Material &material                                          ); // get      material parameters        of 'elm_id' ELM_MTRL ELM_WATER_MTRL element in the project, false on fail
       Bool    setMaterial              (C UID &elm_id, C Material &material, Bool reload_textures, Bool adjust_params); // set      material parameters        of 'elm_id' ELM_MTRL ELM_WATER_MTRL element in the project, false on fail, 'reload_textures'=if reload the textures that were changed during this update (if this is set to false, then texture files names will get updated, however the texture images will remain the same), 'adjust_params'=if automatically adjust some parameters based on detected texture change (for example default specular value is 0, however if a specular map was added to the material in this change, then specular intensity value should be set to value >0 so the specular effect is visible, in this case 'adjust_params'=will automatically adjust specular intensity to 1 if a specular map was added and the intensity was 0. 'adjust_params' may adjust some other parameters as well)
-      Bool reloadMaterialTextures      (C UID &elm_id, bool base, bool detail, bool macro, bool emissive             ); // reload   material textures          of 'elm_id' ELM_MTRL ELM_WATER_MTRL element in the project, false on fail
+      Bool reloadMaterialTextures      (C UID &elm_id, bool base, bool detail, bool emissive                         ); // reload   material textures          of 'elm_id' ELM_MTRL ELM_WATER_MTRL element in the project, false on fail
       Bool    mulMaterialTextureByColor(C UID &elm_id                                                                ); // multiply material textures by color of 'elm_id' ELM_MTRL ELM_WATER_MTRL element in the project, false on fail
 
       // mesh
@@ -426,7 +437,9 @@ struct EditorInterface
    Bool buildExe  (EXE_TYPE type    ); // set build executable type  configuration
    Bool buildPaths(Bool     relative); // set build export     paths configuration (true=relative, false=absolute)
 
+#if !EE_PRIVATE
 private:
+#endif
    Connection _conn;
 };
 /******************************************************************************/
@@ -555,6 +568,9 @@ enum EDITOR_INTERFACE_COMMANDS
    EI_GET_EDITOR_PATH,
 
    EI_NUM,
+#if EE_PRIVATE
+   // !! WHEN CHANGING THIS, DON'T FORGET TO INCREMENT 'EI_VER' !!
+#endif
 };
 enum EDITOR_INTERFACE_OBJ_COMMANDS : Byte
 {

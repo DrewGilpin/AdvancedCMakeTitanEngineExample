@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'PlatformStore' to communicate with the Platform Store, like:
@@ -35,6 +32,9 @@ struct PlatformStore // class allowing to communicate with Platform Store
 {
    enum RESULT : Byte
    {
+   #if EE_PRIVATE
+      // !! THESE ENUMS MUST BE EQUAL TO "EsenthelActivity.java" !!
+   #endif
       PURCHASED          , // item was purchased successfully, 'purchases' container will now     include it
       CONSUMED           , // item was consumed  successfully, 'purchases' container will now not include it
       REFUND             , // item was refunded by the store
@@ -52,6 +52,9 @@ struct PlatformStore // class allowing to communicate with Platform Store
    };
    enum LICENSE_TEST_RESULT : Byte
    {
+   #if EE_PRIVATE
+      // !! THESE ENUMS MUST BE EQUAL TO "EsenthelActivity.java" !!
+   #endif
       LTR_NONE   , // no license test was requested
       LTR_WAITING, // waiting for result
       LTR_OK     , // user          has  a license
@@ -88,6 +91,11 @@ struct PlatformStore // class allowing to communicate with Platform Store
 
  C Item    * findItem    (C Str &item_id)C; // find item     from the 'items'     container by its  ID, null on fail
  C Purchase* findPurchase(C Str &item_id)C; // find purchase from the 'purchases' container by item ID, null on fail
+#if EE_PRIVATE
+ C Purchase* findPurchaseByToken(C Str &token)C; // find purchase from the 'purchases' container by its token, null on fail
+   void           update();
+   Bool backgroundUpdate();
+#endif
 
    // operations
    Bool refreshItems    (C CMemPtr<Str> &item_ids); // refresh 'items'     container for selected items, once the latest data has been received, 'callback' function will be called with REFRESHED_ITEMS     result, false on fail, 'item_ids'=item ID's for which you want to refresh the details
@@ -105,7 +113,9 @@ struct PlatformStore // class allowing to communicate with Platform Store
    void                licenseTest  ();                // test if user has a license for this Application [Supported Platforms: Android]
    LICENSE_TEST_RESULT licenseResult()C {return _ltr;} // get license test result                         [Supported Platforms: Android]
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Processed : Purchase {RESULT result;};
    Bool                _supports_items=false, _supports_subs=false, _has_new_purchases=false, _refresh_purchases=false;
    LICENSE_TEST_RESULT _ltr=LTR_NONE;

@@ -1,11 +1,19 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Material' to specify custom mesh material parameters.
    'Materials' are usually created in the 'Material Editor' tool, and used by 'Meshes'.
 
+/******************************************************************************/
+#if EE_PRIVATE
+enum HAS_FLAG
+{
+   HAS_GLOW      =1<<0,
+   HAS_CLEAR_COAT=1<<1,
+   HAS_FUR       =1<<2,
+   HAS_SUN_RAYS  =1<<3,
+   HAS_WANT_ALPHA=1<<4,
+};
+#endif
 /******************************************************************************/
 enum MATERIAL_TECHNIQUE : Byte // Material Techniques
 {
@@ -33,6 +41,7 @@ Bool HasAlphaTest      (MATERIAL_TECHNIQUE technique); // if 'technique' involve
 Bool HasAlphaTestDither(MATERIAL_TECHNIQUE technique); // if 'technique' involves Alpha-Testing with Dithering
 Bool HasAlphaBlend     (MATERIAL_TECHNIQUE technique); // if 'technique' involves Alpha-Blending
 Bool HasLeaf           (MATERIAL_TECHNIQUE technique); // if 'technique' involves Leaf  Bending
+Bool HasGrass          (MATERIAL_TECHNIQUE technique); // if 'technique' involves Grass Bending
 Bool HasDepthWrite     (MATERIAL_TECHNIQUE technique); // if 'technique' involves Depth-Writing
 /******************************************************************************/
 #define MATERIAL_REFLECT 0.04f // default Material reflectivity value
@@ -61,14 +70,23 @@ struct MaterialParams // Material Parameters
 
    Flt reflect   ()C {return reflect_add;}   void reflect(Flt reflect     ); // get/set reflectivity, 0..1, default=MATERIAL_REFLECT
    Flt reflectMax()C;                        void reflect(Flt min, Flt max); // advanced
+#if EE_PRIVATE
+   #if LINEAR_GAMMA
+      INLINE C Vec4& colorD()C {return colorL();}
+   #else
+      INLINE   Vec4  colorD()C {return colorS();}
+   #endif
+#endif
 };
 struct Material : MaterialParams // Mesh Rendering Material - contains render parameters and textures
 {
+#if EE_PRIVATE
+   // #MaterialTextureLayout #MaterialTextureLayoutDetail
+#endif
    ImagePtr             base_0      , // base     texture #0           , default=null, this texture contains data packed in following channel order: RGB, Alpha
                         base_1      , // base     texture #1           , default=null, this texture contains data packed in following channel order: NormalX, NormalY
                         base_2      , // base     texture #2           , default=null, this texture contains data packed in following channel order: Metal, Rough, Bump, Glow
                       detail_map    , // detail   texture              , default=null, this texture contains data packed in following channel order: NormalX, NormalY, Rough, Color
-                       macro_map    , // macro    texture              , default=null
                     emissive_map    ; // emissive texture              , default=null
    Bool               cull          , // face     culling              , default=true
                       detail_all_lod; // detail   textures on all Mesh LODs, default=false, if this option is enabled then all LODs in a Mesh will use detail (if available), if disabled then only first LOD will use it
@@ -88,35 +106,147 @@ struct Material : MaterialParams // Mesh Rendering Material - contains render pa
 
    Bool save(File &f, CChar *path=null)C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    Bool load(File &f, CChar *path=null) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+#if EE_PRIVATE
+   Bool saveData(File     &f, CChar *path=null)C; // save binary, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadData(File     &f, CChar *path=null) ; // load binary, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool saveTxt (FileText &f, CChar *path=null)C; // save text  , 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadTxt (FileText &f, CChar *path=null) ; // load text  , 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool saveTxt (C Str    &name               )C; // save text  , false on fail
+   Bool loadTxt (C Str    &name               ) ; // load text  , false on fail
+#endif
 
    Material();
   ~Material();
 
+#if EE_PRIVATE
+   Bool hasAlpha            ()C {return  HasAlpha      (technique);} // if material technique involves Alpha-Blending or     Alpha-Testing
+   Bool hasAlphaTest        ()C {return _has_alpha_test           ;} // if material technique involves Alpha-Testing
+   Bool hasAlphaBlend       ()C {return  HasAlphaBlend (technique);} // if material technique involves Alpha-Blending
+   Bool hasAlphaBlendNoLight()C;                                     // if material technique involves Alpha-Blending with no Light
+   Bool hasAlphaBlendLight  ()C;                                     // if material technique involves Alpha-Blending with    Light
+   Bool hasDepthWrite       ()C {return _depth_write              ;} // if material technique involves Depth-Writing
+   Bool hasGrass            ()C {return  HasGrass      (technique);} // if material technique involves    Grass Bending
+   Bool hasGrass2D          ()C;                                     // if material technique involves 2D Grass Bending
+   Bool hasGrass3D          ()C;                                     // if material technique involves 3D Grass Bending
+   Bool hasLeaf             ()C {return  HasLeaf       (technique);} // if material technique involves    Leaf  Bending
+   Bool hasLeaf2D           ()C;                                     // if material technique involves 2D Leaf  Bending
+   Bool hasLeaf3D           ()C;                                     // if material technique involves 3D Leaf  Bending
+
+   void setOpaque    (     )C;
+   void setEmissive  (     )C;
+   void setBlend     (     )C;
+   void setBlendForce(     )C;
+   void setOutline   (     )C;
+   void setBehind    (     )C;
+   void setShadow    (     )C;
+   void setMulti     (Int i)C;
+   void setAuto      (     )C;
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    Bool  _depth_write, _has_alpha_test;
    Byte  _has;
    Color _alpha_factor;
+
    struct Multi
    {
       Vec4 color;
       Vec  refl_rogh_glow_mul, refl_rogh_glow_add;
-      Flt  normal, bump, det_mul, det_add, det_inv, macro, // medium prec
+      Flt  normal, bump, det_mul, det_add, det_inv, // medium prec
            uv_scale, det_uv_scale; // high prec
    }_multi;
+
    struct MaterialShader // Material->Shader link
    {
       ShaderBase       *shader; // keep this as first member, because it's used most often
       Int next_material_shader, // index of the next shader for this material in 'MaterialShaders' container
           shader_material     ; // index of 'ShaderMaterial'
-   }mutable _opaque_material_shader, _shadow_material_shader; // have to keep 2 separate, because in forward renderer we queue opaque draw calls, but before we draw them, we process shadows first. These store information about the first shader for this material (most materials will use only one shader during rendering), but if there are more shaders needed, then they contain indexes to next shaders in 'MaterialShaders' container
+   #if EE_PRIVATE
+      void clear ()  {shader=null; next_material_shader=shader_material=-1;}
+      void unlink()  {shader=null; /*next_material_shader=-1;*/} // clearing 'next_material_shader' is not needed, because we check it only when "shader!=null"
+      Bool empty ()C {return shader==null;}
+   #endif
+   };
+#if SUPPORT_RT_FORWARD
+   struct
+#else // if we don't support Forward renderer, then can keep it as just one index
+   union
+#endif
+   {
+      mutable MaterialShader _opaque_material_shader, _shadow_material_shader; // have to keep 2 separate, because in forward renderer we queue opaque draw calls, but before we draw them, we process shadows first. These store information about the first shader for this material (most materials will use only one shader during rendering), but if there are more shaders needed, then they contain indexes to next shaders in 'MaterialShaders' container
+   };
+
 #if COUNT_MATERIAL_USAGE
     mutable Int _usage;
 #endif
+#if EE_PRIVATE
+#if COUNT_MATERIAL_USAGE
+   void clearUsage()C {_usage=0;}
+   void   incUsage()C {_usage++;}
+   void   decUsage()C {_usage--;}
+   Bool emptyUsage()C {return !_usage;}
+#else
+   void clearUsage()C {}
+   void   incUsage()C {}
+   void   decUsage()C {}
+   Bool emptyUsage()C {return true;}
+#endif
+   void  clearOpaque()C {_opaque_material_shader.clear();}
+   void  clearShadow()C {_shadow_material_shader.clear();}
+   void  clear      ()C {clearOpaque(); clearShadow(); clearUsage();}
+   void unlinkOpaque()C {_opaque_material_shader.unlink();}
+   void unlinkShadow()C {_shadow_material_shader.unlink();}
+   void unlink      ()C {unlinkOpaque(); unlinkShadow();}
+   Bool canBeRemoved()C {return _opaque_material_shader.empty() && _shadow_material_shader.empty() && emptyUsage();}
+#endif
 };
+#if EE_PRIVATE
+extern Material
+   MaterialDefault      , // Default  Material
+   MaterialDefaultNoCull; // Default  Material with no culling
+extern const Material
+  *     MaterialLast           , // Last set       Material
+  *MultiMaterialLast[MAX_MTRLS]; // Last set Multi Material
+#endif
+/******************************************************************************/
+#if EE_PRIVATE
+// unique combination of 4 materials
+struct UniqueMultiMaterialKey
+{
+ C Material *m[MAX_MTRLS];
+
+   UniqueMultiMaterialKey() {}
+   UniqueMultiMaterialKey(C Material *a, C Material *b, C Material *c, C Material *d, C Material *e) {m[0]=a; m[1]=b; m[2]=c; m[3]=d; m[4]=e;}
+
+   Bool has(C Material *mtrl)C {FREPA(m)if(m[i]==mtrl)return true; return false;}
+};
+struct UniqueMultiMaterialData
+{
+   Material::MaterialShader material_shader;
+
+   void clear () {material_shader.clear ();}
+   void unlink() {material_shader.unlink();}
+
+   UniqueMultiMaterialData() {clear();}
+};
+#endif
 /******************************************************************************/
 DECLARE_CACHE(Material, Materials, MaterialPtr); // 'Materials' cache storing 'Material' objects which can be accessed by 'MaterialPtr' pointer
+extern const MaterialPtr MaterialNull; // 'MaterialPtr' that is always null
 
 #define BUMP_TO_NORMAL_SCALE (1.0f/64) // 0.015625, this value should be close to average 'Material.bump' which are 0.015, 0.03, 0.05 (remember that in Editor that value may be scaled)
+#if EE_PRIVATE
+extern ThreadSafeMap<UniqueMultiMaterialKey, UniqueMultiMaterialData> UniqueMultiMaterialMap;
+
+void MaterialClear();
+void ShutMaterial();
+void InitMaterial();
+
+INLINE C Material& GetMaterial      (C Material *material                    ) {return material ? *material : MaterialDefault;}
+INLINE C Material& GetShadowMaterial(C Material *material, Bool reuse_default) {return reuse_default ? (material && !material->cull) ? MaterialDefaultNoCull : MaterialDefault : GetMaterial(material);}
+#endif
 /******************************************************************************/
 enum TEX_TYPE // Material Texture Type
 {
@@ -131,7 +261,6 @@ enum TEX_TYPE // Material Texture Type
    TEX_DET_BUMP  ,
    TEX_DET_NORMAL,
    TEX_DET_SMOOTH,
-   TEX_MACRO     ,
    TEX_EMISSIVE  ,
    TEX_NUM       ,
       
@@ -153,7 +282,6 @@ enum TEX_FLAG
    TEXF_DET_BUMP  =1<<TEX_DET_BUMP  ,
    TEXF_DET_NORMAL=1<<TEX_DET_NORMAL,
    TEXF_DET_SMOOTH=1<<TEX_DET_SMOOTH,
-   TEXF_MACRO     =1<<TEX_MACRO     ,
    TEXF_EMISSIVE  =1<<TEX_EMISSIVE  ,
 
    TEXF_NONE= 0,

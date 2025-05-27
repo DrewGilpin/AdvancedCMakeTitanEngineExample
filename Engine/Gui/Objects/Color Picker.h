@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct ColorPicker : Window // !! must be stored in constant memory address !!
 {
@@ -33,7 +30,9 @@ const_mem_addr struct ColorPicker : Window // !! must be stored in constant memo
 
    ColorPicker();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct SatLum : GuiCustom
    {
       virtual void update(C GuiPC &gpc)override;
@@ -60,5 +59,17 @@ private:
    Button         _mode;
    Ptr            _func_user;
    void         (*_func)(Ptr user);
+
+#if EE_PRIVATE
+   void  call    ();
+   void  toGui   (Bool rgb=true, Bool alpha=true, Bool hsb=true, Bool rgba=true);
+   void _set     (C Vec4 &color, SET_MODE mode=SET_DEFAULT); // set without 'toGui'
+   void _setRGB  (C Vec  &rgb  , SET_MODE mode=SET_DEFAULT); // set without 'toGui'
+   void _setHSB  (C Vec  &hsb  , SET_MODE mode=SET_DEFAULT); // set without 'toGui'
+   void _setAlpha(  Flt   alpha, SET_MODE mode=SET_DEFAULT); // set without 'toGui'
+   void  setOld  ();
+
+   static void SetTextStyle();
+#endif
 };
 /******************************************************************************/

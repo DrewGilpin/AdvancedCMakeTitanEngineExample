@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct SteamWorks
 {
@@ -141,7 +138,9 @@ struct SteamWorks
    Bool init(); // manually initialize and return if initializion was ok, you don't need to call this as it is automatically called in the constructor
    void shut(); // manually shutdown Steam                              , you don't need to call this as it is automatically called in the  destructor
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Operation : Download
    {
       UInt  type;
@@ -151,6 +150,9 @@ private:
    UInt            _start_time_s=0;
    Str8            _web_api_key;
    Memx<Operation> _operations;
+#if EE_PRIVATE
+   void update();
+#endif
 
    SteamWorks() {init();} // automatically calls 'init'
   ~SteamWorks() {shut();} // automatically calls 'shut'

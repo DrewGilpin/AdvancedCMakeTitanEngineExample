@@ -1,16 +1,14 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 inline Bool Any(C Half &x                                 ) {return FlagOn(x.data                           , 0x7FFF);} // faster version of "x!=0"
 inline Bool Any(C Half &x, C Half &y                      ) {return FlagOn(x.data | y.data                  , 0x7FFF);} // faster version of "x!=0 || y!=0"
 inline Bool Any(C Half &x, C Half &y, C Half &z           ) {return FlagOn(x.data | y.data | z.data         , 0x7FFF);} // faster version of "x!=0 || y!=0 || z!=0"
 inline Bool Any(C Half &x, C Half &y, C Half &z, C Half &w) {return FlagOn(x.data | y.data | z.data | w.data, 0x7FFF);} // faster version of "x!=0 || y!=0 || z!=0 || w!=0"
 
-inline Bool Any(C Flt &x                              ) {return FlagOn((U32&)x                              , ~SIGN_BIT);} // faster version of "x!=0"
-inline Bool Any(C Flt &x, C Flt &y                    ) {return FlagOn((U32&)x | (U32&)y                    , ~SIGN_BIT);} // faster version of "x!=0 || y!=0"
-inline Bool Any(C Flt &x, C Flt &y, C Flt &z          ) {return FlagOn((U32&)x | (U32&)y | (U32&)z          , ~SIGN_BIT);} // faster version of "x!=0 || y!=0 || z!=0"
-inline Bool Any(C Flt &x, C Flt &y, C Flt &z, C Flt &w) {return FlagOn((U32&)x | (U32&)y | (U32&)z | (U32&)w, ~SIGN_BIT);} // faster version of "x!=0 || y!=0 || z!=0 || w!=0"
+inline Bool Any(C Flt &x                                        ) {return FlagOn((U32&)x                                        , ~SIGN_BIT);} // faster version of "x!=0"
+inline Bool Any(C Flt &x, C Flt &y                              ) {return FlagOn((U32&)x | (U32&)y                              , ~SIGN_BIT);} // faster version of "x!=0 || y!=0"
+inline Bool Any(C Flt &x, C Flt &y, C Flt &z                    ) {return FlagOn((U32&)x | (U32&)y | (U32&)z                    , ~SIGN_BIT);} // faster version of "x!=0 || y!=0 || z!=0"
+inline Bool Any(C Flt &x, C Flt &y, C Flt &z, C Flt &w          ) {return FlagOn((U32&)x | (U32&)y | (U32&)z | (U32&)w          , ~SIGN_BIT);} // faster version of "x!=0 || y!=0 || z!=0 || w!=0"
+inline Bool Any(C Flt &x, C Flt &y, C Flt &z, C Flt &w, C Flt &u) {return FlagOn((U32&)x | (U32&)y | (U32&)z | (U32&)w | (U32&)u, ~SIGN_BIT);} // faster version of "x!=0 || y!=0 || z!=0 || w!=0 || u!=0"
 
 inline Bool Any(C Dbl &x                              ) {return FlagOn((U64&)x                              , (~0ull)>>1);} // faster version of "x!=0"
 inline Bool Any(C Dbl &x, C Dbl &y                    ) {return FlagOn((U64&)x | (U64&)y                    , (~0ull)>>1);} // faster version of "x!=0 || y!=0"
@@ -33,7 +31,8 @@ inline ULong AtomicGet(C ULong &x         ) {return x;}
 inline void  AtomicSet(  Long  &x, Long  y) {x=y     ;}
 inline void  AtomicSet(  ULong &x, ULong y) {x=y     ;}
 #endif
-T1(TYPE) void AtomicSet(TYPE* &x, TYPE *y) {x=y;}
+T1(TYPE) void AtomicSet(TYPE* &x, TYPE *y) {x=y   ;}
+T1(TYPE) void AtomicSet(TYPE* &x, null_t ) {x=null;}
 /******************************************************************************/
 inline       Str8::Str8     (Str8 &&s) {_length=0; Swap(T, s);}
 inline       Str ::Str      (Str  &&s) {_length=0; Swap(T, s);}
@@ -45,10 +44,11 @@ inline Bool Str ::save(File &f)C {f.putStr(T); return f.ok();}
 inline Bool Str8::load(File &f)  {f.getStr(T); return f.ok();}
 inline Bool Str ::load(File &f)  {f.getStr(T); return f.ok();}
 /******************************************************************************/
-inline   TextNode*           FindNode (MemPtr<TextNode> nodes, C Str &name, Int i)  {return ConstCast(  CFindNode (nodes, name, i));}
-inline C XmlParam*  XmlNode::findParam(C Str &name, Int i                        )C {return ConstCast(T).findParam(       name, i) ;}
-inline C TextNode* TextNode::findNode (C Str &name, Int i                        )C {return ConstCast(T).findNode (       name, i) ;}
-inline C TextNode* TextData::findNode (C Str &name, Int i                        )C {return ConstCast(T).findNode (       name, i) ;}
+inline   TextParam*           FindParam(MemPtr<TextParam> params, C Str &name, Int i)  {return ConstCast(  CFindParam(params, name, i));}
+inline   TextNode *           FindNode (MemPtr<TextNode >  nodes, C Str &name, Int i)  {return ConstCast(  CFindNode ( nodes, name, i));}
+inline C XmlParam *  XmlNode::findParam(C Str &name, Int i                          )C {return ConstCast(T).findParam(        name, i) ;}
+inline C TextNode * TextNode::findNode (C Str &name, Int i                          )C {return ConstCast(T).findNode (        name, i) ;}
+inline C TextNode * TextData::findNode (C Str &name, Int i                          )C {return ConstCast(T).findNode (        name, i) ;}
 /******************************************************************************/
 inline C TextParam* FileParams::findParam(C Str &name)C {return ConstCast(T).findParam(name);}
 /******************************************************************************/
@@ -69,6 +69,26 @@ inline C Param* Object::findParam(C Str8 &name)C {return ConstCast(T).findParam(
 inline C Param* Object::findParam(C Str  &name)C {return ConstCast(T).findParam(name  );}
 inline C Param& Object:: getParam(C Str  &name)C {return ConstCast(T). getParam(name  );}
 /******************************************************************************/
+extern Bool  _ImportJXL (Image &image, File &f);
+extern Bool (*ImportJXL)(Image &image, File &f);
+inline void   SupportImportJXL() {ImportJXL=_ImportJXL;}
+
+extern Bool  _ExportJXL (C Image &image, File &f, Flt quality, Flt compression_level);
+extern Bool (*ExportJXL)(C Image &image, File &f, Flt quality, Flt compression_level);
+inline void   SupportExportJXL() {ExportJXL=_ExportJXL;}
+
+inline void   SupportJXL() {SupportImportJXL(); SupportExportJXL();}
+
+extern Bool  _ImportAVIF (Image &image, File &f);
+extern Bool (*ImportAVIF)(Image &image, File &f);
+inline void   SupportImportAVIF() {ImportAVIF=_ImportAVIF;}
+
+extern Bool  _ExportAVIF (C Image &image, File &f, Flt rgb_quality, Flt alpha_quality, Flt compression_level);
+extern Bool (*ExportAVIF)(C Image &image, File &f, Flt rgb_quality, Flt alpha_quality, Flt compression_level);
+inline void   SupportExportAVIF() {ExportAVIF=_ExportAVIF;}
+
+inline void   SupportAVIF() {SupportImportAVIF(); SupportExportAVIF();}
+
 extern Bool  _CompressBC67 (C Image &src, Image &dest);
 extern Bool (*CompressBC67)(C Image &src, Image &dest);
 inline void   SupportCompressBC() {CompressBC67=_CompressBC67;}
@@ -85,7 +105,7 @@ extern Bool  _CompressPVRTC (C Image &src, Image &dest, Int quality=-1);
 extern Bool (*CompressPVRTC)(C Image &src, Image &dest, Int quality   );
 inline void   SupportCompressPVRTC() {if(WINDOWS_OLD || MAC || LINUX)CompressPVRTC=_CompressPVRTC;}
 
-inline void SupportCompressAll() {SupportCompressBC(); SupportCompressETC(); SupportCompressASTC(); SupportCompressPVRTC();}
+inline void SupportCompressAll() {SupportCompressBC(); SupportCompressETC(); SupportCompressASTC(); SupportCompressPVRTC(); SupportJXL(); SupportAVIF();}
 
 extern Bool  _ResizeWaifu (C Image &src, Image &dest, UInt flags);
 extern Bool (*ResizeWaifu)(C Image &src, Image &dest, UInt flags);
@@ -95,6 +115,9 @@ inline void   SupportFilterWaifu() {ResizeWaifu=_ResizeWaifu;}
 /******************************************************************************/
 inline Char * TextPos(Char  *src, Char  c) {return ConstCast(TextPos((CChar *)src, c));}
 inline Char8* TextPos(Char8 *src, Char8 c) {return ConstCast(TextPos((CChar8*)src, c));}
+
+inline void      Split(MemPtr<Str> splits, C Str &string, Char8 separator) {return Split(splits, string, Char8To16(separator));}
+inline Memc<Str> Split(                    C Str &string, Char8 separator) {return Split(        string, Char8To16(separator));}
 /******************************************************************************/
 // MATH
 /******************************************************************************/
@@ -107,27 +130,133 @@ inline Ptr Randomizer::pointer()
 #endif
 }
 /******************************************************************************/
+// VECTOR
+/******************************************************************************/
+inline VecB2 ::VecB2 (C VecI2   &v) {set(v.x, v.y          );}
+inline VecSB2::VecSB2(C VecI2   &v) {set(v.x, v.y          );}
+inline VecB  ::VecB  (C VecI    &v) {set(v.x, v.y, v.z     );}
+inline VecSB ::VecSB (C VecI    &v) {set(v.x, v.y, v.z     );}
+inline VecB4 ::VecB4 (C VecI4   &v) {set(v.x, v.y, v.z, v.w);}
+inline VecB4 ::VecB4 (C VecUS4  &v) {set(v.x, v.y, v.z, v.w);}
+inline VecSB4::VecSB4(C VecI4   &v) {set(v.x, v.y, v.z, v.w);}
+inline VecUS2::VecUS2(C VecB2   &v) {set(v.x, v.y          );}
+inline VecUS2::VecUS2(C VecI2   &v) {set(v.x, v.y          );}
+inline VecUS ::VecUS (C VecB    &v) {set(v.x, v.y, v.z     );}
+inline VecUS ::VecUS (C VecI    &v) {set(v.x, v.y, v.z     );}
+inline VecUS4::VecUS4(C VecB4   &v) {set(v.x, v.y, v.z, v.w);}
+inline VecUS4::VecUS4(C VecI4   &v) {set(v.x, v.y, v.z, v.w);}
+inline VecH2 ::VecH2 (C VecSSN2 &v) {set(v.x, v.y          );}
+inline VecH2 ::VecH2 (C VecUSN2 &v) {set(v.x, v.y          );}
+inline Vec2  ::Vec2  (C VecH2   &v) {set(v.x, v.y          );}
+inline Vec2  ::Vec2  (C VecSSN2 &v) {set(v.x, v.y          );}
+inline Vec2  ::Vec2  (C VecUSN2 &v) {set(v.x, v.y          );}
+inline Vec2  ::Vec2  (C VecD2   &v) {set(v.x, v.y          );}
+inline Vec2  ::Vec2  (C VecI2   &v) {set(v.x, v.y          );}
+inline Vec2  ::Vec2  (C VecB2   &v) {set(v.x, v.y          );}
+inline Vec2  ::Vec2  (C VecSB2  &v) {set(v.x, v.y          );}
+inline Vec2  ::Vec2  (C VecUS2  &v) {set(v.x, v.y          );}
+inline VecD2 ::VecD2 (C VecH2   &v) {set(v.x, v.y          );}
+inline VecD2 ::VecD2 (C Vec2    &v) {set(v.x, v.y          );}
+inline VecD2 ::VecD2 (C VecI2   &v) {set(v.x, v.y          );}
+inline VecD2 ::VecD2 (C VecB2   &v) {set(v.x, v.y          );}
+inline VecD2 ::VecD2 (C VecSB2  &v) {set(v.x, v.y          );}
+inline VecD2 ::VecD2 (C VecUS2  &v) {set(v.x, v.y          );}
+inline VecH  ::VecH  (C VecSSN  &v) {set(v.x, v.y, v.z     );}
+inline Vec   ::Vec   (C VecH    &v) {set(v.x, v.y, v.z     );}
+inline Vec   ::Vec   (C VecSSN  &v) {set(v.x, v.y, v.z     );}
+inline Vec   ::Vec   (C VecD    &v) {set(v.x, v.y, v.z     );}
+inline Vec   ::Vec   (C VecI    &v) {set(v.x, v.y, v.z     );}
+inline Vec   ::Vec   (C VecB    &v) {set(v.x, v.y, v.z     );}
+inline Vec   ::Vec   (C VecSB   &v) {set(v.x, v.y, v.z     );}
+inline VecD  ::VecD  (C VecH    &v) {set(v.x, v.y, v.z     );}
+inline VecD  ::VecD  (C Vec     &v) {set(v.x, v.y, v.z     );}
+inline VecD  ::VecD  (C VecI    &v) {set(v.x, v.y, v.z     );}
+inline VecD  ::VecD  (C VecB    &v) {set(v.x, v.y, v.z     );}
+inline VecD  ::VecD  (C VecSB   &v) {set(v.x, v.y, v.z     );}
+inline VecH4 ::VecH4 (C VecSSN4 &v) {set(v.x, v.y, v.z, v.w);}
+inline Vec4  ::Vec4  (C VecH4   &v) {set(v.x, v.y, v.z, v.w);}
+inline Vec4  ::Vec4  (C VecSSN4 &v) {set(v.x, v.y, v.z, v.w);}
+inline Vec4  ::Vec4  (C VecD4   &v) {set(v.x, v.y, v.z, v.w);}
+inline Vec4  ::Vec4  (C VecI4   &v) {set(v.x, v.y, v.z, v.w);}
+inline Vec4  ::Vec4  (C VecB4   &v) {set(v.x, v.y, v.z, v.w);}
+inline Vec4  ::Vec4  (C VecSB4  &v) {set(v.x, v.y, v.z, v.w);}
+inline Vec4  ::Vec4  (C VecUS4  &v) {set(v.x, v.y, v.z, v.w);}
+inline VecD4 ::VecD4 (C VecH4   &v) {set(v.x, v.y, v.z, v.w);}
+inline VecD4 ::VecD4 (C Vec4    &v) {set(v.x, v.y, v.z, v.w);}
+inline VecD4 ::VecD4 (C VecI4   &v) {set(v.x, v.y, v.z, v.w);}
+inline VecD4 ::VecD4 (C VecB4   &v) {set(v.x, v.y, v.z, v.w);}
+inline VecD4 ::VecD4 (C VecSB4  &v) {set(v.x, v.y, v.z, v.w);}
+inline VecD4 ::VecD4 (C VecUS4  &v) {set(v.x, v.y, v.z, v.w);}
+inline Vec5  ::Vec5  (C VecB5   &v) {set(v.x, v.y, v.z, v.w, v.u);}
+
+inline Vec  Vec2 :: xy0()C {return Vec (x, y, 0);}
+inline Vec  Vec2 :: x0y()C {return Vec (x, 0, y);}
+inline Vec  Vec2 ::_0xy()C {return Vec (0, x, y);}
+inline Vec  Vec2 ::_0yx()C {return Vec (0, y, x);}
+inline VecD VecD2:: xy0()C {return VecD(x, y, 0);}
+inline VecD VecD2:: x0y()C {return VecD(x, 0, y);}
+inline VecD VecD2::_0xy()C {return VecD(0, x, y);}
+inline VecD VecD2::_0yx()C {return VecD(0, y, x);}
+inline VecI VecI2:: xy0()C {return VecI(x, y, 0);}
+inline VecI VecI2:: x0y()C {return VecI(x, 0, y);}
+inline VecI VecI2::_0xy()C {return VecI(0, x, y);}
+inline VecI VecI2::_0yx()C {return VecI(0, y, x);}
+#if EE_PRIVATE
+inline SSN::SSN(Flt f)       {  data=SFltToShort(f   );} // create  from float
+inline SSN::operator Flt ()C {return ShortToSFlt(data);} // convert to   float
+inline SSN::operator Half()C {return ShortToSFlt(data);} // convert to   half
+
+inline USN::USN(Flt f)       {  data=FltToU16(f   );} // create  from float
+inline USN::operator Flt ()C {return U16ToFlt(data);} // convert to   float
+inline USN::operator Half()C {return U16ToFlt(data);} // convert to   half
+#endif
+/******************************************************************************/
 // MATRIX
 /******************************************************************************/
 inline void Matrix3::mul(C RevMatrix3 &matrix, Matrix3 &dest)C {matrix.mul(T, dest);}
 inline void Matrix ::mul(C RevMatrix  &matrix, Matrix  &dest)C {matrix.mul(T, dest);}
+
+#if EE_PRIVATE
+inline void SetFastMatrix(                 ) {ViewMatrix[0]=                          CamMatrixInv; Sh.ViewMatrix->setChanged();}
+inline void SetFastMatrix(C Matrix  &matrix) {ViewMatrix[0].fromDivNormalized(matrix, CamMatrix  ); Sh.ViewMatrix->setChanged();}
+inline void SetFastMatrix(C MatrixM &matrix) {ViewMatrix[0].fromDivNormalized(matrix, CamMatrix  ); Sh.ViewMatrix->setChanged();}
+
+inline void SetFastMatrixPrev(                 ) {ViewMatrixPrev[0]=                          CamMatrixInvPrev; Sh.ViewMatrixPrev->setChanged();}
+inline void SetFastMatrixPrev(C Matrix  &matrix) {ViewMatrixPrev[0].fromDivNormalized(matrix, CamMatrixPrev  ); Sh.ViewMatrixPrev->setChanged();}
+inline void SetFastMatrixPrev(C MatrixM &matrix) {ViewMatrixPrev[0].fromDivNormalized(matrix, CamMatrixPrev  ); Sh.ViewMatrixPrev->setChanged();}
+#endif
+/******************************************************************************/
+// SHAPES
+/******************************************************************************/
+inline Ball ::Ball (C BallM &ball) {set(ball.r, ball.pos);}
+inline BallM::BallM(C Ball  &ball) {set(ball.r, ball.pos);}
+
+inline Capsule::Capsule(C CapsuleM &c) {set(c.r, c.h, c.pos, c.up);}
 /******************************************************************************/
 // TEMPLATES
 /******************************************************************************/
-T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Int   i, C TYPE &container) {return UInt (i)<UInt (Elms(container));} // template specialization for not enum's
-T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(UInt  i, C TYPE &container) {return UInt (i)<UInt (Elms(container));} // template specialization for not enum's
-T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Long  i, C TYPE &container) {return ULong(i)<ULong(Elms(container));} // template specialization for not enum's
-T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(ULong i, C TYPE &container) {return ULong(i)<ULong(Elms(container));} // template specialization for not enum's
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(SByte  i, C TYPE &container) {return InRange(i, Elms(container));} // template specialization for not enum's
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Byte   i, C TYPE &container) {return InRange(i, Elms(container));} // template specialization for not enum's
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Short  i, C TYPE &container) {return InRange(i, Elms(container));} // template specialization for not enum's
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(UShort i, C TYPE &container) {return InRange(i, Elms(container));} // template specialization for not enum's
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Int    i, C TYPE &container) {return InRange(i, Elms(container));} // template specialization for not enum's
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(UInt   i, C TYPE &container) {return InRange(i, Elms(container));} // template specialization for not enum's
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(Long   i, C TYPE &container) {return InRange(i, Elms(container));} // template specialization for not enum's
+T1(TYPE) DISABLE_IF_ENUM(TYPE, Bool) InRange(ULong  i, C TYPE &container) {return InRange(i, Elms(container));} // template specialization for not enum's
 /******************************************************************************/
 T1(TYPE) struct ClassFunc // various basic functions used by many classes
 {
-   static void New      (Ptr elm                        ) {    new(        elm )                     TYPE  ;}
-   static void Del      (Ptr elm                        ) {       ( (TYPE*)elm )->PLATFORM(, TYPE::)~TYPE();} // for non-Windows (Clang) directly call specified destructor (ignoring any virtual) because this function is always paired with 'New' above, so we always operate on the same type of class, this improves performance and silences -Wdelete-non-abstract-non-virtual-dtor. Unsupported on Windows compiler
-   static void Copy     (Ptr dest,  CPtr  src           ) {       (*(TYPE*)dest)=*(C TYPE*)src             ;}
-   static Bool Load     (Ptr elm , C Str &file          ) {return ( (TYPE*)elm )->  load(file      )       ;}
-   static Bool LoadUser (Ptr elm , C Str &file, Ptr user) {return ( (TYPE*)elm )->  load(file, user)       ;}
-   static Bool LoadEmpty(Ptr elm                        ) {return ( (TYPE*)elm )->  load(          )       ;}
-   static void Unload   (Ptr elm                        ) {return ( (TYPE*)elm )->unload(          )       ;}
+            static void New         (Ptr elm                          ) {    new(        elm )                     TYPE  ;}
+            static void Del         (Ptr elm                          ) {       ( (TYPE*)elm )->PLATFORM(, TYPE::)~TYPE();} // for non-Windows (Clang) directly call specified destructor (ignoring any virtual) because this function is always paired with 'New' above, so we always operate on the same type of class, this improves performance and silences -Wdelete-non-abstract-non-virtual-dtor. Unsupported on Windows compiler
+            static void Copy        (Ptr dest,  CPtr  src             ) {       (*(TYPE*)dest)=*(C TYPE*)src             ;}
+            static Bool Load        (Ptr elm                          ) {return ( (TYPE*)elm )->  load (          )      ;}
+            static Bool LoadName    (Ptr elm , C Str &name            ) {return ( (TYPE*)elm )->  load (name      )      ;}
+            static Bool LoadNameUser(Ptr elm , C Str &name, Ptr   user) {return ( (TYPE*)elm )->  load (name, user)      ;}
+            static Bool LoadUser    (Ptr elm              , Ptr   user) {return ( (TYPE*)elm )->  load (      user)      ;}
+   T1(USER) static Bool LoadUserP   (Ptr elm              , USER *user) {return ( (TYPE*)elm )->  load (      user)      ;}
+   T1(USER) static Bool LoadUserR   (Ptr elm              , USER &user) {return ( (TYPE*)elm )->  load (      user)      ;}
+   T1(USER) static Bool LoadUserR1  (Ptr elm              , USER &user) {return ( (TYPE*)elm )->  load1(      user)      ;}
+            static void Unload      (Ptr elm                          ) {return ( (TYPE*)elm )->unload (          )      ;}
 
    static inline Bool HasNew() {return !std::is_trivially_default_constructible<TYPE>::value && New!=ClassFunc<Int>::New;} // check also if the '<TYPE>.New' function address is different than '<Int>.New' because 'is_trivially_default_constructible' is not enough for cases when constructor exists but is empty
    static inline Bool HasDel() {return !std::is_trivially_destructible         <TYPE>::value && Del!=ClassFunc<Int>::Del;} // check also if the '<TYPE>.Del' function address is different than '<Int>.Del' because 'is_trivially_destructible'          is not enough for cases when  destructor exists but is empty
@@ -149,6 +278,17 @@ Bool _BinarySearchFirst(CPtr data, Int elms, Int elm_size, CPtr value, Int &inde
 
 T2(DATA, VALUE) Bool BinarySearch     (C DATA *data, Int elms, C VALUE &value, Int &index, Int compare(C DATA &a, C VALUE &b)) {return _BinarySearch     (data, elms, SIZE(DATA), &value, index, (Int(*)(CPtr, CPtr))compare);}
 T2(DATA, VALUE) Bool BinarySearchFirst(C DATA *data, Int elms, C VALUE &value, Int &index, Int compare(C DATA &a, C VALUE &b)) {return _BinarySearchFirst(data, elms, SIZE(DATA), &value, index, (Int(*)(CPtr, CPtr))compare);}
+
+#if EE_PRIVATE
+struct FloatIndex // Float + Index
+{
+   Flt f; // float
+   Int i; // index
+
+   static Int Compare(C FloatIndex &a, C FloatIndex &b) {return EE::Compare(a.f, b.f);}
+};
+inline void Sort(FloatIndex *data, Int elms) {Sort(data, elms, FloatIndex::Compare);}
+#endif
 /******************************************************************************/
 // MEMORY
 /******************************************************************************/
@@ -164,6 +304,12 @@ void _ReallocZero(Ptr &data,  Long size_new,  Long size_old); // reallocate memo
 
 T1(TYPE) void Realloc    (TYPE* &data, Int elms_new, Int elms_old) {_Realloc    (*(Ptr*)&data, elms_new*SIZEL(TYPE), elms_old*SIZEL(TYPE));}
 T1(TYPE) void ReallocZero(TYPE* &data, Int elms_new, Int elms_old) {_ReallocZero(*(Ptr*)&data, elms_new*SIZEL(TYPE), elms_old*SIZEL(TYPE));}
+#if EE_PRIVATE
+T1(TYPE) void Realloc1    (TYPE* &data,              Int elms_old) {Realloc    (data, elms_old+1, elms_old);}
+T1(TYPE) void ReallocZero1(TYPE* &data,              Int elms_old) {ReallocZero(data, elms_old+1, elms_old);}
+
+void _MoveElmLeftUnsafe(Ptr data, UInt elm_size, Int elm, Int new_index, Ptr temp);
+#endif
 
 void   _ReverseOrder(Ptr data, Int elms, UInt elm_size                           ); // reverse   order of elements (first<->last)
 void    _RotateOrder(Ptr data, Int elms, UInt elm_size, Int offset               ); // rotate    order of elements, changes the order of elements so "new_index=old_index+offset", 'offset'=offset of moving the original indexes into target indexes (-Inf..Inf)
@@ -354,6 +500,17 @@ T1(TYPE)  Mems<TYPE>&  Mems<TYPE>::setNumDiscard(Int num)
    }
    return T;
 }
+#if EE_PRIVATE
+T1(TYPE)  void  Mems<TYPE>::minNumDiscard(Int num)
+{
+   if(Greater(num, elms())) // num>elms()
+   {
+      if(ClassFunc<TYPE>::HasDel())REPA(T)T[i].~TYPE(); // delete all elements, destroy as the first step
+      Alloc(Free(_data), _elms=num);
+      if(ClassFunc<TYPE>::HasNew())FREPA(T)new(&T[i])TYPE; // create new elements, create as the last step
+   }
+}
+#endif
 
 T1(TYPE)  Int  Mems<TYPE>::addNum(Int num) {Int index=elms(); Long new_elms=Long(index)+num; if(new_elms>INT_MAX)Exit("'Mems.addNum' size too big"); setNum((Int)new_elms); return index;}
 
@@ -381,6 +538,13 @@ T1(TYPE)                     Mems<TYPE>&  Mems<TYPE>::operator=(   Mems  <TYPE  
 T1(TYPE)  Bool  Mems<TYPE>::operator==(C Mems<TYPE> &x)C {if(elms()!=x.elms())return false; REPA(T)if(T[i]!=x[i])return false; return true ;}
 T1(TYPE)  Bool  Mems<TYPE>::operator!=(C Mems<TYPE> &x)C {if(elms()!=x.elms())return true ; REPA(T)if(T[i]!=x[i])return true ; return false;}
 
+#if EE_PRIVATE
+T1(TYPE)  void         Mems<TYPE>::copyTo  (  TYPE *dest)C {if(dest)CopyFast(dest  , data(), elmsMem());          }
+T1(TYPE)  Mems<TYPE>&  Mems<TYPE>::copyFrom(C TYPE *src )  {        Copy    (data(), src   , elmsMem()); return T;} // use 'Copy' in case 'src' is null
+T1(TYPE)  void         Mems<TYPE>:: setFrom(  TYPE* &data, Int elms) {if(data!=T._data){del(); T._data=data; T._elms=elms; data=null;}}
+T1(TYPE)  void         Mems<TYPE>:: setTemp(  TYPE*  data, Int elms) {                         T._data=data; T._elms=elms;            }
+#endif
+
 T1(TYPE)  Bool  Mems<TYPE>::save(File &f)C {       f.cmpUIntV(elms()) ; FREPA(T)if(!T[i].save(f))return false; return f.ok();}
 T1(TYPE)  Bool  Mems<TYPE>::save(File &f)  {       f.cmpUIntV(elms()) ; FREPA(T)if(!T[i].save(f))return false; return f.ok();}
 T1(TYPE)  Bool  Mems<TYPE>::load(File &f)  {setNum(f.decUIntV(      )); FREPA(T)if(!T[i].load(f))goto   error;     if(f.ok())return true; error: clear(); return false;}
@@ -397,9 +561,18 @@ T1(TYPE)  Bool  Mems<TYPE>::loadRawData(File &f)  {return f.getN(data(), elms())
 T1(TYPE)  Bool  Mems<TYPE>::saveRaw(File &f)C {       f.cmpUIntV(elms()) ; saveRawData(f); return f.ok();}
 T1(TYPE)  Bool  Mems<TYPE>::loadRaw(File &f)  {setNum(f.decUIntV(      )); loadRawData(f);     if(f.ok())return true; clear(); return false;}
 
+#if EE_PRIVATE
+T1(TYPE)  Int   Mems<TYPE>::saveRawSize()C {return CmpUIntVSize(elms())+elmsMem();}
+
+T1(TYPE)  Bool  Mems<TYPE>::_saveRaw(File &f)C {       f.putInt(elms()) ; saveRawData(f); return f.ok();}
+T1(TYPE)  Bool  Mems<TYPE>::_loadRaw(File &f)  {setNum(f.getInt(      )); loadRawData(f);     if(f.ok())return true; clear(); return false;}
+T1(TYPE)  Bool  Mems<TYPE>::_save   (File &f)C {       f.putInt(elms()) ; FREPA(T)if(!T[i].save(f))return false; return f.ok();}
+T1(TYPE)  Bool  Mems<TYPE>::_load   (File &f)  {setNum(f.getInt(      )); FREPA(T)if(!T[i].load(f))goto   error;     if(f.ok())return true; error: clear(); return false;}
+#endif
+
 T1(TYPE)  Mems<TYPE>::~Mems(            )          {del();}
 T1(TYPE)  Mems<TYPE>:: Mems(            )          {_data=null; _elms=0;}
-T1(TYPE)  Mems<TYPE>:: Mems(  Int   elms)          {MAX(elms, 0); Alloc(_data, elms); _elms=elms; if(ClassFunc<TYPE>::HasNew())FREPA(T)new(&T[i])TYPE;} // create new elements, create as the last step
+T1(TYPE)  Mems<TYPE>:: Mems(  Int   elms)          {Alloc(_data, _elms=Max(elms, 0)); if(ClassFunc<TYPE>::HasNew())FREPA(T)new(&T[i])TYPE;}
 T1(TYPE)  Mems<TYPE>:: Mems(C Mems  &src) : Mems() {T=src;}
 T1(TYPE)  Mems<TYPE>:: Mems(  Mems &&src) : Mems() {Swap(T, src);}
 /******************************************************************************/
@@ -490,6 +663,13 @@ T1(TYPE) T2(USER, USER1)  Bool  Memc<TYPE>::load(File &f, C USER &user, C USER1 
 
 T1(TYPE)  Bool  Memc<TYPE>::saveRaw(File &f)C {return super::saveRaw(f);}
 T1(TYPE)  Bool  Memc<TYPE>::loadRaw(File &f)  {return super::loadRaw(f);}
+
+#if EE_PRIVATE
+T1(TYPE)  Bool  Memc<TYPE>::_saveRaw(File &f)C {return super::_saveRaw(f);}
+T1(TYPE)  Bool  Memc<TYPE>::_loadRaw(File &f)  {return super::_loadRaw(f);}
+T1(TYPE)  Bool  Memc<TYPE>::_save   (File &f)C {       f.putInt(elms()) ; FREPA(T)if(!T[i].save(f))return false; return f.ok();}
+T1(TYPE)  Bool  Memc<TYPE>::_load   (File &f)  {setNum(f.getInt(      )); FREPA(T)if(!T[i].load(f))goto   error;     if(f.ok())return true; error: clear(); return false;}
+#endif
 
 T1(TYPE)  Memc<TYPE>::Memc(            ) : _Memc(SIZE(TYPE)   , ClassFunc<TYPE>::GetNew(), ClassFunc<TYPE>::GetDel()) {}
 T1(TYPE)  Memc<TYPE>::Memc(C Memc  &src) : _Memc(src.elmSize(),                src._new  ,                src._del  ) {T=src;}
@@ -797,6 +977,25 @@ template<typename TYPE, Int size>  Memt<TYPE, size>&  Memt<TYPE, size>::setNumDi
    }
    return T;
 }
+#if EE_PRIVATE
+template<typename TYPE, Int size>  void  Memt<TYPE, size>::minNumDiscard(Int num)
+{
+   if(Greater(num, elms())) // num>elms()
+   {
+      if(Greater(num, maxElms())) // resize memory, num>maxElms()
+      {
+         clear(); // clear before 'reserve' to skip copying old elements
+         reserve(num);
+        _elms=num; // set '_elms' before accessing new elements to avoid range assert
+         if(ClassFunc<TYPE>::HasNew())FREPA(T)new(&T[i])TYPE; // create new elements, create as the last step
+      }else // add elements in existing memory
+      {
+         Int old_elms=elms(); _elms=num; // set '_elms' before accessing new elements to avoid range assert
+         if(ClassFunc<TYPE>::HasNew())for(Int i=old_elms; i<elms(); i++)new(&T[i])TYPE; // create as the last step
+      }
+   }
+}
+#endif
 
 template<typename TYPE, Int size>  Int  Memt<TYPE, size>::addNum(Int num) {Int index=elms(); Long new_elms=Long(index)+num; if(new_elms>INT_MAX)Exit("'Memt.addNum' size too big"); setNum((Int)new_elms); return index;}
 
@@ -841,6 +1040,13 @@ template<typename TYPE, Int size>  Bool  Memt<TYPE, size>::loadRawData(File &f) 
 
 template<typename TYPE, Int size>  Bool  Memt<TYPE, size>::saveRaw(File &f)C {       f.cmpUIntV(elms()) ; saveRawData(f); return f.ok();}
 template<typename TYPE, Int size>  Bool  Memt<TYPE, size>::loadRaw(File &f)  {setNum(f.decUIntV(      )); loadRawData(f);     if(f.ok())return true; clear(); return false;}
+
+#if EE_PRIVATE
+template<typename TYPE, Int size>  Bool  Memt<TYPE, size>::loadRawDataFast(File &f) {return f.getFastN(data(), elms());}
+
+template<typename TYPE, Int size>  Bool  Memt<TYPE, size>::_saveRaw(File &f)C {       f.putInt  (elms()) ; saveRawData(f); return f.ok();}
+template<typename TYPE, Int size>  Bool  Memt<TYPE, size>::_loadRaw(File &f)  {setNum(f.getInt  (      )); loadRawData(f);     if(f.ok())return true; clear(); return false;}
+#endif
 
 template<typename TYPE, Int size>  Memt<TYPE, size>::~Memt(           )          {del();}
 template<typename TYPE, Int size>  Memt<TYPE, size>:: Memt(           )          {_data=null; _elms=0; _max_elms=SIZE(_temp)/elmSize();} // '_data' being set to 'null' instead of '_temp' allows for moving 'Memt' into another memory address
@@ -979,19 +1185,23 @@ T1(TYPE)  UIntPtr  Memx<TYPE>::  memUsage()C {return super::  memUsage();}
 
 T1(TYPE)  TYPE&  Memx<TYPE>::    absElm(Int i) {return *(TYPE*)super::    absElm(i);}
 T1(TYPE)  TYPE&  Memx<TYPE>::  validElm(Int i) {return *(TYPE*)super::  validElm(i);}
-T1(TYPE)  TYPE*  Memx<TYPE>::      addr(Int i) {return  (TYPE*)super::      addr(i);}
+T1(TYPE)  TYPE*  Memx<TYPE>:: addr     (Int i) {return  (TYPE*)super:: addr     (i);}
+T1(TYPE)  TYPE*  Memx<TYPE>:: addrFirst(     ) {return  (TYPE*)super:: addrFirst( );}
+T1(TYPE)  TYPE*  Memx<TYPE>:: addrLast (     ) {return  (TYPE*)super:: addrLast ( );}
 T1(TYPE)  TYPE&  Memx<TYPE>::operator[](Int i) {return *(TYPE*)super::operator[](i);}
 T1(TYPE)  TYPE&  Memx<TYPE>::     first(     ) {return *(TYPE*)super::     first( );}
 T1(TYPE)  TYPE&  Memx<TYPE>::      last(     ) {return *(TYPE*)super::      last( );}
 T1(TYPE)  TYPE&  Memx<TYPE>::     New  (     ) {return *(TYPE*)super::     New  ( );}
 T1(TYPE)  TYPE&  Memx<TYPE>::     NewAt(Int i) {return *(TYPE*)super::     NewAt(i);}
 
-T1(TYPE)  C TYPE&  Memx<TYPE>::    absElm(Int i)C {return ConstCast(T).  absElm(i);}
-T1(TYPE)  C TYPE&  Memx<TYPE>::  validElm(Int i)C {return ConstCast(T).validElm(i);}
-T1(TYPE)  C TYPE*  Memx<TYPE>::      addr(Int i)C {return ConstCast(T).    addr(i);}
-T1(TYPE)  C TYPE&  Memx<TYPE>::operator[](Int i)C {return ConstCast(T)         [i];}
-T1(TYPE)  C TYPE&  Memx<TYPE>::     first(     )C {return ConstCast(T).   first( );}
-T1(TYPE)  C TYPE&  Memx<TYPE>::      last(     )C {return ConstCast(T).    last( );}
+T1(TYPE)  C TYPE&  Memx<TYPE>::    absElm(Int i)C {return ConstCast(T).   absElm(i);}
+T1(TYPE)  C TYPE&  Memx<TYPE>::  validElm(Int i)C {return ConstCast(T). validElm(i);}
+T1(TYPE)  C TYPE*  Memx<TYPE>:: addr     (Int i)C {return ConstCast(T).addr     (i);}
+T1(TYPE)  C TYPE*  Memx<TYPE>:: addrFirst(     )C {return ConstCast(T).addrFirst( );}
+T1(TYPE)  C TYPE*  Memx<TYPE>:: addrLast (     )C {return ConstCast(T).addrLast ( );}
+T1(TYPE)  C TYPE&  Memx<TYPE>::operator[](Int i)C {return ConstCast(T)          [i];}
+T1(TYPE)  C TYPE&  Memx<TYPE>::     first(     )C {return ConstCast(T).    first( );}
+T1(TYPE)  C TYPE&  Memx<TYPE>::      last(     )C {return ConstCast(T).     last( );}
 
 T1(TYPE)  Int   Memx<TYPE>::validToAbsIndex(  Int valid)C {return super::validToAbsIndex(valid);}
 T1(TYPE)  Int   Memx<TYPE>::absToValidIndex(  Int   abs)C {return super::absToValidIndex(abs  );}
@@ -1025,6 +1235,7 @@ T1(TYPE)                     Memx<TYPE>&  Memx<TYPE>::operator=(C  Meml  <TYPE  
 T1(TYPE) template<Int size>  Memx<TYPE>&  Memx<TYPE>::operator=(C CMemPtr<TYPE, size>  &src) {if(this!=src._memx){setNum(src.elms()); FREPAO(T)=src[i];} return T;}
 T1(TYPE)                     Memx<TYPE>&  Memx<TYPE>::operator=(   Memx  <TYPE      > &&src) {Swap(T, src); return T;}
 
+T1(TYPE)               Memx<TYPE>&  Memx<TYPE>::cleanup               ()  {super::cleanup(); return T;}
 T1(TYPE) T1(EXTENDED)  Memx<TYPE>&  Memx<TYPE>::replaceClass          ()  {ASSERT_BASE_EXTENDED<TYPE, EXTENDED>(); super::_reset(SIZE(EXTENDED), _abs.blockElms(), ClassFunc<EXTENDED>::GetNew(), ClassFunc<EXTENDED>::GetDel()); return T;}
 T1(TYPE) T1(BASE    )               Memx<TYPE>::operator   Memx<BASE>&()  {ASSERT_BASE_EXTENDED<BASE, TYPE    >(); return *(  Memx<BASE>*)this;}
 T1(TYPE) T1(BASE    )               Memx<TYPE>::operator C Memx<BASE>&()C {ASSERT_BASE_EXTENDED<BASE, TYPE    >(); return *(C Memx<BASE>*)this;}
@@ -1279,9 +1490,36 @@ template<typename TYPE, Int Memt_size> T1(VALUE)  Bool  CMemPtr<TYPE, Memt_size>
    }
 }
 
+#if EE_PRIVATE
+template<typename TYPE, Int Memt_size>  void  CMemPtr<TYPE, Memt_size>::copyTo(TYPE *dest)C
+{
+   switch(_mode)
+   {
+      case PTR :  if(dest)CopyFastN(dest, _ptr, _ptr_elms); break;
+      case MEMS: _mems->copyTo(dest); break;
+      case MEMC: _memc->copyTo(dest); break;
+      case MEMT: _memt->copyTo(dest); break;
+      case MEMB: _memb->copyTo(dest); break;
+      case MEMX: _memx->copyTo(dest); break;
+      case MEML: _meml->copyTo(dest); break;
+   }
+}
+#endif
 template<typename TYPE, Int Memt_size>        CMemPtr<TYPE, Memt_size>::operator Bool()C {return _mode!=PTR || elms();}
 template<typename TYPE, Int Memt_size>  Bool  CMemPtr<TYPE, Memt_size>::resizable    ()C {return _mode!=PTR;}
-template<typename TYPE, Int Memt_size>  Bool  CMemPtr<TYPE, Memt_size>::continuous   ()C {return _mode==PTR || _mode==MEMS || _mode==MEMC || _mode==MEMT;}
+template<typename TYPE, Int Memt_size>  Bool  CMemPtr<TYPE, Memt_size>::continuous   ()C
+{
+   switch(_mode)
+   {
+      default  : return  true; // PTR
+      case MEMS: return  Mems<TYPE>           ::Continuous;
+      case MEMC: return _Memc                 ::Continuous;
+      case MEMT: return  Memt<TYPE, Memt_size>::Continuous;
+      case MEMB: return _Memb                 ::Continuous;
+      case MEMX: return _Memx                 ::Continuous;
+      case MEML: return _Meml                 ::Continuous;
+   }
+}
 
 template<typename TYPE, Int Memt_size>  Bool  CMemPtr<TYPE, Memt_size>::save(File &f)C
 {
@@ -1593,6 +1831,22 @@ template<typename TYPE, Int Memt_elms>                         MemPtrN<TYPE, Mem
 template<typename TYPE, Int Memt_elms> template<Int src_size>  MemPtrN<TYPE, Memt_elms>&  MemPtrN<TYPE, Memt_elms>::operator=(C CMemPtr <TYPE,  src_size> &src           ) {super::operator=(src); return T;}
 template<typename TYPE, Int Memt_elms>                         MemPtrN<TYPE, Memt_elms>&  MemPtrN<TYPE, Memt_elms>::operator=(C  MemPtrN<TYPE, Memt_elms> &src           ) {super::operator=(src); return T;}
 
+#if EE_PRIVATE
+template<typename TYPE, Int Memt_size>  MemPtr<TYPE, Memt_size>&  MemPtr<TYPE, Memt_size>::copyFrom(C TYPE *src)
+{
+   switch(T._mode)
+   {
+      case super::PTR : CopyN(ConstCast(T._ptr), src, T._ptr_elms); break; // use 'CopyN' in case 'src' is null
+      case super::MEMS: ConstCast(T._mems)->copyFrom(src); break;
+      case super::MEMC: ConstCast(T._memc)->copyFrom(src); break;
+      case super::MEMT: ConstCast(T._memt)->copyFrom(src); break;
+      case super::MEMB: ConstCast(T._memb)->copyFrom(src); break;
+      case super::MEMX: ConstCast(T._memx)->copyFrom(src); break;
+      case super::MEML: ConstCast(T._meml)->copyFrom(src); break;
+   }
+   return T;
+}
+#endif
 template<typename TYPE, Int Memt_size>  Bool  MemPtr<TYPE, Memt_size>::save(File &f)C {return super::save(f);}
 template<typename TYPE, Int Memt_size>  Bool  MemPtr<TYPE, Memt_size>::save(File &f)
 {
@@ -1637,25 +1891,35 @@ template<typename TYPE, Int Memt_size>  Bool  MemPtr<TYPE, Memt_size>::loadRaw(F
 /******************************************************************************/
 // COUNTED POINTER
 /******************************************************************************/
-T1(TYPE)  void  CountedPtr<TYPE>::DecRef(TYPE *data) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>(); SCAST(PtrCounter, *data).decRef(ClassFunc<TYPE>::Unload   );}
-T1(TYPE)  void  CountedPtr<TYPE>::IncRef(TYPE *data) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>(); SCAST(PtrCounter, *data).incRef(ClassFunc<TYPE>::LoadEmpty);}
+T1(TYPE)            void   CountedPtr<TYPE>::DecRef      (TYPE *data            ) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>();                           SCAST(PtrCounter, *data).decRef(                            ClassFunc<TYPE>::Unload                 ) ;}
+T1(TYPE)            Bool   CountedPtr<TYPE>::DecRefCancel(TYPE *data            ) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>(); return                    SCAST(PtrCounter, *data).decRef(                                                                    ) ;}
+T1(TYPE)            TYPE*  CountedPtr<TYPE>::IncRef      (TYPE *data            ) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>(); return static_cast<TYPE*>(SCAST(PtrCounter, *data).incRef(                                                                    ));}
+T1(TYPE)            TYPE*  CountedPtr<TYPE>::IncRefLoad  (TYPE *data            ) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>(); return static_cast<TYPE*>(SCAST(PtrCounter, *data).incRef(                            ClassFunc<TYPE>::Load                   ));}
+T1(TYPE)            TYPE*  CountedPtr<TYPE>::IncRefLoad  (TYPE *data, Ptr   user) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>(); return static_cast<TYPE*>(SCAST(PtrCounter, *data).incRef(                            ClassFunc<TYPE>::LoadUser        ,  user));}
+T1(TYPE) T1(USER)   TYPE*  CountedPtr<TYPE>::IncRefLoad  (TYPE *data, USER &user) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>(); return static_cast<TYPE*>(SCAST(PtrCounter, *data).incRef((Bool(*)(Ptr elm, Ptr user))ClassFunc<TYPE>::LoadUserR <USER>, &user));}
+T1(TYPE) T1(USER)   TYPE*  CountedPtr<TYPE>::IncRefLoad1 (TYPE *data, USER &user) {ASSERT_BASE_EXTENDED<PtrCounter, TYPE>(); return static_cast<TYPE*>(SCAST(PtrCounter, *data).incRef((Bool(*)(Ptr elm, Ptr user))ClassFunc<TYPE>::LoadUserR1<USER>, &user));}
 
-T1(TYPE)  CountedPtr<TYPE>&  CountedPtr<TYPE>::clear    (                   ) {                                DecRef(T._data); T._data=       null ;  return T;}
-T1(TYPE)  CountedPtr<TYPE>&  CountedPtr<TYPE>::operator=(  TYPE       * data) {if(T!=data){IncRef(      data); DecRef(T._data); T._data=       data ;} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first
-T1(TYPE)  CountedPtr<TYPE>&  CountedPtr<TYPE>::operator=(C CountedPtr & eptr) {if(T!=eptr){IncRef(eptr._data); DecRef(T._data); T._data= eptr._data ;} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first
-T1(TYPE)  CountedPtr<TYPE>&  CountedPtr<TYPE>::operator=(  CountedPtr &&eptr) {                                              Swap(_data, eptr._data);  return T;}
-T1(TYPE)  CountedPtr<TYPE>&  CountedPtr<TYPE>::operator=(  null_t           ) {clear();                                                                return T;}
+T1(TYPE)           CountedPtr<TYPE>&  CountedPtr<TYPE>::clear    (                               ) {            DecRef      (_data); _data=null;                                    return T;}
+T1(TYPE)           Bool               CountedPtr<TYPE>::cancel   (                               ) {Bool unload=DecRefCancel(_data); _data=null;                                    return unload;}
+T1(TYPE)           CountedPtr<TYPE>&  CountedPtr<TYPE>::operator=(  null_t                       ) {clear();                                                                        return T;}
+T1(TYPE)           CountedPtr<TYPE>&  CountedPtr<TYPE>::operator=(  TYPE       * data            ) {if(T!=data){TYPE *old=_data; _data=IncRefLoad (      data      ); DecRef(old);} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first
+T1(TYPE)           CountedPtr<TYPE>&  CountedPtr<TYPE>::operator=(C CountedPtr & eptr            ) {if(T!=eptr){TYPE *old=_data; _data=IncRef     (eptr._data      ); DecRef(old);} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first, 'CountedPtr' should already be loaded
+T1(TYPE)           CountedPtr<TYPE>&  CountedPtr<TYPE>::operator=(  CountedPtr &&eptr            ) {                        Swap(_data,            eptr._data      );               return T;}
+T1(TYPE)           CountedPtr<TYPE>&  CountedPtr<TYPE>::set      (  TYPE       * data, Ptr   user) {if(T!=data){TYPE *old=_data; _data=IncRefLoad (      data, user); DecRef(old);} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first
+T1(TYPE) T1(USER)  CountedPtr<TYPE>&  CountedPtr<TYPE>::set      (  TYPE       * data, USER &user) {if(T!=data){TYPE *old=_data; _data=IncRefLoad (      data, user); DecRef(old);} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first
+T1(TYPE) T1(USER)  CountedPtr<TYPE>&  CountedPtr<TYPE>::set1     (  TYPE       * data, USER &user) {if(T!=data){TYPE *old=_data; _data=IncRefLoad1(      data, user); DecRef(old);} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first
 
-T1(TYPE)  CountedPtr<TYPE>:: CountedPtr(  null_t           ) {       T._data=      null ;}
-T1(TYPE)  CountedPtr<TYPE>:: CountedPtr(  TYPE       * data) {IncRef(T._data=      data);}
-T1(TYPE)  CountedPtr<TYPE>:: CountedPtr(C CountedPtr & eptr) {IncRef(T._data=eptr._data);}
-T1(TYPE)  CountedPtr<TYPE>:: CountedPtr(  CountedPtr &&eptr) {       T._data=eptr._data ; eptr._data=null;}
+T1(TYPE)  CountedPtr<TYPE>:: CountedPtr(  null_t           ) {_data=                 null ;}
+T1(TYPE)  CountedPtr<TYPE>:: CountedPtr(  TYPE       * data) {_data=IncRefLoad(      data);}
+T1(TYPE)  CountedPtr<TYPE>:: CountedPtr(C CountedPtr & eptr) {_data=IncRef    (eptr._data);} // 'CountedPtr' should already be loaded
+T1(TYPE)  CountedPtr<TYPE>:: CountedPtr(  CountedPtr &&eptr) {_data=           eptr._data ; eptr._data=null;}
 T1(TYPE)  CountedPtr<TYPE>::~CountedPtr(                   ) {clear();}
 /******************************************************************************/
 // CACHE
 /******************************************************************************/
 T1(TYPE)  Cache<TYPE>&  Cache<TYPE>::clear         (               ) {                   super::clear         (         ); return T;}
 T1(TYPE)  Cache<TYPE>&  Cache<TYPE>::del           (               ) {                   super::del           (         ); return T;}
+T1(TYPE)  Cache<TYPE>&  Cache<TYPE>::cleanup       (               ) {                   super::cleanup       (         ); return T;}
 T1(TYPE)  CACHE_MODE    Cache<TYPE>::mode          (CACHE_MODE mode) {return (CACHE_MODE)super::mode          (mode     );          }
 T1(TYPE)  Cache<TYPE>&  Cache<TYPE>::caseSensitive (Bool  sensitive) {                   super::caseSensitive (sensitive); return T;}
 T1(TYPE)  Cache<TYPE>&  Cache<TYPE>::delayRemove   (Flt   time     ) {                   super::delayRemove   (time     ); return T;}
@@ -1673,8 +1937,13 @@ T1(TYPE)  TYPE*  Cache<TYPE>::operator()(C UID &id  , CChar *path) {return (TYPE
 
 T1(TYPE)  C Str&  Cache<TYPE>::name    (C TYPE *data             )C {return super::name    (data       );}
 T1(TYPE)  CChar*  Cache<TYPE>::name    (C TYPE *data, CChar *path)C {return super::name    (data,  path);}
-T1(TYPE)  UID     Cache<TYPE>::id      (C TYPE *data             )C {return super::id      (data       );}
+T1(TYPE)  UID     Cache<TYPE>:: id     (C TYPE *data             )C {return super:: id     (data       );}
+T1(TYPE)  UID     Cache<TYPE>::_id     (C TYPE *data             )C {return super::_id     (data       );}
 T1(TYPE)  Int     Cache<TYPE>::ptrCount(C TYPE *data             )C {return super::ptrCount(data       );}
+#if EE_PRIVATE
+T1(TYPE)  Bool    Cache<TYPE>::has     (C TYPE *data             )C {return super::has     (data       );}
+T1(TYPE)  Bool    Cache<TYPE>::has     (C Str  &file, CChar *path)C {return super::has     (file, path );}
+#endif
 T1(TYPE)  Bool    Cache<TYPE>::contains(C TYPE *data             )C {return super::contains(data       );}
 T1(TYPE)  Bool    Cache<TYPE>::dummy   (C TYPE *data             )C {return super::dummy   (data       );}
 T1(TYPE)  void    Cache<TYPE>::dummy   (C TYPE *data, Bool  dummy)  {       super::dummy   (data, dummy);}
@@ -1690,9 +1959,9 @@ T1(TYPE)  void  Cache<TYPE>::removeData(C TYPE *data) {return super::removeData(
 
 T1(TYPE)  void  Cache<TYPE>::update() {return super::update();}
 
-T1(TYPE)  void  Cache<TYPE>::setLoadUser(Ptr user) {super::setLoadUser(ClassFunc<TYPE>::LoadUser, user);}
+T1(TYPE)  void  Cache<TYPE>::setLoadUser(Ptr user) {super::setLoadUser(ClassFunc<TYPE>::LoadNameUser, user);}
 
-T1(TYPE) T1(EXTENDED)  Cache<TYPE>&  Cache<TYPE>::replaceClass() {ASSERT_BASE_EXTENDED<TYPE, EXTENDED>(); lock(); del(); /*_data_offset=OFFSET(typename Cache<EXTENDED>::Elm, data);*/ _desc_offset=OFFSET(typename Cache<EXTENDED>::Elm, desc); _memx.replaceClass<typename Cache<EXTENDED>::Elm>(); _load=ClassFunc<EXTENDED>::Load; unlock(); return T;}
+T1(TYPE) T1(EXTENDED)  Cache<TYPE>&  Cache<TYPE>::replaceClass() {ASSERT_BASE_EXTENDED<TYPE, EXTENDED>(); lock(); del(); /*_data_offset=OFFSET(typename Cache<EXTENDED>::Elm, data);*/ _desc_offset=OFFSET(typename Cache<EXTENDED>::Elm, desc); _memx.replaceClass<typename Cache<EXTENDED>::Elm>(); _load=ClassFunc<EXTENDED>::LoadName; unlock(); return T;}
 
 T1(TYPE)  Cache<TYPE>&  Cache<TYPE>::operator=(C Cache<TYPE> &src) {if(this!=&src){lock(); src.lock(); lockedFrom(src); FREPA(T)lockedData(i)=src.lockedData(i); src.unlock(); unlock();} return T;}
 
@@ -1714,6 +1983,9 @@ template<typename TYPE, Cache<TYPE> &CACHE>  CacheElmPtr<TYPE,CACHE>&  CacheElmP
 template<typename TYPE, Cache<TYPE> &CACHE>  CacheElmPtr<TYPE,CACHE>&  CacheElmPtr<TYPE,CACHE>::operator=(C CacheElmPtr & eptr) {if(T!=eptr){CACHE.incDecRef(eptr._data, T._data); T._data= eptr._data ;} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first
 template<typename TYPE, Cache<TYPE> &CACHE>  CacheElmPtr<TYPE,CACHE>&  CacheElmPtr<TYPE,CACHE>::operator=(  CacheElmPtr &&eptr) {                                               Swap(_data, eptr._data);  return T;}
 template<typename TYPE, Cache<TYPE> &CACHE>  CacheElmPtr<TYPE,CACHE>&  CacheElmPtr<TYPE,CACHE>::operator=(  null_t            ) {clear();                                                                 return T;}
+#if EE_PRIVATE
+template<typename TYPE, Cache<TYPE> &CACHE>  CacheElmPtr<TYPE,CACHE>&  CacheElmPtr<TYPE,CACHE>::setContained(TYPE       * data) {if(T!=data){CACHE.incRefContained(data); CACHE.decRef(T._data); T._data=data;} return T;} // have to inc ref first, in case new pointer is a child of current that would get released if dec ref was first
+#endif
 
 template<typename TYPE, Cache<TYPE> &CACHE>  CacheElmPtr<TYPE,CACHE>&  CacheElmPtr<TYPE,CACHE>::find     (CChar  *file, CChar *path) {TYPE *old=T._data; T._data=(TYPE*)CACHE._Cache::find   (    file , path, true); CACHE.decRef(old); return T;}
 template<typename TYPE, Cache<TYPE> &CACHE>  CacheElmPtr<TYPE,CACHE>&  CacheElmPtr<TYPE,CACHE>::find     (CChar8 *file, CChar *path) {TYPE *old=T._data; T._data=(TYPE*)CACHE._Cache::find   (Str(file), path, true); CACHE.decRef(old); return T;}
@@ -1766,8 +2038,9 @@ inline void CachesDelayRemove(Flt time) // set amount of time (in seconds) after
 /******************************************************************************/
 // MAP
 /******************************************************************************/
-T2(KEY, DATA)  Map<KEY, DATA>&  Map<KEY, DATA>::del  () {super::del  (); return T;}
-T2(KEY, DATA)  Map<KEY, DATA>&  Map<KEY, DATA>::clear() {super::clear(); return T;}
+T2(KEY, DATA)  Map<KEY, DATA>&  Map<KEY, DATA>::del    () {super::del    (); return T;}
+T2(KEY, DATA)  Map<KEY, DATA>&  Map<KEY, DATA>::clear  () {super::clear  (); return T;}
+T2(KEY, DATA)  Map<KEY, DATA>&  Map<KEY, DATA>::cleanup() {super::cleanup(); return T;}
 
 T2(KEY, DATA)  ThreadSafeMap<KEY, DATA>&  ThreadSafeMap<KEY, DATA>::del  () {super::del  (); return T;}
 T2(KEY, DATA)  ThreadSafeMap<KEY, DATA>&  ThreadSafeMap<KEY, DATA>::clear() {super::clear(); return T;}
@@ -2022,6 +2295,19 @@ T1(TYPE)  ListColumn::ListColumn(Str (*data_to_text)(C TYPE &data), Flt width, C
 /******************************************************************************/
 // GRAPHICS
 /******************************************************************************/
+#if EE_PRIVATE
+INLINE void DisplayState::primType(UInt prim_type)
+{
+   if(D._prim_type!=prim_type)
+   {
+      D._prim_type=prim_type;
+   #if DX11
+      D3DC->IASetPrimitiveTopology((D3D_PRIMITIVE_TOPOLOGY)prim_type);
+   #endif
+   }
+}
+#endif
+/******************************************************************************/
 // MESH
 /******************************************************************************/
 inline void MeshPart::draw(C MatrixM &matrix)C {draw(matrix, matrix);}
@@ -2054,5 +2340,298 @@ namespace Edit
    T1(TYPE)  TYPE*  Undo<TYPE>::set( Int change_type, Bool force_create, Flt extra_time) {return (TYPE*)super::set(change_type, force_create, extra_time);}
 
    T1(TYPE) T1(CHANGE)  Undo<TYPE>&  Undo<TYPE>::replaceClass() {ASSERT_BASE_EXTENDED<TYPE, CHANGE>(); _changes.replaceClass<CHANGE>(); return T;}
+
+   inline C ObjData::Param* ObjData::findParam(C Str &name, PARAM_TYPE type, Bool include_removed, Bool include_inherited)C {return ConstCast(T).findParam(name, type, include_removed, include_inherited);}
 }
+/******************************************************************************/
+#if EE_PRIVATE
+
+#if X86 || (ARM && X64) || WEB // x86 32/64 and ARM 64 can do unaligned reads. When using WebAssembly (WASM) for WEB platform, unaligned access is supported, however when executed on platforms without native unaligned access support (Arm32) it will be extremely slow, however since Arm32 is in extinction then it's better to enable unaligned access to get better performance on majority of platforms that support it.
+   T1(TYPE) C TYPE& Unaligned(              C TYPE &src) {return src;}
+   T1(TYPE)   void  Unaligned(TYPE   &dest, C TYPE &src) {  dest=src;}
+   T1(TYPE)   void _Unaligned(Byte   &dest, C TYPE &src) {  dest=src;}
+   T1(TYPE)   void _Unaligned(Short  &dest, C TYPE &src) {  dest=src;}
+   T1(TYPE)   void _Unaligned(UShort &dest, C TYPE &src) {  dest=src;}
+   T1(TYPE)   void _Unaligned(Int    &dest, C TYPE &src) {  dest=src;}
+   T1(TYPE)   void _Unaligned(UInt   &dest, C TYPE &src) {  dest=src;}
+#else
+   T1(TYPE)   TYPE  Unaligned(              C TYPE &src) {if(SIZE(TYPE)==1)return src;else{TYPE temp; CopyFast(Ptr(&temp), CPtr(&src), SIZE(TYPE)); return temp;}} // !! these functions must casted to 'Ptr', because without it, compiler may try to inline the 'memcpy' when it detects that both params are of the same type and in that case it will assume that they are memory aligned and crash will occur !!
+   T1(TYPE)   void  Unaligned(TYPE   &dest, C TYPE &src) {if(SIZE(TYPE)==1)  dest=src;else{           CopyFast(Ptr(&dest), CPtr(&src), SIZE(TYPE));             }} // !! these functions must casted to 'Ptr', because without it, compiler may try to inline the 'memcpy' when it detects that both params are of the same type and in that case it will assume that they are memory aligned and crash will occur !!
+   T1(TYPE)   void _Unaligned(Byte   &dest, C TYPE &src) {                   dest=Unaligned(src) ;                                                               }
+   T1(TYPE)   void _Unaligned(Short  &dest, C TYPE &src) {Unaligned(dest, (Short )Unaligned(src));                                                               }
+   T1(TYPE)   void _Unaligned(UShort &dest, C TYPE &src) {Unaligned(dest, (UShort)Unaligned(src));                                                               }
+   T1(TYPE)   void _Unaligned(Int    &dest, C TYPE &src) {Unaligned(dest, (Int   )Unaligned(src));                                                               }
+   T1(TYPE)   void _Unaligned(UInt   &dest, C TYPE &src) {Unaligned(dest, (UInt  )Unaligned(src));                                                               }
+#endif
+
+T2(TA, TB)  File&  File::putMulti(C TA &a, C TB &b)
+{
+ C UInt size=SIZE(a)+SIZE(b);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   T<<buf;
+   return T;
+}
+T2(TA, TB)  File&  File::getMulti(TA &a, TB &b)
+{
+ C UInt size=SIZE(a)+SIZE(b);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   return T;
+}
+
+T3(TA, TB, TC)  File&  File::putMulti(C TA &a, C TB &b, C TC &c)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   T<<buf;
+   return T;
+}
+T3(TA, TB, TC)  File&  File::getMulti(TA &a, TB &b, TC &c)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   return T;
+}
+
+T4(TA, TB, TC, TD)  File&  File::putMulti(C TA &a, C TB &b, C TC &c, C TD &d)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   Unaligned((TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]), d);
+   T<<buf;
+   return T;
+}
+T4(TA, TB, TC, TD)  File&  File::getMulti(TA &a, TB &b, TC &c, TD &d)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   Unaligned(d, (TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]));
+   return T;
+}
+
+T5(TA, TB, TC, TD, TE)  File&  File::putMulti(C TA &a, C TB &b, C TC &c, C TD &d, C TE &e)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   Unaligned((TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]), d);
+   Unaligned((TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]), e);
+   T<<buf;
+   return T;
+}
+T5(TA, TB, TC, TD, TE)  File&  File::getMulti(TA &a, TB &b, TC &c, TD &d, TE &e)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   Unaligned(d, (TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]));
+   Unaligned(e, (TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]));
+   return T;
+}
+
+T6(TA, TB, TC, TD, TE, TF)  File&  File::putMulti(C TA &a, C TB &b, C TC &c, C TD &d, C TE &e, C TF &f)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   Unaligned((TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]), d);
+   Unaligned((TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]), e);
+   Unaligned((TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]), f);
+   T<<buf;
+   return T;
+}
+T6(TA, TB, TC, TD, TE, TF)  File&  File::getMulti(TA &a, TB &b, TC &c, TD &d, TE &e, TF &f)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   Unaligned(d, (TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]));
+   Unaligned(e, (TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]));
+   Unaligned(f, (TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]));
+   return T;
+}
+
+T7(TA, TB, TC, TD, TE, TF, TG)  File&  File::putMulti(C TA &a, C TB &b, C TC &c, C TD &d, C TE &e, C TF &f, C TG &g)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   Unaligned((TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]), d);
+   Unaligned((TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]), e);
+   Unaligned((TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]), f);
+   Unaligned((TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]), g);
+   T<<buf;
+   return T;
+}
+T7(TA, TB, TC, TD, TE, TF, TG)  File&  File::getMulti(TA &a, TB &b, TC &c, TD &d, TE &e, TF &f, TG &g)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   Unaligned(d, (TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]));
+   Unaligned(e, (TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]));
+   Unaligned(f, (TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]));
+   Unaligned(g, (TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]));
+   return T;
+}
+
+T8(TA, TB, TC, TD, TE, TF, TG, TH)  File&  File::putMulti(C TA &a, C TB &b, C TC &c, C TD &d, C TE &e, C TF &f, C TG &g, C TH &h)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   Unaligned((TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]), d);
+   Unaligned((TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]), e);
+   Unaligned((TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]), f);
+   Unaligned((TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]), g);
+   Unaligned((TH&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)]), h);
+   T<<buf;
+   return T;
+}
+T8(TA, TB, TC, TD, TE, TF, TG, TH)  File&  File::getMulti(TA &a, TB &b, TC &c, TD &d, TE &e, TF &f, TG &g, TH &h)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   Unaligned(d, (TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]));
+   Unaligned(e, (TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]));
+   Unaligned(f, (TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]));
+   Unaligned(g, (TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]));
+   Unaligned(h, (TH&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)]));
+   return T;
+}
+
+T9(TA, TB, TC, TD, TE, TF, TG, TH, TI)  File&  File::putMulti(C TA &a, C TB &b, C TC &c, C TD &d, C TE &e, C TF &f, C TG &g, C TH &h, C TI &i)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   Unaligned((TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]), d);
+   Unaligned((TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]), e);
+   Unaligned((TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]), f);
+   Unaligned((TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]), g);
+   Unaligned((TH&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)]), h);
+   Unaligned((TI&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)]), i);
+   T<<buf;
+   return T;
+}
+T9(TA, TB, TC, TD, TE, TF, TG, TH, TI)  File&  File::getMulti(TA &a, TB &b, TC &c, TD &d, TE &e, TF &f, TG &g, TH &h, TI &i)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   Unaligned(d, (TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]));
+   Unaligned(e, (TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]));
+   Unaligned(f, (TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]));
+   Unaligned(g, (TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]));
+   Unaligned(h, (TH&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)]));
+   Unaligned(i, (TI&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)]));
+   return T;
+}
+
+T10(TA, TB, TC, TD, TE, TF, TG, TH, TI, TJ)  File&  File::putMulti(C TA &a, C TB &b, C TC &c, C TD &d, C TE &e, C TF &f, C TG &g, C TH &h, C TI &i, C TJ &j)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)+SIZE(j);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   Unaligned((TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]), d);
+   Unaligned((TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]), e);
+   Unaligned((TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]), f);
+   Unaligned((TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]), g);
+   Unaligned((TH&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)]), h);
+   Unaligned((TI&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)]), i);
+   Unaligned((TJ&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)]), j);
+   T<<buf;
+   return T;
+}
+T10(TA, TB, TC, TD, TE, TF, TG, TH, TI, TJ)  File&  File::getMulti(TA &a, TB &b, TC &c, TD &d, TE &e, TF &f, TG &g, TH &h, TI &i, TJ &j)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)+SIZE(j);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   Unaligned(d, (TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]));
+   Unaligned(e, (TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]));
+   Unaligned(f, (TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]));
+   Unaligned(g, (TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]));
+   Unaligned(h, (TH&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)]));
+   Unaligned(i, (TI&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)]));
+   Unaligned(j, (TJ&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)]));
+   return T;
+}
+
+T11(TA, TB, TC, TD, TE, TF, TG, TH, TI, TJ, TK)  File&  File::putMulti(C TA &a, C TB &b, C TC &c, C TD &d, C TE &e, C TF &f, C TG &g, C TH &h, C TI &i, C TJ &j, C TK &k)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)+SIZE(j)+SIZE(k);
+   Byte buf[size];
+   Unaligned((TA&)(buf[0]), a);
+   Unaligned((TB&)(buf[SIZE(a)]), b);
+   Unaligned((TC&)(buf[SIZE(a)+SIZE(b)]), c);
+   Unaligned((TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]), d);
+   Unaligned((TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]), e);
+   Unaligned((TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]), f);
+   Unaligned((TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]), g);
+   Unaligned((TH&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)]), h);
+   Unaligned((TI&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)]), i);
+   Unaligned((TJ&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)]), j);
+   Unaligned((TK&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)+SIZE(j)]), k);
+   T<<buf;
+   return T;
+}
+T11(TA, TB, TC, TD, TE, TF, TG, TH, TI, TJ, TK)  File&  File::getMulti(TA &a, TB &b, TC &c, TD &d, TE &e, TF &f, TG &g, TH &h, TI &i, TJ &j, TK &k)
+{
+ C UInt size=SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)+SIZE(j)+SIZE(k);
+   Byte buf[size]; T>>buf;
+   Unaligned(a, (TA&)(buf[0]));
+   Unaligned(b, (TB&)(buf[SIZE(a)]));
+   Unaligned(c, (TC&)(buf[SIZE(a)+SIZE(b)]));
+   Unaligned(d, (TD&)(buf[SIZE(a)+SIZE(b)+SIZE(c)]));
+   Unaligned(e, (TE&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)]));
+   Unaligned(f, (TF&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)]));
+   Unaligned(g, (TG&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)]));
+   Unaligned(h, (TH&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)]));
+   Unaligned(i, (TI&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)]));
+   Unaligned(j, (TJ&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)]));
+   Unaligned(k, (TK&)(buf[SIZE(a)+SIZE(b)+SIZE(c)+SIZE(d)+SIZE(e)+SIZE(f)+SIZE(g)+SIZE(h)+SIZE(i)+SIZE(j)]));
+   return T;
+}
+#endif
 /******************************************************************************/

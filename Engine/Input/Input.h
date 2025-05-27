@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Accelerometer' to access Accelerometer input.
@@ -10,9 +7,16 @@
    Use 'Location*' functions to access device world location.
 
 /******************************************************************************/
-#define        LongPressTime 0.55f // amount of time to consider any                   button press a long   press
+#define        LongPressTime 0.35f // amount of time to consider any                   button press a long   press
 #define      DoubleClickTime 0.25f // amount of time to consider Keyboard/Mouse/Joypad button press a double click
 #define TouchDoubleClickTime 0.33f // amount of time to consider Touch                        press a double click
+#if EE_PRIVATE
+#define  TapTime 0.25f
+#define DragTime 0.15f
+#define  FirstRepeatPressTime 0.21f // amount of time wait until triggering a first repeat press
+#define       RepeatPressTime 0.05f // amount of time wait until triggering a       repeat press
+#define AnalogRepeatPressTime 0.08f // amount of time wait until triggering a       repeat press for analog input
+#endif
 /******************************************************************************/
 // ACCELEROMETER, GYROSCOPE, LOCATION
 /******************************************************************************/
@@ -81,22 +85,65 @@ struct VirtualReality // Virtual Reality - Head Mounted Display (HMD)
    void shut    (); // manually shut down HMD, normally you don't need to call this, as it will be called by the engine automatically
    void recenter(); // reset              HMD yaw orientation angle and position offset
 
+#if !EE_PRIVATE
 private:
+#endif
    Char8              _name[64];
    Flt                _eye_dist, _density, _refresh, _gui_depth, _gui_size, _left_eye_tex_aspect;
    Vec2               _fov;
    VecI2              _res, _gui_res;
-   Rect               _left_eye_tex_rect;
+   Rect               _left_eye_uv_rect;
    Matrix             _matrix, _left, _right;
    U64                _adapter_id;
    ImageRTC           _ui_ds;
    ImageRTPtr         _render, _ui;
    VirtualRealityApi *_api;
 
+#if EE_PRIVATE
+   Bool init        (VirtualRealityApi &api);
+   void update      ();
+   void draw        ();
+   Bool    connected();
+   void disconnected();
+   void setFOVTan   (Flt left, Flt right, Flt up, Flt down);
+
+   void          delImages();
+   Bool       createImages();
+   Bool     createUIImage ();
+   Bool createRenderImage ();
+
+   ImageRTC* getRender();
+   ImageRTC* getUI    ();
+#endif
    VirtualReality();
    NO_COPY_CONSTRUCTOR(VirtualReality);
 }extern
    VR;
+#if EE_PRIVATE
+struct VirtualRealityApi
+{
+   virtual Bool init() {return false;}
+   virtual void shut() {}
+
+   virtual Bool   active        ()C {return false;}
+   virtual Matrix matrixCur     ()C {return VR._matrix;} // return last known matrix
+   virtual void   recenter      ()  {}
+   virtual void   changedUIDepth()  {}
+   virtual void   changedUISize ()  {}
+   virtual void   update        ()  {}
+   virtual void   draw          ()  {}
+
+   virtual void          delImages() {}
+   virtual Bool     createUIImage () {return false;}
+   virtual Bool createRenderImage () {return false;}
+
+   virtual ImageRTC* getNewRender() {return null;}
+   virtual ImageRTC* getNewUI    () {return null;}
+
+   virtual ~VirtualRealityApi() {shut();}
+}extern
+   *VrApi;
+#endif
 /******************************************************************************/
 // GENERAL INPUT
 /******************************************************************************/
@@ -106,6 +153,7 @@ enum INPUT_TYPE : Byte // Input Device Type
    INPUT_KEYBOARD, // Keyboard
    INPUT_MOUSE   , // Mouse
    INPUT_JOYPAD  , // Joypad
+   INPUT_TOUCH   , // Touch
 };
 struct Input
 {
@@ -123,6 +171,30 @@ struct Input
 };
 extern Memc<Input> Inputs; // all inputs that occurred in this frame (in order as they were received) 
 /******************************************************************************/
+#if EE_PRIVATE
+struct InputDevicesClass // Input Devices
+{
+#if WINDOWS_OLD
+#if DIRECT_INPUT
+   IDirectInput8 *DI=null;
+#else
+   Ptr            DI=null;
+#endif
+#endif
+
+   void del    ();
+   void create ();
+   void update ();
+   void clear  ();
+   void acquire(Bool on);
+   void checkMouseKeyboard();
+
+   InputDevicesClass() {}
+   NO_COPY_CONSTRUCTOR(InputDevicesClass);
+}extern
+   InputDevices;
+#endif
+/******************************************************************************/
 struct TextEdit // Text Edit Settings
 {
    Bool overwrite, // if cursor  is in overwriting mode
@@ -135,5 +207,26 @@ struct TextEdit // Text Edit Settings
 };
 Bool EditText(Str &str, TextEdit &edit, Bool multi_line=false); // edit 'str' text according to keyboard input, returns true if text was changed
 /******************************************************************************/
-void DeviceVibrate(Flt intensity, Flt duration); // set device vibration, 'intensity'=how strong 0..1, 'duration'=how long (in seconds)
+#if EE_PRIVATE
+extern Vec      AccelerometerValue, GyroscopeValue, MagnetometerValue;
+extern Bool     LocationBackground[2];
+extern Dbl      LocationLat[2], LocationLon[2];
+extern Flt      LocationAlt[2], LocationAcc[2], LocationSpd[2], LocationInterval[2], MagnetometerInterval;
+extern DateTime LocationTim[2];
+#if ANDROID
+extern ASensorEventQueue *SensorEventQueue;
+#elif IOS
+extern CLLocationManager *LocationManager[2];
+#endif
+
+void SetMagnetometerRefresh(Flt interval);
+void     SetLocationRefresh(Flt interval, Bool gps=true);
+#if ANDROID
+void UpdateLocation(jobject location, Bool gps, JNI &jni);
+void UpdateLocation(                  Bool gps, JNI &jni);
+void UpdateLocation(                            JNI &jni);
+#endif
+#endif
+void DeviceVibrate     (Flt intensity, Flt duration); // set device vibration, 'intensity'=how strong 0..1, 'duration'=how long (in seconds)
+void DeviceVibrateShort(                           ); // perform a short vibration, that can be used as acknowledgment to the user that touch action has been performed
 /******************************************************************************/

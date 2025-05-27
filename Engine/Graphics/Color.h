@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    4-Byte Colors helper functions.
@@ -21,7 +18,7 @@ struct Color // 4-Byte Color
       struct{Byte  r, g, b, a;}; // red, green, blue, alpha
       struct{Byte  x, y, z, w;};
       struct{Byte  c[4]      ;}; // component
-      struct{UInt  u         ;};
+      struct{UInt  data      ;};
       struct{VecB2 rg        ;};
       struct{VecB  rgb       ;};
       struct{VecB2 xy        ;};
@@ -31,11 +28,11 @@ struct Color // 4-Byte Color
       struct{VecB4 v4        ;};
    };
 
-   Color& zero(                                               ) {u=0; return T;}
+   Color& zero(                                               ) {data=0; return T;}
    Color& set (Byte red, Byte green, Byte blue, Byte alpha=255) {T.r=red; T.g=green; T.b=blue; T.a=alpha; return T;}
    Color& set (Byte lum,                        Byte alpha=255) {T.r=     T.g=       T.b=lum ; T.a=alpha; return T;}
 
-   Bool any ()C {return u!=0        ;} // if any component is non-zero
+   Bool any ()C {return data!=0     ;} // if any component is non-zero
    Bool mono()C {return r==g && g==b;} // if monochromatic
    Int  lum ()C {return Max(r, g, b);} // get luminance
 
@@ -48,8 +45,8 @@ struct Color // 4-Byte Color
 
    Bool fromHex(C Str &t); // set from "rrggbbaa" text format (using hexadecimal numbers), false on fail
 
-   Bool operator==(C Color &c)C {return u==c.u;}
-   Bool operator!=(C Color &c)C {return u!=c.u;}
+   Bool operator==(C Color &c)C {return data==c.data;}
+   Bool operator!=(C Color &c)C {return data!=c.data;}
 
    Color() {}
    Color(Byte red, Byte green, Byte blue, Byte alpha=255) {set(red, green, blue, alpha);}
@@ -136,10 +133,46 @@ Vec  LinearToSRGB(C Vec   &l); // convert 0..1   linear to 0..1 srgb
 Vec4 LinearToSRGB(C Vec4  &l); // convert 0..1   linear to 0..1 srgb (except alpha)
 Vec4 LinearToSRGB(C Color &l); // convert 0..255 linear to 0..1 srgb
 
+Color LinearToSRGBColor(C Vec  &l);
+Color LinearToSRGBColor(C Vec4 &l);
+
 Flt LinearLumOfLinearColor(C Vec &l); // get linear photometric luminance (as perceived by human eye) of linear color
 Flt LinearLumOfSRGBColor  (C Vec &s); // get linear photometric luminance (as perceived by human eye) of srgb   color
 Flt   SRGBLumOfLinearColor(C Vec &l); // get srgb   photometric luminance (as perceived by human eye) of linear color
 Flt   SRGBLumOfSRGBColor  (C Vec &s); // get srgb   photometric luminance (as perceived by human eye) of srgb   color
 
 Vec NightLightFactor(Flt intensity); // get color multiplier for "Night Light / Blue Filter" effect, to be used for colors in sRGB space, example "Flt intensity=0.5f; Vec night_light_color=srgb_color*NightLightFactor(intensity);"
+#if EE_PRIVATE
+Flt AlphaToDisplay(Flt alpha);
+
+Flt SignSRGBToLinear(Flt s); // convert -1..1 srgb   to -1..1 linear
+Flt SignLinearToSRGB(Flt l); // convert -1..1 linear to -1..1 srgb
+
+extern Flt ByteToFltArray[256], ByteSRGBToLinearArray[256], LinearByteToSRGBArray[256], *SRGBToDisplayArray;
+
+INLINE Flt   ByteSRGBToLinear (  Byte   s) {return ByteSRGBToLinearArray[s];}
+INLINE Flt   LinearByteToSRGB (  Byte   l) {return LinearByteToSRGBArray[l];}
+INLINE Flt   ByteSRGBToDisplay(  Byte   s) {return    SRGBToDisplayArray[s];}
+       Byte  LinearToByteSRGB (  Flt    l);
+       Byte  SRGBToLinearByte (  Flt    s);
+       Vec4  SRGBToDisplay    (C Color &s);
+
+INLINE Flt LinearToDisplay(Flt l) {return LINEAR_GAMMA ? l : LinearToSRGB(l);}
+INLINE Flt   SRGBToDisplay(Flt s) {return LINEAR_GAMMA ? SRGBToLinear(s) : s;}
+
+#if LINEAR_GAMMA
+INLINE C Vec & LinearToDisplay(C Vec  &l) {return l;}
+INLINE C Vec4& LinearToDisplay(C Vec4 &l) {return l;}
+INLINE   Vec     SRGBToDisplay(C Vec  &s) {return SRGBToLinear(s);}
+INLINE   Vec4    SRGBToDisplay(C Vec4 &s) {return SRGBToLinear(s);}
+#else
+INLINE   Vec   LinearToDisplay(C Vec  &l) {return LinearToSRGB(l);}
+INLINE   Vec4  LinearToDisplay(C Vec4 &l) {return LinearToSRGB(l);}
+INLINE C Vec &   SRGBToDisplay(C Vec  &s) {return s;}
+INLINE C Vec4&   SRGBToDisplay(C Vec4 &s) {return s;}
+#endif
+
+void InitSRGB();
+Bool SetColorLUT(COLOR_SPACE src_color_space, C Str &dest_color_space, Image &lut);
+#endif
 /******************************************************************************/

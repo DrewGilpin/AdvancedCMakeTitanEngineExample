@@ -1,7 +1,4 @@
 ﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
-/******************************************************************************
 
    Use 'Vec2' to handle 2D vectors, Flt type
    Use 'Vec'  to handle 3D vectors, Flt type
@@ -22,6 +19,10 @@
    Use 'VecSB2' to handle 2D vectors, SByte type
    Use 'VecSB'  to handle 3D vectors, SByte type
    Use 'VecSB4' to handle 4D vectors, SByte type
+
+   Use 'VecUS2' to handle 2D vectors, UShort type
+   Use 'VecUS'  to handle 3D vectors, UShort type
+   Use 'VecUS4' to handle 4D vectors, UShort type
 
 /******************************************************************************/
 #define SIGN_BIT 0x80000000 // Float Sign Bit
@@ -56,13 +57,41 @@
 #define EPS_ANIM_POS      0.0002f           // Animation Position Epsilon (default value used for optimizing animation positions)
 #define EPS_ANIM_SCALE    0.0002f           // Animation Scale    Epsilon (default value used for optimizing animation scales)
 #define EPS_ANIM_ANGLE    0.0002f           // Animation Angle    Epsilon (default value used for optimizing animation rotation angles)
-#define EPS_COL8          (0.5f/ 256)       // Color              Epsilon (this gives  8-bit color precision)
-#define EPS_COL           (0.5f/1024)       // Color              Epsilon (this gives 10-bit color precision)
-#define EPS_COL8_COS      (1-EPS_COL8)      // Color Cos          Epsilon (Dot product of 2 directional vectors giving  8-bit color precision)
-#define EPS_COL_COS       (1-EPS_COL)       // Color Cos          Epsilon (Dot product of 2 directional vectors giving 10-bit color precision)
 #define EPS_COS           0.9999995f        // Cos Flt            Epsilon (Smallest Dot product of the same normalized directional Vec  vector)
 #define EPSD_COS          0.999999999999999 // Cos Dbl            Epsilon (Smallest Dot product of the same normalized directional VecD vector)
+#define EPS_ANGLE         0.0009765625f     // Angle Flt          Epsilon Acos(EPS_COS)
 #define EPS_NRM_AUTO      PI_3              // Normal Angle       Epsilon (used for calculating vertex normals)
+
+#define EPS_COL8          (0.5f/ 256)                                     // Color     Epsilon (this gives  8-bit color precision)
+#define EPS_COL           (0.5f/1024)                                     // Color     Epsilon (this gives 10-bit color precision)
+#define EPS_COL8_COS      (1-EPS_COL8)                                    // Color Cos Epsilon (Dot product of 2 directional vectors giving  8-bit color precision)
+#define EPS_COL_COS       (1-EPS_COL)                                     // Color Cos Epsilon (Dot product of 2 directional vectors giving 10-bit color precision)
+#define EPS_COL8_LINEAR   0.000151171f                                    // EPS_COL8 in linear Gamma, SRGBToLinear(0.5/ 256  )  , Warning: can be used only when comparing with 0
+#define EPS_COL_LINEAR    0.000037793f                                    // EPS_COL  in linear Gamma, SRGBToLinear(0.5/1024  )  , Warning: can be used only when comparing with 0
+
+#if EE_PRIVATE
+#define EPS_COL8_NATIVE   (LINEAR_GAMMA ? EPS_COL8_LINEAR   : EPS_COL8  ) //                                                       Warning: can be used only when comparing with 0
+#define EPS_COL_NATIVE    (LINEAR_GAMMA ? EPS_COL_LINEAR    : EPS_COL   ) //                                                       Warning: can be used only when comparing with 0
+#define EPS_COL8_1        EPS_COL8                                        //                                                       Warning: can be used only when comparing with 1
+#define EPS_COL_1         EPS_COL                                         //                                                       Warning: can be used only when comparing with 1
+#define EPS_COL8_1_LINEAR 0.004448891f                                    // EPS_COL8 in linear Gamma, SRGBToLinear(0.5/ 256+1)-1, Warning: can be used only when comparing with 1
+#define EPS_COL_1_LINEAR  0.001111269f                                    // EPS_COL  in linear Gamma, SRGBToLinear(0.5/1024+1)-1, Warning: can be used only when comparing with 1
+#define EPS_COL8_1_NATIVE (LINEAR_GAMMA ? EPS_COL8_1_LINEAR : EPS_COL8_1) //                                                       Warning: can be used only when comparing with 1
+#define EPS_COL_1_NATIVE  (LINEAR_GAMMA ? EPS_COL_1_LINEAR  : EPS_COL_1 ) //                                                       Warning: can be used only when comparing with 1
+
+#define EPS_GPU                (MOBILE ? HALF_EPS : FLT_EPS) // GPU             Epsilon (Mobile GPU's may have only half precision)
+#define EPS_ANIM_BLEND         (1.0f/4096)                   // Animation Blend Epsilon (default value used for ignoring animations)
+#define EPS_SKY_MIN_LERP_DIST  (1.0f/8)                      // 12.5 cm
+#define EPS_SKY_MIN_VIEW_RANGE 0.999f                        // 0.999f was the biggest value that caused holes to disappear
+#define EPS_TAN_COS            EPS_COL_COS                   // use strict eps to merge only if are the same, strict eps doesn't significantly increase the vertex count, on few test models vtx count was only 1% bigger when compared to 0 eps
+#define EPS_BIN_COS            0                             // can use 0 for 'Dot' (to differentiate only if binormals are on the same side) because binormals are stored in MeshRender using 1-bit only and reconstructed as "Cross(nrm, tan)" or "-Cross(nrm, tan)"
+
+#define LOG_2  0.69314718055994529f // Log(2)
+#define LOG_2D 0.69314718055994529  // Log(2)
+
+#define LOG2_E  1.44269504088896340736f // Log2(e)
+#define LOG2_ED 1.44269504088896340736  // Log2(e)
+#endif
 /******************************************************************************/
 enum AXIS_TYPE
 {
@@ -143,22 +172,32 @@ constexpr Dbl   Max(Flt   x, Dbl   y) {return (x>y) ? x : y;}
 constexpr Dbl   Max(Dbl   x, Int   y) {return (x>y) ? x : y;}
 constexpr Dbl   Max(Dbl   x, Flt   y) {return (x>y) ? x : y;}
 
-inline Int  Min(Int  x, Int  y, Int  z        ) {return Min(x, Min(y, z));}
-inline Long Min(Long x, Long y, Long z        ) {return Min(x, Min(y, z));}
-inline Flt  Min(Flt  x, Flt  y, Flt  z        ) {return Min(x, Min(y, z));}
-inline Dbl  Min(Dbl  x, Dbl  y, Dbl  z        ) {return Min(x, Min(y, z));}
-inline Int  Max(Int  x, Int  y, Int  z        ) {return Max(x, Max(y, z));}
-inline Long Max(Long x, Long y, Long z        ) {return Max(x, Max(y, z));}
-inline Flt  Max(Flt  x, Flt  y, Flt  z        ) {return Max(x, Max(y, z));}
-inline Dbl  Max(Dbl  x, Dbl  y, Dbl  z        ) {return Max(x, Max(y, z));}
-inline Int  Min(Int  x, Int  y, Int  z, Int  w) {return Min(x, Min(y, z, w));}
-inline Long Min(Long x, Long y, Long z, Long w) {return Min(x, Min(y, z, w));}
-inline Flt  Min(Flt  x, Flt  y, Flt  z, Flt  w) {return Min(x, Min(y, z, w));}
-inline Dbl  Min(Dbl  x, Dbl  y, Dbl  z, Dbl  w) {return Min(x, Min(y, z, w));}
-inline Int  Max(Int  x, Int  y, Int  z, Int  w) {return Max(x, Max(y, z, w));}
-inline Long Max(Long x, Long y, Long z, Long w) {return Max(x, Max(y, z, w));}
-inline Flt  Max(Flt  x, Flt  y, Flt  z, Flt  w) {return Max(x, Max(y, z, w));}
-inline Dbl  Max(Dbl  x, Dbl  y, Dbl  z, Dbl  w) {return Max(x, Max(y, z, w));}
+inline Int  Min(Int  x, Int  y, Int  z) {return Min(Min(x, y), z);}
+inline Long Min(Long x, Long y, Long z) {return Min(Min(x, y), z);}
+inline Flt  Min(Flt  x, Flt  y, Flt  z) {return Min(Min(x, y), z);}
+inline Dbl  Min(Dbl  x, Dbl  y, Dbl  z) {return Min(Min(x, y), z);}
+inline Int  Max(Int  x, Int  y, Int  z) {return Max(Max(x, y), z);}
+inline Long Max(Long x, Long y, Long z) {return Max(Max(x, y), z);}
+inline Flt  Max(Flt  x, Flt  y, Flt  z) {return Max(Max(x, y), z);}
+inline Dbl  Max(Dbl  x, Dbl  y, Dbl  z) {return Max(Max(x, y), z);}
+
+inline Int  Min(Int  x, Int  y, Int  z, Int  w) {return Min(Min(x, y, z), w);}
+inline Long Min(Long x, Long y, Long z, Long w) {return Min(Min(x, y, z), w);}
+inline Flt  Min(Flt  x, Flt  y, Flt  z, Flt  w) {return Min(Min(x, y, z), w);}
+inline Dbl  Min(Dbl  x, Dbl  y, Dbl  z, Dbl  w) {return Min(Min(x, y, z), w);}
+inline Int  Max(Int  x, Int  y, Int  z, Int  w) {return Max(Max(x, y, z), w);}
+inline Long Max(Long x, Long y, Long z, Long w) {return Max(Max(x, y, z), w);}
+inline Flt  Max(Flt  x, Flt  y, Flt  z, Flt  w) {return Max(Max(x, y, z), w);}
+inline Dbl  Max(Dbl  x, Dbl  y, Dbl  z, Dbl  w) {return Max(Max(x, y, z), w);}
+
+inline Int  Min(Int  x, Int  y, Int  z, Int  w, Int  u) {return Min(Min(x, y, z, w), u);}
+inline Long Min(Long x, Long y, Long z, Long w, Long u) {return Min(Min(x, y, z, w), u);}
+inline Flt  Min(Flt  x, Flt  y, Flt  z, Flt  w, Flt  u) {return Min(Min(x, y, z, w), u);}
+inline Dbl  Min(Dbl  x, Dbl  y, Dbl  z, Dbl  w, Dbl  u) {return Min(Min(x, y, z, w), u);}
+inline Int  Max(Int  x, Int  y, Int  z, Int  w, Int  u) {return Max(Max(x, y, z, w), u);}
+inline Long Max(Long x, Long y, Long z, Long w, Long u) {return Max(Max(x, y, z, w), u);}
+inline Flt  Max(Flt  x, Flt  y, Flt  z, Flt  w, Flt  u) {return Max(Max(x, y, z, w), u);}
+inline Dbl  Max(Dbl  x, Dbl  y, Dbl  z, Dbl  w, Dbl  u) {return Max(Max(x, y, z, w), u);}
 
 // minimize/maximize value
 T2(TA, TB) inline TA& MIN(TA &x, TB y) {if(y<x)x=y; return x;} // equal to: x=Min(x, y)
@@ -183,31 +222,52 @@ Int MinI(Dbl x, Dbl y, Dbl z, Dbl w);
 Int MaxI(Int x, Int y, Int z, Int w);
 Int MaxI(Flt x, Flt y, Flt z, Flt w);
 Int MaxI(Dbl x, Dbl y, Dbl z, Dbl w);
+Int MinI(Int x, Int y, Int z, Int w, Int u);
+Int MinI(Flt x, Flt y, Flt z, Flt w, Flt u);
+Int MinI(Dbl x, Dbl y, Dbl z, Dbl w, Dbl u);
+Int MaxI(Int x, Int y, Int z, Int w, Int u);
+Int MaxI(Flt x, Flt y, Flt z, Flt w, Flt u);
+Int MaxI(Dbl x, Dbl y, Dbl z, Dbl w, Dbl u);
 
 // get average value
-inline Int   AvgI(Int   x, Int   y                ) {return DivRound(x+y    , 2   )      ;}
-inline UInt  AvgI(UInt  x, UInt  y                ) {return DivRound(x+y    , 2u  )      ;}
-inline Long  AvgI(Long  x, Long  y                ) {return DivRound(x+y    , 2ll )      ;}
-inline ULong AvgI(ULong x, ULong y                ) {return DivRound(x+y    , 2ull)      ;}
-inline Flt   AvgF(Int   x, Int   y                ) {return         (x+y          )*0.5f ;}
-inline Flt   Avg (Int   x, Int   y                ) {return         (x+y          )*0.5f ;}
-inline Flt   Avg (Int   x, Flt   y                ) {return         (x+y          )*0.5f ;}
-inline Flt   Avg (Flt   x, Int   y                ) {return         (x+y          )*0.5f ;}
-inline Flt   Avg (Flt   x, Flt   y                ) {return         (x+y          )*0.5f ;}
-inline Dbl   Avg (Dbl   x, Dbl   y                ) {return         (x+y          )*0.5  ;}
-inline Int   AvgI(Int   x, Int   y, Int  z        ) {return DivRound(x+y+z  , 3   )      ;}
-inline Byte  AvgI(Byte  x, Byte  y, Byte z        ) {return DivRound(UInt(x+y+z)  , 3u)  ;}
-inline UInt  AvgI(UInt  x, UInt  y, UInt z        ) {return DivRound(x+y+z  , 3u  )      ;}
-inline Flt   AvgF(Int   x, Int   y, Int  z        ) {return         (x+y+z        )/3.0f ;}
-inline Flt   Avg (Int   x, Int   y, Int  z        ) {return         (x+y+z        )/3.0f ;}
-inline Flt   Avg (Flt   x, Flt   y, Flt  z        ) {return         (x+y+z        )/3.0f ;}
-inline Dbl   Avg (Dbl   x, Dbl   y, Dbl  z        ) {return         (x+y+z        )/3.0  ;}
-inline Int   AvgI(Int   x, Int   y, Int  z, Int  w) {return DivRound(x+y+z+w, 4   )      ;}
-inline UInt  AvgI(UInt  x, UInt  y, UInt z, UInt w) {return DivRound(x+y+z+w, 4u  )      ;}
-inline Flt   AvgF(Int   x, Int   y, Int  z, Int  w) {return         (x+y+z+w      )*0.25f;}
-inline Flt   Avg (Int   x, Int   y, Int  z, Int  w) {return         (x+y+z+w      )*0.25f;}
-inline Flt   Avg (Flt   x, Flt   y, Flt  z, Flt  w) {return         (x+y+z+w      )*0.25f;}
-inline Dbl   Avg (Dbl   x, Dbl   y, Dbl  z, Dbl  w) {return         (x+y+z+w      )*0.25 ;}
+inline Int   AvgI(Int   x, Int   y) {return DivRound(x+y, 2   )     ;}
+inline UInt  AvgI(UInt  x, UInt  y) {return DivRound(x+y, 2u  )     ;}
+inline Long  AvgI(Long  x, Long  y) {return DivRound(x+y, 2ll )     ;}
+inline ULong AvgI(ULong x, ULong y) {return DivRound(x+y, 2ull)     ;}
+inline Flt   Avg (Int   x, Int   y) {return         (x+y      )*0.5f;}
+inline Flt   Avg (Int   x, Flt   y) {return         (x+y      )*0.5f;}
+inline Flt   Avg (Flt   x, Int   y) {return         (x+y      )*0.5f;}
+inline Flt   Avg (Flt   x, Flt   y) {return         (x+y      )*0.5f;}
+inline Dbl   Avg (Dbl   x, Dbl   y) {return         (x+y      )*0.5 ;}
+
+inline Int   AvgI(Int   x, Int   y, Int  z) {return DivRound(     x+y+z , 3 )     ;}
+inline Byte  AvgI(Byte  x, Byte  y, Byte z) {return DivRound(UInt(x+y+z), 3u)     ;}
+inline UInt  AvgI(UInt  x, UInt  y, UInt z) {return DivRound(     x+y+z , 3u)     ;}
+inline Flt   Avg (Int   x, Int   y, Int  z) {return         (     x+y+z     )/3.0f;}
+inline Flt   Avg (Flt   x, Flt   y, Flt  z) {return         (     x+y+z     )/3.0f;}
+inline Dbl   Avg (Dbl   x, Dbl   y, Dbl  z) {return         (     x+y+z     )/3.0 ;}
+
+inline Int   AvgI(Int   x, Int   y, Int  z, Int  w) {return DivRound(x+y+z+w, 4 )      ;}
+inline UInt  AvgI(UInt  x, UInt  y, UInt z, UInt w) {return DivRound(x+y+z+w, 4u)      ;}
+inline Flt   Avg (Int   x, Int   y, Int  z, Int  w) {return         (x+y+z+w    )*0.25f;}
+inline Flt   Avg (Flt   x, Flt   y, Flt  z, Flt  w) {return         (x+y+z+w    )*0.25f;}
+inline Dbl   Avg (Dbl   x, Dbl   y, Dbl  z, Dbl  w) {return         (x+y+z+w    )*0.25 ;}
+
+inline Int   AvgI(Int   x, Int   y, Int  z, Int  w, Int  u) {return DivRound(x+y+z+w+u, 5 )     ;}
+inline UInt  AvgI(UInt  x, UInt  y, UInt z, UInt w, UInt u) {return DivRound(x+y+z+w+u, 5u)     ;}
+inline Flt   Avg (Int   x, Int   y, Int  z, Int  w, Int  u) {return         (x+y+z+w+u    )*0.2f;} // /5.0f
+inline Flt   Avg (Flt   x, Flt   y, Flt  z, Flt  w, Flt  u) {return         (x+y+z+w+u    )*0.2f;} // /5.0f
+inline Dbl   Avg (Dbl   x, Dbl   y, Dbl  z, Dbl  w, Dbl  u) {return         (x+y+z+w+u    )*0.2 ;} // /5.0
+/******************************************************************************/
+// ROOT
+/******************************************************************************/
+inline Flt SqrtFast(Int x) {return sqrtf((Flt)x);} // square root, returns NaN for negative values
+inline Flt SqrtFast(Flt x) {return sqrtf(     x);} // square root, returns NaN for negative values
+inline Dbl SqrtFast(Dbl x) {return sqrt (     x);} // square root, returns NaN for negative values
+
+inline Flt Cbrt(Int x) {return cbrtf((Flt)x);} // cube root, works ok for negative values
+inline Flt Cbrt(Flt x) {return cbrtf(     x);} // cube root, works ok for negative values
+inline Dbl Cbrt(Dbl x) {return cbrt (     x);} // cube root, works ok for negative values
 /******************************************************************************/
 // TESTING
 /******************************************************************************/
@@ -217,10 +277,11 @@ inline Bool Any(C Half &x, C Half &y                      ); // faster version o
 inline Bool Any(C Half &x, C Half &y, C Half &z           ); // faster version of "x!=0 || y!=0 || z!=0"
 inline Bool Any(C Half &x, C Half &y, C Half &z, C Half &w); // faster version of "x!=0 || y!=0 || z!=0 || w!=0"
 
-inline Bool Any(C Flt &x                              ); // faster version of "x!=0"
-inline Bool Any(C Flt &x, C Flt &y                    ); // faster version of "x!=0 || y!=0"
-inline Bool Any(C Flt &x, C Flt &y, C Flt &z          ); // faster version of "x!=0 || y!=0 || z!=0"
-inline Bool Any(C Flt &x, C Flt &y, C Flt &z, C Flt &w); // faster version of "x!=0 || y!=0 || z!=0 || w!=0"
+inline Bool Any(C Flt &x                                        ); // faster version of "x!=0"
+inline Bool Any(C Flt &x, C Flt &y                              ); // faster version of "x!=0 || y!=0"
+inline Bool Any(C Flt &x, C Flt &y, C Flt &z                    ); // faster version of "x!=0 || y!=0 || z!=0"
+inline Bool Any(C Flt &x, C Flt &y, C Flt &z, C Flt &w          ); // faster version of "x!=0 || y!=0 || z!=0 || w!=0"
+inline Bool Any(C Flt &x, C Flt &y, C Flt &z, C Flt &w, C Flt &u); // faster version of "x!=0 || y!=0 || z!=0 || w!=0 || u!=0"
 
 inline Bool Any(C Dbl &x                              ); // faster version of "x!=0"
 inline Bool Any(C Dbl &x, C Dbl &y                    ); // faster version of "x!=0 || y!=0"
@@ -235,6 +296,19 @@ inline void CHS(Int   &x) {x=-x;}
 inline void CHS(Long  &x) {x=-x;}
 inline void CHS(Flt   &x) {((U32&) x)   ^=SIGN_BIT;} // works as "x=-x;" but faster
 inline void CHS(Dbl   &x) {((U32*)&x)[1]^=SIGN_BIT;} // works as "x=-x;" but faster
+#if EE_PRIVATE
+INLINE Bool NegativeSB(Flt  x) {return FlagOn     ((UInt&)x, SIGN_BIT);}
+INLINE void      CHSSB(Flt &x) {       FlagToggle ((UInt&)x, SIGN_BIT);}
+INLINE void      ABSSB(Flt &x) {       FlagDisable((UInt&)x, SIGN_BIT);}
+
+inline Flt Xor(Flt a, UInt b) {((U32&) a)   ^=b; return a;} // used for fast changing of the 'a' sign, 'b' should be either 0 or SIGN_BIT
+inline Dbl Xor(Dbl a, UInt b) {((U32*)&a)[1]^=b; return a;} // used for fast changing of the 'a' sign, 'b' should be either 0 or SIGN_BIT
+
+void DecRealByBit(Flt &r); // decrement real value by just 1 bit
+void DecRealByBit(Dbl &r); // decrement real value by just 1 bit
+void IncRealByBit(Flt &r); // increment real value by just 1 bit
+void IncRealByBit(Dbl &r); // increment real value by just 1 bit
+#endif
 /******************************************************************************/
 // 16-BIT FLOAT
 /******************************************************************************/
@@ -262,7 +336,40 @@ typedef struct Half
    Bool operator==(Half h)C {return data  ==h.data;}
    Bool operator!=(Half h)C {return data  !=h.data;}
 }F16;
+extern const Half HalfZero, HalfOne;
 inline Int Compare(C Half &a, C Half &b) {if(a<b)return -1; if(a>b)return +1; return 0;} // compare 'a' 'b' values and return -1, 0, +1
+/******************************************************************************/
+struct SSN // Signed Short Normalized 16-bit -32767..32767 -> -1..1
+{
+   I16 data;
+
+   SSN() {}
+   SSN(Flt f);       // create  from float
+   operator Flt ()C; // convert to   float
+   operator Half()C; // convert to   half
+
+   SSN& operator+=(Flt f) {T=Flt(T)+f; return T;}
+   SSN& operator-=(Flt f) {T=Flt(T)-f; return T;}
+   SSN& operator*=(Flt f) {T=Flt(T)*f; return T;}
+   SSN& operator/=(Flt f) {T=Flt(T)/f; return T;}
+};extern
+   const SSN SSNZero;
+
+struct USN // Unsigned Short Normalized 16-bit 0..65535 -> 0..1
+{
+   U16 data;
+
+   USN() {}
+   USN(Flt f);       // create  from float
+   operator Flt ()C; // convert to   float
+   operator Half()C; // convert to   half
+
+   USN& operator+=(Flt f) {T=Flt(T)+f; return T;}
+   USN& operator-=(Flt f) {T=Flt(T)-f; return T;}
+   USN& operator*=(Flt f) {T=Flt(T)*f; return T;}
+   USN& operator/=(Flt f) {T=Flt(T)/f; return T;}
+};extern
+   const USN USNZero;
 /******************************************************************************/
 // VECTORS
 /******************************************************************************/
@@ -352,46 +459,52 @@ struct Vec2 // Vector 2D
    Vec _0xy()C;                     // return as Vec (0, x, y)
    Vec _0yx()C;                     // return as Vec (0, y, x)
 
-   Bool      any          (                )C {return Any (x, y);}   // if any component  is  non-zero
-   Bool      all          (                )C {return   x &&  y ;}   // if all components are non-zero
-   Bool      allZero      (                )C {return  !x && !y ;}   // if all components are     zero
-   Bool      anyDifferent (                )C {return      x!=y ;}   // if any component  is different
-   Int       minI         (                )C {return MinI(x, y);}   // components minimum index
-   Int       maxI         (                )C {return MaxI(x, y);}   // components maximum index
-   Flt       min          (                )C {return Min (x, y);}   // components minimum
-   Flt       max          (                )C {return Max (x, y);}   // components maximum
-   Flt       avg          (                )C {return Avg (x, y);}   // components average
-   Flt       sum          (                )C {return      x+ y ;}   // components sum
-   Flt       mul          (                )C {return      x* y ;}   // components multiplication
-   Flt       div          (                )C {return      x/ y ;}   // components division
-   Flt       length       (                )C;                       // get               length
-   Flt       length2      (                )C {return  x*x + y*y;}   // get       squared length
-   Vec2&  satLength       (                );                        // saturate  length (clip it to 0..1)
-   Flt    setLength       (Flt     length  );                        // set       length and return previous length
-   Vec2& clipLength       (Flt max_length  );                        // clip      length to 0..max_length range
-   Flt       normalize    (                );                        // normalize length and return previous length
-   Vec2&     mul          (C Matrix2  &m   );                        // transform by matrix
-   Vec2&     mul          (C Matrix2P &m   );                        // transform by matrix
-   Vec2&     mul          (C Matrix3  &m   );                        // transform by matrix
-   Vec2&     mul          (C Matrix   &m   );                        // transform by matrix
-   Vec2&     div          (C Matrix2  &m   );                        // transform by matrix inverse
-   Vec2&     div          (C Matrix2P &m   );                        // transform by matrix inverse
-   Vec2&     div          (C Matrix3  &m   );                        // transform by matrix inverse
-   Vec2&     div          (C Matrix   &m   );                        // transform by matrix inverse
-   Vec2&     divNormalized(C Matrix2  &m   );                        // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec2&     divNormalized(C Matrix2P &m   );                        // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec2&     divNormalized(C Matrix3  &m   );                        // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec2&     divNormalized(C Matrix   &m   );                        // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec2&     rotate       (Flt angle       );                        // rotate by angle
-   Vec2&     rotateCosSin (Flt cos, Flt sin);                        // rotate by cos and sin of angle
-   Vec2&     chs          (                );                        // change sign of all components
-   Vec2&     chsX         (                ) {CHS(x);     return T;} // change sign of X   component
-   Vec2&     chsY         (                ) {CHS(y);     return T;} // change sign of Y   component
-   Vec2&     abs          (                );                        // absolute       all components
-   Vec2&     sat          (                );                        // saturate       all components
-   Vec2&     swap         (                ) {Swap(x, y); return T;} // swap               components
+   Bool      any          (                )C {return Any (x, y);}          // if any component  is  non-zero
+   Bool      all          (                )C {return   x &&  y ;}          // if all components are non-zero
+   Bool      allZero      (                )C {return  !x && !y ;}          // if all components are     zero
+   Bool      anyDifferent (                )C {return      x!=y ;}          // if any component  is different
+   Int       minI         (                )C {return MinI(x, y);}          // components minimum index
+   Int       maxI         (                )C {return MaxI(x, y);}          // components maximum index
+   Flt       min          (                )C {return Min (x, y);}          // components minimum
+   Flt       max          (                )C {return Max (x, y);}          // components maximum
+   Flt       avg          (                )C {return Avg (x, y);}          // components average
+   Flt       sum          (                )C {return      x+ y ;}          // components sum
+   Flt       mul          (                )C {return      x* y ;}          // components multiplication
+   Flt       div          (                )C {return      x/ y ;}          // components division
+   Flt       length2      (                )C {return  x*x + y*y;}          // get       squared length
+   Flt       length       (                )C {return SqrtFast(length2());} // get               length
+   Vec2&  satLength       (                );                               // saturate  length (clip it to 0..1)
+   Flt    setLength       (Flt     length  );                               // set       length and return previous length
+   Vec2& clipLength       (Flt max_length  );                               // clip      length to 0..max_length range
+   Flt       normalize    (                );                               // normalize length and return previous length
+   Vec2&     mul          (C Matrix2  &m   );                               // transform by matrix
+   Vec2&     mul          (C Matrix2P &m   );                               // transform by matrix
+   Vec2&     mul          (C Matrix3  &m   );                               // transform by matrix
+   Vec2&     mul          (C Matrix   &m   );                               // transform by matrix
+   Vec2&     div          (C Matrix2  &m   );                               // transform by matrix inverse
+   Vec2&     div          (C Matrix2P &m   );                               // transform by matrix inverse
+   Vec2&     div          (C Matrix3  &m   );                               // transform by matrix inverse
+   Vec2&     div          (C Matrix   &m   );                               // transform by matrix inverse
+   Vec2&     divNormalized(C Matrix2  &m   );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec2&     divNormalized(C Matrix2P &m   );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec2&     divNormalized(C Matrix3  &m   );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec2&     divNormalized(C Matrix   &m   );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec2&     rotate       (Flt angle       );                               // rotate by angle
+   Vec2&     rotateCosSin (Flt cos, Flt sin);                               // rotate by cos and sin of angle
+   Vec2&     chs          (                );                               // change sign of all components
+   Vec2&     chsX         (                ) {CHS(x);     return T;}        // change sign of X   component
+   Vec2&     chsY         (                ) {CHS(y);     return T;}        // change sign of Y   component
+   Vec2&     abs          (                );                               // absolute       all components
+   Vec2&     sat          (                );                               // saturate       all components
+   Vec2&     swap         (                ) {Swap(x, y); return T;}        // swap               components
 
    Str asText(Int precision=INT_MAX)C; // return as text
+
+#if EE_PRIVATE
+   Vec2 asIso  ()C {return Vec2(x+y  , y-x  );}
+   Vec2 asIso2 ()C {return Vec2(x*2+y, y*2-x);}
+   Vec2 asIso_2()C {return Vec2(x+y*2, y-x*2);}
+#endif
 
    // draw
    void draw(C Color &color, Flt r=0.007f)C; // this can be optionally called outside of Render function
@@ -399,12 +512,14 @@ struct Vec2 // Vector 2D
               Vec2() {}
               Vec2(Flt r       ) {set(r   );}
               Vec2(Flt x, Flt y) {set(x, y);}
-   CONVERSION Vec2(C VecH2  &v);
-   CONVERSION Vec2(C VecD2  &v);
-   CONVERSION Vec2(C VecI2  &v);
-   CONVERSION Vec2(C VecB2  &v);
-   CONVERSION Vec2(C VecSB2 &v);
-   CONVERSION Vec2(C VecUS2 &v);
+   CONVERSION Vec2(C VecH2   &v);
+   CONVERSION Vec2(C VecSSN2 &v);
+   CONVERSION Vec2(C VecUSN2 &v);
+   CONVERSION Vec2(C VecD2   &v);
+   CONVERSION Vec2(C VecI2   &v);
+   CONVERSION Vec2(C VecB2   &v);
+   CONVERSION Vec2(C VecSB2  &v);
+   CONVERSION Vec2(C VecUS2  &v);
 };
 #define Vec2Zero (Vec4Zero.xy) // const Vec2(0, 0)
 /******************************************************************************/
@@ -508,36 +623,36 @@ struct VecD2 // Vector 2D (double precision)
    VecD _0xy()C;                      // return as VecD (0, x, y)
    VecD _0yx()C;                      // return as VecD (0, y, x)
 
-   Bool       any          (              )C {return   x ||  y ;}   // if any component  is  non-zero
-   Bool       all          (              )C {return   x &&  y ;}   // if all components are non-zero
-   Bool       allZero      (              )C {return  !x && !y ;}   // if all components are     zero
-   Bool       anyDifferent (              )C {return      x!=y ;}   // if any component  is different
-   Int        minI         (              )C {return MinI(x, y);}   // components minimum index
-   Int        maxI         (              )C {return MaxI(x, y);}   // components maximum index
-   Dbl        min          (              )C {return Min (x, y);}   // components minimum
-   Dbl        max          (              )C {return Max (x, y);}   // components maximum
-   Dbl        avg          (              )C {return Avg (x, y);}   // components average
-   Dbl        sum          (              )C {return      x+ y ;}   // components sum
-   Dbl        mul          (              )C {return      x* y ;}   // components multiplication
-   Dbl        div          (              )C {return      x/ y ;}   // components division
-   Dbl        length       (              )C;                       // get               length
-   Dbl        length2      (              )C {return  x*x + y*y;}   // get       squared length
-   VecD2&  satLength       (              );                        // saturate  length (clip it to 0..1)
-   Dbl     setLength       (Dbl     length);                        // set       length and return previous length
-   VecD2& clipLength       (Dbl max_length);                        // clip      length to 0..max_length range
-   Dbl        normalize    (              );                        // normalize length and return previous length
-   VecD2&     mul          (C MatrixD3 &m );                        // transform by matrix
-   VecD2&     mul          (C MatrixD  &m );                        // transform by matrix
-   VecD2&     div          (C MatrixD3 &m );                        // transform by matrix inverse
-   VecD2&     div          (C MatrixD  &m );                        // transform by matrix inverse
-   VecD2&     divNormalized(C MatrixD3 &m );                        // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   VecD2&     divNormalized(C MatrixD  &m );                        // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   VecD2&     chs          (              );                        // change sign of all components
-   VecD2&     chsX         (              ) {CHS(x);     return T;} // change sign of X   component
-   VecD2&     chsY         (              ) {CHS(y);     return T;} // change sign of Y   component
-   VecD2&     abs          (              );                        // absolute       all components
-   VecD2&     sat          (              );                        // saturate       all components
-   VecD2&     swap         (              ) {Swap(x, y); return T;} // swap               components
+   Bool       any          (              )C {return   x ||  y ;}          // if any component  is  non-zero
+   Bool       all          (              )C {return   x &&  y ;}          // if all components are non-zero
+   Bool       allZero      (              )C {return  !x && !y ;}          // if all components are     zero
+   Bool       anyDifferent (              )C {return      x!=y ;}          // if any component  is different
+   Int        minI         (              )C {return MinI(x, y);}          // components minimum index
+   Int        maxI         (              )C {return MaxI(x, y);}          // components maximum index
+   Dbl        min          (              )C {return Min (x, y);}          // components minimum
+   Dbl        max          (              )C {return Max (x, y);}          // components maximum
+   Dbl        avg          (              )C {return Avg (x, y);}          // components average
+   Dbl        sum          (              )C {return      x+ y ;}          // components sum
+   Dbl        mul          (              )C {return      x* y ;}          // components multiplication
+   Dbl        div          (              )C {return      x/ y ;}          // components division
+   Dbl        length2      (              )C {return  x*x + y*y;}          // get       squared length
+   Dbl        length       (              )C {return SqrtFast(length2());} // get               length
+   VecD2&  satLength       (              );                               // saturate  length (clip it to 0..1)
+   Dbl     setLength       (Dbl     length);                               // set       length and return previous length
+   VecD2& clipLength       (Dbl max_length);                               // clip      length to 0..max_length range
+   Dbl        normalize    (              );                               // normalize length and return previous length
+   VecD2&     mul          (C MatrixD3 &m );                               // transform by matrix
+   VecD2&     mul          (C MatrixD  &m );                               // transform by matrix
+   VecD2&     div          (C MatrixD3 &m );                               // transform by matrix inverse
+   VecD2&     div          (C MatrixD  &m );                               // transform by matrix inverse
+   VecD2&     divNormalized(C MatrixD3 &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   VecD2&     divNormalized(C MatrixD  &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   VecD2&     chs          (              );                               // change sign of all components
+   VecD2&     chsX         (              ) {CHS(x);     return T;}        // change sign of X   component
+   VecD2&     chsY         (              ) {CHS(y);     return T;}        // change sign of Y   component
+   VecD2&     abs          (              );                               // absolute       all components
+   VecD2&     sat          (              );                               // saturate       all components
+   VecD2&     swap         (              ) {Swap(x, y); return T;}        // swap               components
 
    Str asText(Int precision=INT_MAX)C; // return as text
 
@@ -598,6 +713,7 @@ struct Vec // Vector 3D
    Vec& operator/=(C Matrix   &m) {return div(m);}
    Vec& operator*=(C MatrixM  &m) {return mul(m);}
    Vec& operator/=(C MatrixM  &m) {return div(m);}
+   Vec& operator*=(C MatrixO  &m) {return mul(m);}
    Vec& operator*=(C MatrixD  &m) {return mul(m);}
    Vec& operator/=(C MatrixD  &m) {return div(m);}
    Vec& operator&=(C Box      &b) ; // intersect
@@ -655,63 +771,91 @@ struct Vec // Vector 3D
    Vec  x0z()C {return Vec (x, 0, z);} // return as Vec (x, 0, z)
    Vec  xy0()C {return Vec (x, y, 0);} // return as Vec (x, y, 0)
 
-   Bool     any          (              )C {return  Any (x, y, z);}  // if any component  is  non-zero
-   Bool     all          (              )C {return  x &&  y &&  z;}  // if all components are non-zero
-   Bool     allZero      (              )C {return !x && !y && !z;}  // if all components are     zero
-   Bool     anyDifferent (              )C {return   x!=y || x!=z;}  // if any component  is different
-   Int      minI         (              )C {return  MinI(x, y, z);}  // components minimum index
-   Int      maxI         (              )C {return  MaxI(x, y, z);}  // components maximum index
-   Flt      min          (              )C {return  Min (x, y, z);}  // components minimum
-   Flt      max          (              )C {return  Max (x, y, z);}  // components maximum
-   Flt      avg          (              )C {return  Avg (x, y, z);}  // components average
-   Flt      sum          (              )C {return       x+ y+ z ;}  // components sum
-   Flt      mul          (              )C {return       x* y* z ;}  // components multiplication
-   Flt      length       (              )C;                          // get               length
-   Flt      length2      (              )C {return x*x + y*y + z*z;} // get       squared length
-   Vec&  satLength       (              );                           // saturate  length (clip it to 0..1)
-   Flt   setLength       (Flt     length);                           // set       length and return previous length
-   Vec& clipLength       (Flt max_length);                           // clip      length to 0..max_length range
-   Flt      normalize    (              );                           // normalize length and return previous length
-   Vec&     mul          (C Orient   &o );                           // transform by orientation
-   Vec&     mul          (C OrientD  &o );                           // transform by orientation
-   Vec&     mul          (C OrientP  &o );                           // transform by orientation
-   Vec&     mul          (C OrientM  &o );                           // transform by orientation
-   Vec&     mul          (C Matrix3  &m );                           // transform by matrix
-   Vec&     mul          (C MatrixD3 &m );                           // transform by matrix
-   Vec&     mul          (C Matrix   &m );                           // transform by matrix
-   Vec&     mul          (C MatrixM  &m );                           // transform by matrix
-   Vec&     mul          (C MatrixD  &m );                           // transform by matrix
-   Vec&     div          (C Matrix3  &m );                           // transform by matrix inverse
-   Vec&     div          (C MatrixD3 &m );                           // transform by matrix inverse
-   Vec&     div          (C Matrix   &m );                           // transform by matrix inverse
-   Vec&     div          (C MatrixM  &m );                           // transform by matrix inverse
-   Vec&     div          (C MatrixD  &m );                           // transform by matrix inverse
-   Vec&     divNormalized(C Matrix3  &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec&     divNormalized(C MatrixD3 &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec&     divNormalized(C Matrix   &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec&     divNormalized(C MatrixM  &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec&     divNormalized(C MatrixD  &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   Vec&     rotateX      (Flt angle     );                           // rotate along X axis by angle
-   Vec&     rotateY      (Flt angle     );                           // rotate along Y axis by angle
-   Vec&     rotateZ      (Flt angle     );                           // rotate along Z axis by angle
-   Vec&     chs          (              );                           // change sign of all components
-   Vec&     chsX         (              ) {CHS(x); return T;}        // change sign of X   component
-   Vec&     chsY         (              ) {CHS(y); return T;}        // change sign of Y   component
-   Vec&     chsZ         (              ) {CHS(z); return T;}        // change sign of Z   component
-   Vec&     abs          (              );                           // absolute       all components
-   Vec&     sat          (              );                           // saturate       all components
-   Vec&     swapYZ       (              ) {Swap(y, z); return T;}    // swap       Y and Z components
+   Bool     any          (              )C {return  Any (x, y, z);}      // if any component  is  non-zero
+   Bool     all          (              )C {return  x &&  y &&  z;}      // if all components are non-zero
+   Bool     allZero      (              )C {return !x && !y && !z;}      // if all components are     zero
+   Bool     anyDifferent (              )C {return   x!=y || x!=z;}      // if any component  is different
+   Int      minI         (              )C {return  MinI(x, y, z);}      // components minimum index
+   Int      maxI         (              )C {return  MaxI(x, y, z);}      // components maximum index
+   Flt      min          (              )C {return  Min (x, y, z);}      // components minimum
+   Flt      max          (              )C {return  Max (x, y, z);}      // components maximum
+   Flt      avg          (              )C {return  Avg (x, y, z);}      // components average
+   Flt      sum          (              )C {return       x+ y+ z ;}      // components sum
+   Flt      mul          (              )C {return       x* y* z ;}      // components multiplication
+   Flt      length2      (              )C {return x*x + y*y + z*z;}     // get       squared length
+   Flt      length       (              )C {return SqrtFast(length2());} // get               length
+   Vec&  satLength       (              );                               // saturate  length (clip it to 0..1)
+   Flt   setLength       (Flt     length);                               // set       length and return previous length
+   Vec& clipLength       (Flt max_length);                               // clip      length to 0..max_length range
+   Flt      normalize    (              );                               // normalize length and return previous length
+   Bool     normalizeEps (              );                               // normalize length only if current length >EPS, otherwise fail
+   Vec&     mul          (C Orient   &o );                               // transform by orientation
+   Vec&     mul          (C OrientD  &o );                               // transform by orientation
+   Vec&     mul          (C OrientP  &o );                               // transform by orientation
+   Vec&     mul          (C OrientM  &o );                               // transform by orientation
+   Vec&     mul          (C Matrix3  &m );                               // transform by matrix
+   Vec&     mul          (C MatrixD3 &m );                               // transform by matrix
+   Vec&     mul          (C Matrix   &m );                               // transform by matrix
+   Vec&     mul          (C MatrixM  &m );                               // transform by matrix
+   Vec&     mul          (C MatrixO  &m );                               // transform by matrix
+   Vec&     mul          (C MatrixD  &m );                               // transform by matrix
+   Vec&     div          (C Matrix3  &m );                               // transform by matrix inverse
+   Vec&     div          (C MatrixD3 &m );                               // transform by matrix inverse
+   Vec&     div          (C Matrix   &m );                               // transform by matrix inverse
+   Vec&     div          (C MatrixM  &m );                               // transform by matrix inverse
+   Vec&     div          (C MatrixD  &m );                               // transform by matrix inverse
+   Vec&     divNormalized(C Matrix3  &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec&     divNormalized(C MatrixD3 &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec&     divNormalized(C Matrix   &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec&     divNormalized(C MatrixM  &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec&     divNormalized(C MatrixD  &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   Vec&     divNormalized(C Orient   &o );                               // transform by orient inverse, this method is faster than 'div' however 'o' must be normalized
+   Vec&     divNormalized(C OrientD  &o );                               // transform by orient inverse, this method is faster than 'div' however 'o' must be normalized
+   Vec&     divNormalized(C OrientP  &o );                               // transform by orient inverse, this method is faster than 'div' however 'o' must be normalized
+   Vec&     divNormalized(C OrientM  &o );                               // transform by orient inverse, this method is faster than 'div' however 'o' must be normalized
+   Vec&     rotateX      (Flt angle     );                               // rotate along X axis by angle
+   Vec&     rotateY      (Flt angle     );                               // rotate along Y axis by angle
+   Vec&     rotateZ      (Flt angle     );                               // rotate along Z axis by angle
+   Vec&     chs          (              );                               // change sign of all components
+   Vec&     chsX         (              ) {CHS(x); return T;}            // change sign of X   component
+   Vec&     chsY         (              ) {CHS(y); return T;}            // change sign of Y   component
+   Vec&     chsZ         (              ) {CHS(z); return T;}            // change sign of Z   component
+   Vec&     abs          (              );                               // absolute       all components
+   Vec&     sat          (              );                               // saturate       all components
+   Vec&     swapYZ       (              ) {Swap(y, z); return T;}        // swap       Y and Z components
 
-   Vec& fromDiv          (C Vec  &v, C Matrix3  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C Vec  &v, C MatrixD3 &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C Vec  &v, C Matrix   &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C Vec  &v, C MatrixM  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C Vec  &v, C MatrixD  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C VecD &v, C Matrix3  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C VecD &v, C MatrixD3 &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C VecD &v, C Matrix   &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C VecD &v, C MatrixM  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
-   Vec& fromDiv          (C VecD &v, C MatrixD  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromMul(C Vec  &v, C Orient   &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   Vec& fromMul(C Vec  &v, C OrientD  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   Vec& fromMul(C Vec  &v, C OrientP  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   Vec& fromMul(C Vec  &v, C OrientM  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   Vec& fromMul(C Vec  &v, C Matrix3  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C Vec  &v, C MatrixD3 &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C Vec  &v, C Matrix   &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C Vec  &v, C MatrixM  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C Vec  &v, C MatrixO  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C Vec  &v, C MatrixD  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C VecD &v, C Orient   &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   Vec& fromMul(C VecD &v, C OrientD  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   Vec& fromMul(C VecD &v, C OrientP  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   Vec& fromMul(C VecD &v, C OrientM  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   Vec& fromMul(C VecD &v, C Matrix3  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C VecD &v, C MatrixD3 &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C VecD &v, C Matrix   &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C VecD &v, C MatrixM  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C VecD &v, C MatrixO  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   Vec& fromMul(C VecD &v, C MatrixD  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+
+   Vec& fromDiv(C Vec  &v, C Matrix3  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C Vec  &v, C MatrixD3 &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C Vec  &v, C Matrix   &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C Vec  &v, C MatrixM  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C Vec  &v, C MatrixD  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C VecD &v, C Matrix3  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C VecD &v, C MatrixD3 &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C VecD &v, C Matrix   &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C VecD &v, C MatrixM  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+   Vec& fromDiv(C VecD &v, C MatrixD  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix
+
    Vec& fromDivNormalized(C Vec  &v, C Matrix3  &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix     , this method is faster than 'div' however 'm' must be normalized
    Vec& fromDivNormalized(C Vec  &v, C MatrixD3 &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix     , this method is faster than 'div' however 'm' must be normalized
    Vec& fromDivNormalized(C Vec  &v, C Matrix   &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix     , this method is faster than 'div' however 'm' must be normalized
@@ -727,6 +871,10 @@ struct Vec // Vector 3D
    Vec& fromDivNormalized(C Vec  &v, C OrientP  &o); // set as "v/o", 'v' vector transformed by inverse of 'o' orientation, this method is faster than 'div' however 'o' must be normalized
    Vec& fromDivNormalized(C Vec  &v, C OrientM  &o); // set as "v/o", 'v' vector transformed by inverse of 'o' orientation, this method is faster than 'div' however 'o' must be normalized
 
+#if EE_PRIVATE
+   void rightToLeft(); // convert from right hand to left hand coordinate system
+#endif
+
    Str asText(Int precision=INT_MAX)C; // return as text
 
    // draw
@@ -737,11 +885,12 @@ struct Vec // Vector 3D
               Vec(Flt r              ) {set(r      );}
               Vec(Flt x, Flt y, Flt z) {set(x, y, z);}
               Vec(C Vec2  &xy , Flt z) {set(xy  , z);}
-   CONVERSION Vec(C VecH  &v);
-   CONVERSION Vec(C VecD  &v);
-   CONVERSION Vec(C VecI  &v);
-   CONVERSION Vec(C VecB  &v);
-   CONVERSION Vec(C VecSB &v);
+   CONVERSION Vec(C VecH   &v);
+   CONVERSION Vec(C VecSSN &v);
+   CONVERSION Vec(C VecD   &v);
+   CONVERSION Vec(C VecI   &v);
+   CONVERSION Vec(C VecB   &v);
+   CONVERSION Vec(C VecSB  &v);
 };extern const Vec
    VecDir[DIR_NUM], // vector[DIR_ENUM] array
    VecOne         ; // Vec(1, 1, 1)
@@ -785,6 +934,7 @@ struct VecD // Vector 3D (double precision)
    VecD& operator/=(C Matrix   &m) {return div(m);}
    VecD& operator*=(C MatrixM  &m) {return mul(m);}
    VecD& operator/=(C MatrixM  &m) {return div(m);}
+   VecD& operator*=(C MatrixO  &m) {return mul(m);}
    VecD& operator*=(C MatrixD  &m) {return mul(m);}
    VecD& operator/=(C MatrixD  &m) {return div(m);}
    Bool  operator==(C VecD     &v)C;
@@ -854,6 +1004,7 @@ struct VecD // Vector 3D (double precision)
    friend VecD operator* (C VecD &v, C MatrixD3 &m) {return VecD(v)*=m;}
    friend VecD operator* (C VecD &v, C Matrix   &m) {return VecD(v)*=m;}
    friend VecD operator* (C VecD &v, C MatrixM  &m) {return VecD(v)*=m;}
+   friend VecD operator* (C VecD &v, C MatrixO  &m) {return VecD(v)*=m;}
    friend VecD operator* (C VecD &v, C MatrixD  &m) {return VecD(v)*=m;}
    friend VecD operator/ (C VecD &v, C Matrix3  &m) {return VecD(v)/=m;}
    friend VecD operator/ (C VecD &v, C MatrixD3 &m) {return VecD(v)/=m;}
@@ -870,49 +1021,74 @@ struct VecD // Vector 3D (double precision)
    VecD2 zx()C {return VecD2(z, x);} // return as VecD2(z, x)
    VecD2 zy()C {return VecD2(z, y);} // return as VecD2(z, y)
 
-   Bool      any          (              )C {return  x ||  y ||  z;}  // if any component  is  non-zero
-   Bool      all          (              )C {return  x &&  y &&  z;}  // if all components are non-zero
-   Bool      allZero      (              )C {return !x && !y && !z;}  // if all components are     zero
-   Bool      anyDifferent (              )C {return   x!=y || x!=z;}  // if any component  is different
-   Int       minI         (              )C {return  MinI(x, y, z);}  // components minimum index
-   Int       maxI         (              )C {return  MaxI(x, y, z);}  // components maximum index
-   Dbl       min          (              )C {return  Min (x, y, z);}  // components minimum
-   Dbl       max          (              )C {return  Max (x, y, z);}  // components maximum
-   Dbl       avg          (              )C {return  Avg (x, y, z);}  // components average
-   Dbl       sum          (              )C {return       x+ y+ z ;}  // components sum
-   Dbl       mul          (              )C {return       x* y* z ;}  // components multiplication
-   Dbl       length       (              )C;                          // get               length
-   Dbl       length2      (              )C {return x*x + y*y + z*z;} // get       squared length
-   VecD&  satLength       (              );                           // saturate  length (clip it to 0..1)
-   Dbl    setLength       (Dbl     length);                           // set       length and return previous length
-   VecD& clipLength       (Dbl max_length);                           // clip      length to 0..max_length range
-   Dbl       normalize    (              );                           // normalize length and return previous length
-   VecD&     mul          (C Orient   &o );                           // transform by orientation
-   VecD&     mul          (C OrientD  &o );                           // transform by orientation
-   VecD&     mul          (C OrientP  &o );                           // transform by orientation
-   VecD&     mul          (C OrientM  &o );                           // transform by orientation
-   VecD&     mul          (C Matrix3  &m );                           // transform by matrix
-   VecD&     mul          (C MatrixD3 &m );                           // transform by matrix
-   VecD&     mul          (C Matrix   &m );                           // transform by matrix
-   VecD&     mul          (C MatrixM  &m );                           // transform by matrix
-   VecD&     mul          (C MatrixD  &m );                           // transform by matrix
-   VecD&     div          (C Matrix3  &m );                           // transform by matrix inverse
-   VecD&     div          (C MatrixD3 &m );                           // transform by matrix inverse
-   VecD&     div          (C Matrix   &m );                           // transform by matrix inverse
-   VecD&     div          (C MatrixM  &m );                           // transform by matrix inverse
-   VecD&     div          (C MatrixD  &m );                           // transform by matrix inverse
-   VecD&     divNormalized(C Matrix3  &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   VecD&     divNormalized(C MatrixD3 &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   VecD&     divNormalized(C Matrix   &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   VecD&     divNormalized(C MatrixM  &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   VecD&     divNormalized(C MatrixD  &m );                           // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
-   VecD&     chs          (              );                           // change sign of all components
-   VecD&     chsX         (              ) {CHS(x); return T;}        // change sign of X   component
-   VecD&     chsY         (              ) {CHS(y); return T;}        // change sign of Y   component
-   VecD&     chsZ         (              ) {CHS(z); return T;}        // change sign of Z   component
-   VecD&     abs          (              );                           // absolute       all components
-   VecD&     sat          (              );                           // saturate       all components
-   VecD&     swapYZ       (              ) {Swap(y, z); return T;}    // swap       Y and Z components
+   Bool      any          (              )C {return  x ||  y ||  z;}      // if any component  is  non-zero
+   Bool      all          (              )C {return  x &&  y &&  z;}      // if all components are non-zero
+   Bool      allZero      (              )C {return !x && !y && !z;}      // if all components are     zero
+   Bool      anyDifferent (              )C {return   x!=y || x!=z;}      // if any component  is different
+   Int       minI         (              )C {return  MinI(x, y, z);}      // components minimum index
+   Int       maxI         (              )C {return  MaxI(x, y, z);}      // components maximum index
+   Dbl       min          (              )C {return  Min (x, y, z);}      // components minimum
+   Dbl       max          (              )C {return  Max (x, y, z);}      // components maximum
+   Dbl       avg          (              )C {return  Avg (x, y, z);}      // components average
+   Dbl       sum          (              )C {return       x+ y+ z ;}      // components sum
+   Dbl       mul          (              )C {return       x* y* z ;}      // components multiplication
+   Dbl       length2      (              )C {return x*x + y*y + z*z;}     // get       squared length
+   Dbl       length       (              )C {return SqrtFast(length2());} // get               length
+   VecD&  satLength       (              );                               // saturate  length (clip it to 0..1)
+   Dbl    setLength       (Dbl     length);                               // set       length and return previous length
+   VecD& clipLength       (Dbl max_length);                               // clip      length to 0..max_length range
+   Dbl       normalize    (              );                               // normalize length and return previous length
+   Bool      normalizeEps (              );                               // normalize length only if current length >EPSD, otherwise fail
+   VecD&     mul          (C Orient   &o );                               // transform by orientation
+   VecD&     mul          (C OrientD  &o );                               // transform by orientation
+   VecD&     mul          (C OrientP  &o );                               // transform by orientation
+   VecD&     mul          (C OrientM  &o );                               // transform by orientation
+   VecD&     mul          (C Matrix3  &m );                               // transform by matrix
+   VecD&     mul          (C MatrixD3 &m );                               // transform by matrix
+   VecD&     mul          (C Matrix   &m );                               // transform by matrix
+   VecD&     mul          (C MatrixM  &m );                               // transform by matrix
+   VecD&     mul          (C MatrixO  &m );                               // transform by matrix
+   VecD&     mul          (C MatrixD  &m );                               // transform by matrix
+   VecD&     div          (C Matrix3  &m );                               // transform by matrix inverse
+   VecD&     div          (C MatrixD3 &m );                               // transform by matrix inverse
+   VecD&     div          (C Matrix   &m );                               // transform by matrix inverse
+   VecD&     div          (C MatrixM  &m );                               // transform by matrix inverse
+   VecD&     div          (C MatrixD  &m );                               // transform by matrix inverse
+   VecD&     divNormalized(C Matrix3  &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   VecD&     divNormalized(C MatrixD3 &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   VecD&     divNormalized(C Matrix   &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   VecD&     divNormalized(C MatrixM  &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   VecD&     divNormalized(C MatrixD  &m );                               // transform by matrix inverse, this method is faster than 'div' however 'm' must be normalized
+   VecD&     chs          (              );                               // change sign of all components
+   VecD&     chsX         (              ) {CHS(x); return T;}            // change sign of X   component
+   VecD&     chsY         (              ) {CHS(y); return T;}            // change sign of Y   component
+   VecD&     chsZ         (              ) {CHS(z); return T;}            // change sign of Z   component
+   VecD&     abs          (              );                               // absolute       all components
+   VecD&     sat          (              );                               // saturate       all components
+   VecD&     swapYZ       (              ) {Swap(y, z); return T;}        // swap       Y and Z components
+
+   VecD& fromMul(C Vec  &v, C Orient   &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   VecD& fromMul(C Vec  &v, C OrientD  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   VecD& fromMul(C Vec  &v, C OrientP  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   VecD& fromMul(C Vec  &v, C OrientM  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   VecD& fromMul(C Vec  &v, C Matrix3  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C Vec  &v, C MatrixD3 &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C Vec  &v, C Matrix   &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C Vec  &v, C MatrixM  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C Vec  &v, C MatrixO  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C Vec  &v, C MatrixD  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C VecD &v, C Orient   &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   VecD& fromMul(C VecD &v, C OrientD  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   VecD& fromMul(C VecD &v, C OrientP  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   VecD& fromMul(C VecD &v, C OrientM  &o); // set as "v*m", 'v' vector transformed by 'o' orientation
+   VecD& fromMul(C VecD &v, C Matrix3  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C VecD &v, C MatrixD3 &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C VecD &v, C Matrix   &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C VecD &v, C MatrixM  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C VecD &v, C MatrixO  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+   VecD& fromMul(C VecD &v, C MatrixD  &m); // set as "v*m", 'v' vector transformed by 'm' matrix
+
+   VecD& fromDivNormalized(C VecD &v, C MatrixM &m); // set as "v/m", 'v' vector transformed by inverse of 'm' matrix, this method is faster than 'div' however 'm' must be normalized
 
    Str asText(Int precision=INT_MAX)C; // return as text
 
@@ -1012,8 +1188,8 @@ struct Vec4 // Vector 4D
    Flt   avg         ()C {return     Avg (x, y, z, w);}  // components average
    Flt   sum         ()C {return          x+ y+ z+ w ;}  // components sum
    Flt   mul         ()C {return          x* y* z* w ;}  // components multiplication
-   Flt   length      ()C;                                // get         length
    Flt   length2     ()C {return x*x + y*y + z*z + w*w;} // get squared length
+   Flt   length      ()C {return SqrtFast(length2());}   // get         length
    Flt   normalize   ();                                 // normalize and return previous length
    Vec4& mul         (C Matrix4 &m);                     // transform by matrix
    Vec4& chs         ();                                 // change sign of all components
@@ -1027,16 +1203,18 @@ struct Vec4 // Vector 4D
    Str asText(Int precision=INT_MAX)C; // return as text
 
               Vec4() {}
-              Vec4(Flt r                      ) {set(r         );}
-              Vec4(Flt x, Flt y , Flt z, Flt w) {set(x, y, z, w);}
-              Vec4(C Vec2   &xy , Flt z, Flt w) {set(xy ,  z, w);}
-              Vec4(C Vec    &xyz,        Flt w) {set(xyz,     w);}
-              Vec4(C Vec2   &xy , C Vec2 &zw  ) {set(xy ,    zw);}
-   CONVERSION Vec4(C VecH4  &v);
-   CONVERSION Vec4(C VecD4  &v);
-   CONVERSION Vec4(C VecI4  &v);
-   CONVERSION Vec4(C VecB4  &v);
-   CONVERSION Vec4(C VecSB4 &v);
+              Vec4(Flt r                       ) {set(r         );}
+              Vec4(Flt x, Flt y  , Flt z, Flt w) {set(x, y, z, w);}
+              Vec4(C Vec2    &xy , Flt z, Flt w) {set(xy ,  z, w);}
+              Vec4(C Vec     &xyz,        Flt w) {set(xyz,     w);}
+              Vec4(C Vec2    &xy , C Vec2 &zw  ) {set(xy ,    zw);}
+   CONVERSION Vec4(C VecH4   &v);
+   CONVERSION Vec4(C VecSSN4 &v);
+   CONVERSION Vec4(C VecD4   &v);
+   CONVERSION Vec4(C VecI4   &v);
+   CONVERSION Vec4(C VecB4   &v);
+   CONVERSION Vec4(C VecSB4  &v);
+   CONVERSION Vec4(C VecUS4  &v);
 };extern Vec4
    const Vec4Zero; // Vec4(0, 0, 0, 0)
 /******************************************************************************/
@@ -1141,8 +1319,8 @@ struct VecD4 // Vector 4D (double precision)
    Dbl    avg         ()C {return     Avg (x, y, z, w);}  // components average
    Dbl    sum         ()C {return          x+ y+ z+ w ;}  // components sum
    Dbl    mul         ()C {return          x* y* z* w ;}  // components multiplication
-   Dbl    length      ()C;                                // get         length
    Dbl    length2     ()C {return x*x + y*y + z*z + w*w;} // get squared length
+   Dbl    length      ()C {return SqrtFast(length2());}   // get         length
    Dbl    normalize   ();                                 // normalize and return previous length
    VecD4& chs         ();                                 // change sign of all components
    VecD4& chsX        () {CHS(x); return T;}              // change sign of X   component
@@ -1165,8 +1343,88 @@ struct VecD4 // Vector 4D (double precision)
    CONVERSION VecD4(C VecI4  &v);
    CONVERSION VecD4(C VecB4  &v);
    CONVERSION VecD4(C VecSB4 &v);
+   CONVERSION VecD4(C VecUS4 &v);
 };extern VecD4
    const VecD4Zero; // VecD4(0, 0, 0, 0)
+/******************************************************************************/
+struct Vec5 // Vector 5D
+{
+   union
+   {
+      struct{Flt  x, y, z, w, u;};
+      struct{Flt  c[5]         ;}; // component
+      struct{Vec2 xy, zw       ;};
+      struct{Vec  xyz          ;};
+      struct{Vec4 xyzw         ;};
+   };
+
+   Vec5& zero(                                 ) {x=y=z=w=u=0;                       return T;}
+   Vec5& set (Flt r                            ) {x=y=z=w=u=r;                       return T;}
+   Vec5& set (Flt x, Flt y, Flt z, Flt w, Flt u) {T.x=x; T.y=y; T.z=z; T.w=w; T.u=u; return T;}
+   Vec5& set (C Vec4 &xyzw              , Flt u) {T.xyzw=xyzw;                T.u=u; return T;}
+
+   Vec5& operator+=(  Flt   r) {x+=  r; y+=  r; z+=  r; w+=  r; u+=  r; return T;}
+   Vec5& operator-=(  Flt   r) {x-=  r; y-=  r; z-=  r; w-=  r; u-=  r; return T;}
+   Vec5& operator*=(  Flt   r) {x*=  r; y*=  r; z*=  r; w*=  r; u*=  r; return T;}
+   Vec5& operator/=(  Flt   r) {x/=  r; y/=  r; z/=  r; w/=  r; u/=  r; return T;}
+   Vec5& operator+=(C Vec5 &v) {x+=v.x; y+=v.y; z+=v.z; w+=v.w; u+=v.u; return T;}
+   Vec5& operator-=(C Vec5 &v) {x-=v.x; y-=v.y; z-=v.z; w-=v.w; u-=v.u; return T;}
+   Vec5& operator*=(C Vec5 &v) {x*=v.x; y*=v.y; z*=v.z; w*=v.w; u*=v.u; return T;}
+   Vec5& operator/=(C Vec5 &v) {x/=v.x; y/=v.y; z/=v.z; w/=v.w; u/=v.u; return T;}
+
+   friend Vec5 operator+ (C Vec5 &v, Int i) {return Vec5(v.x+i, v.y+i, v.z+i, v.w+i, v.u+i);}
+   friend Vec5 operator- (C Vec5 &v, Int i) {return Vec5(v.x-i, v.y-i, v.z-i, v.w-i, v.u-i);}
+   friend Vec5 operator* (C Vec5 &v, Int i) {return Vec5(v.x*i, v.y*i, v.z*i, v.w*i, v.u*i);}
+   friend Vec5 operator/ (C Vec5 &v, Int i) {return Vec5(v.x/i, v.y/i, v.z/i, v.w/i, v.u/i);}
+
+   friend Vec5 operator+ (C Vec5 &v, Flt r) {return Vec5(v.x+r, v.y+r, v.z+r, v.w+r, v.u+r);}
+   friend Vec5 operator- (C Vec5 &v, Flt r) {return Vec5(v.x-r, v.y-r, v.z-r, v.w-r, v.u-r);}
+   friend Vec5 operator* (C Vec5 &v, Flt r) {return Vec5(v.x*r, v.y*r, v.z*r, v.w*r, v.u*r);}
+   friend Vec5 operator/ (C Vec5 &v, Flt r) {return Vec5(v.x/r, v.y/r, v.z/r, v.w/r, v.u/r);}
+
+   friend Vec5 operator+ (Int i, C Vec5 &v) {return Vec5(i+v.x, i+v.y, i+v.z, i+v.w, i+v.u);}
+   friend Vec5 operator- (Int i, C Vec5 &v) {return Vec5(i-v.x, i-v.y, i-v.z, i-v.w, i-v.u);}
+   friend Vec5 operator* (Int i, C Vec5 &v) {return Vec5(i*v.x, i*v.y, i*v.z, i*v.w, i*v.u);}
+   friend Vec5 operator/ (Int i, C Vec5 &v) {return Vec5(i/v.x, i/v.y, i/v.z, i/v.w, i/v.u);}
+
+   friend Vec5 operator+ (Flt r, C Vec5 &v) {return Vec5(r+v.x, r+v.y, r+v.z, r+v.w, r+v.u);}
+   friend Vec5 operator- (Flt r, C Vec5 &v) {return Vec5(r-v.x, r-v.y, r-v.z, r-v.w, r-v.u);}
+   friend Vec5 operator* (Flt r, C Vec5 &v) {return Vec5(r*v.x, r*v.y, r*v.z, r*v.w, r*v.u);}
+   friend Vec5 operator/ (Flt r, C Vec5 &v) {return Vec5(r/v.x, r/v.y, r/v.z, r/v.w, r/v.u);}
+
+   friend Vec5 operator+ (C Vec5 &a, C Vec5 &b) {return Vec5(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w, a.u+b.u);}
+   friend Vec5 operator- (C Vec5 &a, C Vec5 &b) {return Vec5(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w, a.u-b.u);}
+   friend Vec5 operator* (C Vec5 &a, C Vec5 &b) {return Vec5(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w, a.u*b.u);}
+   friend Vec5 operator/ (C Vec5 &a, C Vec5 &b) {return Vec5(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w, a.u/b.u);}
+
+   friend Vec5 operator- (C Vec5 &v) {return Vec5(-v.x, -v.y, -v.z, -v.w, -v.u);}
+
+   Bool  any         ()C {return          Any (x, y, z, w, u);}  // if any component  is  non-zero
+   Bool  all         ()C {return    x &&  y &&  z &&  w &&  u;}  // if all components are non-zero
+   Bool  allZero     ()C {return   !x && !y && !z && !w && !u;}  // if all components are     zero
+   Bool  anyDifferent()C {return x!=y || x!=z || x!=w || x!=u;}  // if any component  is different
+   Int   minI        ()C {return          MinI(x, y, z, w, u);}  // components minimum index
+   Int   maxI        ()C {return          MaxI(x, y, z, w, u);}  // components maximum index
+   Flt   min         ()C {return          Min (x, y, z, w, u);}  // components minimum
+   Flt   max         ()C {return          Max (x, y, z, w, u);}  // components maximum
+   Flt   avg         ()C {return          Avg (x, y, z, w, u);}  // components average
+   Flt   sum         ()C {return               x+ y+ z+ w+ u ;}  // components sum
+   Flt   mul         ()C {return               x* y* z* w* u ;}  // components multiplication
+   Vec5& chs         ();                                         // change sign of all components
+   Vec5& chsX        () {CHS(x); return T;}                      // change sign of X   component
+   Vec5& chsY        () {CHS(y); return T;}                      // change sign of Y   component
+   Vec5& chsZ        () {CHS(z); return T;}                      // change sign of Z   component
+   Vec5& chsW        () {CHS(w); return T;}                      // change sign of W   component
+   Vec5& chsU        () {CHS(u); return T;}                      // change sign of U   component
+   Vec5& abs         ();                                         // absolute       all components
+   Vec5& sat         ();                                         // saturate       all components
+
+              Vec5() {}
+              Vec5(Flt r                            ) {set(r            );}
+              Vec5(Flt x, Flt y, Flt z, Flt w, Flt u) {set(x, y, z, w, u);}
+              Vec5(C Vec4  &xyzw             , Flt u) {set(xyzw      , u);}
+   CONVERSION Vec5(C VecB5 &v);
+};
 /******************************************************************************/
 struct VecB2 // Vector 2D (Byte)
 {
@@ -1193,6 +1451,8 @@ struct VecB2 // Vector 2D (Byte)
    Int    min         ()C {return    Min (x, y);} // components minimum
    Int    max         ()C {return    Max (x, y);} // components maximum
    Int    sum         ()C {return         x+ y ;} // components sum
+   Int    mul         ()C {return         x* y ;} // components multiplication
+   Int    find        (Byte value)C;              // get index of first component that equals 'value' (-1 if none)
    VecB2& reverse     ()  {Swap(x, y); return T;} // reverse components order
 
               VecB2() {}
@@ -1229,6 +1489,7 @@ struct VecSB2 // Vector 2D (SByte)
    Int     min         ()C {return    Min (x, y);} // components minimum
    Int     max         ()C {return    Max (x, y);} // components maximum
    Int     sum         ()C {return         x+ y ;} // components sum
+   Int     find        (SByte value)C;             // get index of first component that equals 'value' (-1 if none)
    VecSB2& reverse     ()  {Swap(x, y); return T;} // reverse components order
    VecSB2& chsX        ()  {CHS(x);     return T;} // change sign of X component
    VecSB2& chsY        ()  {CHS(y);     return T;} // change sign of Y component
@@ -1255,24 +1516,26 @@ struct VecB // Vector 3D (Byte)
    Bool operator==(C VecB &v)C {return x==v.x && y==v.y && z==v.z;}
    Bool operator!=(C VecB &v)C {return x!=v.x || y!=v.y || z!=v.z;}
 
-   Bool  any         (         )C {return        x ||  y ||  z;} // if any component  is  non-zero
-   Bool  all         (         )C {return        x &&  y &&  z;} // if all components are non-zero
-   Bool  allZero     (         )C {return       !x && !y && !z;} // if all components are     zero
-   Bool  allDifferent(         )C {return x!=y && x!=z && y!=z;} // if all components are different
-   Bool  anyDifferent(         )C {return x!=y || x!=z        ;} // if any component  is  different
-   Int   minI        (         )C {return        MinI(x, y, z);} // components minimum index
-   Int   maxI        (         )C {return        MaxI(x, y, z);} // components maximum index
-   Int   min         (         )C {return        Min (x, y, z);} // components minimum
-   Int   max         (         )C {return        Max (x, y, z);} // components maximum
-   Int   sum         (         )C {return             x+ y+ z ;} // components sum
-   Int   find        (Int value)C;                               // get index of first component that equals 'value' (-1 if none)
-   VecB& reverse     (         )  {       Swap(x, z); return T;} // reverse components order
+   Bool  any         ()C {return        x ||  y ||  z;} // if any component  is  non-zero
+   Bool  all         ()C {return        x &&  y &&  z;} // if all components are non-zero
+   Bool  allZero     ()C {return       !x && !y && !z;} // if all components are     zero
+   Bool  allDifferent()C {return x!=y && x!=z && y!=z;} // if all components are different
+   Bool  anyDifferent()C {return x!=y || x!=z        ;} // if any component  is  different
+   Int   minI        ()C {return        MinI(x, y, z);} // components minimum index
+   Int   maxI        ()C {return        MaxI(x, y, z);} // components maximum index
+   Int   min         ()C {return        Min (x, y, z);} // components minimum
+   Int   max         ()C {return        Max (x, y, z);} // components maximum
+   Int   sum         ()C {return             x+ y+ z ;} // components sum
+   Int   mul         ()C {return             x* y* z ;} // components multiplication
+   Int   find        (Byte value)C;                     // get index of first component that equals 'value' (-1 if none)
+   VecB& reverse     ()  {       Swap(x, z); return T;} // reverse components order
 
               VecB() {}
               VecB(Byte i                ) {set(i      );}
               VecB(Byte x, Byte y, Byte z) {set(x, y, z);}
    CONVERSION VecB(C VecI &v);
 };
+ASSERT(SIZE(VecB)==3); // some codes expect continuous memory for array of VecB[] to be accessed with [0].c
 /******************************************************************************/
 struct VecSB // Vector 3D (SByte)
 {
@@ -1290,27 +1553,28 @@ struct VecSB // Vector 3D (SByte)
    Bool operator==(C VecSB &v)C {return x==v.x && y==v.y && z==v.z;}
    Bool operator!=(C VecSB &v)C {return x!=v.x || y!=v.y || z!=v.z;}
 
-   Bool   any         (         )C {return        x ||  y ||  z;} // if any component  is  non-zero
-   Bool   all         (         )C {return        x &&  y &&  z;} // if all components are non-zero
-   Bool   allZero     (         )C {return       !x && !y && !z;} // if all components are     zero
-   Bool   allDifferent(         )C {return x!=y && x!=z && y!=z;} // if all components are different
-   Bool   anyDifferent(         )C {return x!=y || x!=z        ;} // if any component  is  different
-   Int    minI        (         )C {return        MinI(x, y, z);} // components minimum index
-   Int    maxI        (         )C {return        MaxI(x, y, z);} // components maximum index
-   Int    min         (         )C {return        Min (x, y, z);} // components minimum
-   Int    max         (         )C {return        Max (x, y, z);} // components maximum
-   Int    sum         (         )C {return             x+ y+ z ;} // components sum
-   Int    find        (Int value)C;                               // get index of first component that equals 'value' (-1 if none)
-   VecSB& reverse     (         )  {       Swap(x, z); return T;} // reverse components order
-   VecSB& chsX        (         )  {           CHS(x); return T;} // change sign of X component
-   VecSB& chsY        (         )  {           CHS(y); return T;} // change sign of Y component
-   VecSB& chsZ        (         )  {           CHS(z); return T;} // change sign of Z component
+   Bool   any         ()C {return        x ||  y ||  z;} // if any component  is  non-zero
+   Bool   all         ()C {return        x &&  y &&  z;} // if all components are non-zero
+   Bool   allZero     ()C {return       !x && !y && !z;} // if all components are     zero
+   Bool   allDifferent()C {return x!=y && x!=z && y!=z;} // if all components are different
+   Bool   anyDifferent()C {return x!=y || x!=z        ;} // if any component  is  different
+   Int    minI        ()C {return        MinI(x, y, z);} // components minimum index
+   Int    maxI        ()C {return        MaxI(x, y, z);} // components maximum index
+   Int    min         ()C {return        Min (x, y, z);} // components minimum
+   Int    max         ()C {return        Max (x, y, z);} // components maximum
+   Int    sum         ()C {return             x+ y+ z ;} // components sum
+   Int    find        (SByte value)C;                    // get index of first component that equals 'value' (-1 if none)
+   VecSB& reverse     ()  {       Swap(x, z); return T;} // reverse components order
+   VecSB& chsX        ()  {           CHS(x); return T;} // change sign of X component
+   VecSB& chsY        ()  {           CHS(y); return T;} // change sign of Y component
+   VecSB& chsZ        ()  {           CHS(z); return T;} // change sign of Z component
 
               VecSB() {}
               VecSB(SByte i                  ) {set(i      );}
               VecSB(SByte x, SByte y, SByte z) {set(x, y, z);}
    CONVERSION VecSB(C VecI &v);
 };
+ASSERT(SIZE(VecSB)==3); // some codes expect continuous memory for array of VecSB[] to be accessed with [0].c
 /******************************************************************************/
 struct VecB4 // Vector 4D (Byte)
 {
@@ -1318,12 +1582,12 @@ struct VecB4 // Vector 4D (Byte)
    {
       struct{Byte  x, y, z, w;};
       struct{Byte  c[4]      ;}; // component
-      struct{UInt  u         ;};
+      struct{UInt  data      ;};
       struct{VecB2 xy, zw    ;};
       struct{VecB  xyz       ;};
    };
 
-   VecB4& zero(                              ) {u=0;                        return T;}
+   VecB4& zero(                              ) {data=0;                     return T;}
    VecB4& set (Byte i                        ) {x=y=z=w=i;                  return T;}
    VecB4& set (Byte x, Byte y, Byte z, Byte w) {T.x=x; T.y=y; T.z=z; T.w=w; return T;}
 
@@ -1331,11 +1595,11 @@ struct VecB4 // Vector 4D (Byte)
    void   operator--(  Int     )  {x-- ; y-- ; z-- ; w-- ;}
    VecB4& operator+=(  Int    i)  {x+=i; y+=i; z+=i; w+=i; return T;}
    VecB4& operator-=(  Int    i)  {x-=i; y-=i; z-=i; w-=i; return T;}
-   Bool   operator==(C VecB4 &v)C {return u==v.u;}
-   Bool   operator!=(C VecB4 &v)C {return u!=v.u;}
+   Bool   operator==(C VecB4 &v)C {return data==v.data;}
+   Bool   operator!=(C VecB4 &v)C {return data!=v.data;}
 
-   friend VecB4 operator+ (C VecB4 &v, Int i) {return VecB4(v.x+i, v.y+i, v.z+i, v.w+i);}
-   friend VecB4 operator- (C VecB4 &v, Int i) {return VecB4(v.x-i, v.y-i, v.z-i, v.w-i);}
+   friend VecB4 operator+ (C VecB4 &v, Byte i) {return VecB4(v.x+i, v.y+i, v.z+i, v.w+i);}
+   friend VecB4 operator- (C VecB4 &v, Byte i) {return VecB4(v.x-i, v.y-i, v.z-i, v.w-i);}
 
    friend Vec4 operator+ (C VecB4 &v, Flt f) {return Vec4(v.x+f, v.y+f, v.z+f, v.w+f);}
    friend Vec4 operator- (C VecB4 &v, Flt f) {return Vec4(v.x-f, v.y-f, v.z-f, v.w-f);}
@@ -1347,25 +1611,27 @@ struct VecB4 // Vector 4D (Byte)
    friend Vec4 operator* (Flt f, C VecB4 &v) {return Vec4(f*v.x, f*v.y, f*v.z, f*v.w);}
    friend Vec4 operator/ (Flt f, C VecB4 &v) {return Vec4(f/v.x, f/v.y, f/v.z, f/v.w);}
 
-   Bool   any         (         )C {return u!=0            ;}                             // if any component  is  non-zero, faster version of "x || y || z || w"
-   Bool   all         (         )C {return x && y && z && w;}                             // if all components are non-zero
-   Bool   allZero     (         )C {return u==0;}                                         // if all components are     zero
-   Bool   allDifferent(         )C {return x!=y && x!=z && x!=w && y!=z && y!=w && z!=w;} // if all components are different
-   Bool   anyDifferent(         )C {return x!=y || x!=z || x!=w                        ;} // if any component  is  different
-   Int    minI        (         )C {return MinI(x, y, z, w);}                             // components minimum index
-   Int    maxI        (         )C {return MaxI(x, y, z, w);}                             // components maximum index
-   Int    min         (         )C {return Min (x, y, z, w);}                             // components minimum
-   Int    max         (         )C {return Max (x, y, z, w);}                             // components maximum
-   Int    sum         (         )C {return      x+ y+ z+ w ;}                             // components sum
-   Int    find        (Int value)C;                                                       // get index of first component that equals 'value' (-1 if none)
-   VecB4& reverse     (         ) {Swap(c[0], c[3]); Swap(c[1], c[2]); return T;}         // reverse components order
+   Bool   any         ()C {return data!=0;}                                      // if any component  is  non-zero, faster version of "x || y || z || w"
+   Bool   all         ()C {return x && y && z && w;}                             // if all components are non-zero
+   Bool   allZero     ()C {return data==0;}                                      // if all components are     zero
+   Bool   allDifferent()C {return x!=y && x!=z && x!=w && y!=z && y!=w && z!=w;} // if all components are different
+   Bool   anyDifferent()C {return x!=y || x!=z || x!=w                        ;} // if any component  is  different
+   Int    minI        ()C {return MinI(x, y, z, w);}                             // components minimum index
+   Int    maxI        ()C {return MaxI(x, y, z, w);}                             // components maximum index
+   Int    min         ()C {return Min (x, y, z, w);}                             // components minimum
+   Int    max         ()C {return Max (x, y, z, w);}                             // components maximum
+   Int    sum         ()C {return      x+ y+ z+ w ;}                             // components sum
+   Int    mul         ()C {return      x* y* z* w ;}                             // components multiplication
+   Int    find        (Byte value)C;                                             // get index of first component that equals 'value' (-1 if none)
+   VecB4& reverse     () {Swap(c[0], c[3]); Swap(c[1], c[2]); return T;}         // reverse components order
 
    Str asTextDots()C; // return as text with components separated using dots "x.y.z.w"
 
               VecB4() {}
               VecB4(Byte i                        ) {set(i         );}
               VecB4(Byte x, Byte y, Byte z, Byte w) {set(x, y, z, w);}
-   CONVERSION VecB4(C VecI4 &v);
+   CONVERSION VecB4(C VecI4  &v);
+   CONVERSION VecB4(C VecUS4 &v);
 };
 /******************************************************************************/
 struct VecSB4 // Vector 4D (SByte)
@@ -1374,40 +1640,91 @@ struct VecSB4 // Vector 4D (SByte)
    {
       struct{SByte  x, y, z, w;};
       struct{SByte  c[4]      ;}; // component
-      struct{UInt   u         ;};
+      struct{UInt   data      ;};
       struct{VecSB2 xy, zw    ;};
       struct{VecSB  xyz       ;};
    };
 
-   VecSB4& zero(                                  ) {u=0;                        return T;}
+   VecSB4& zero(                                  ) {data=0;                     return T;}
    VecSB4& set (SByte i                           ) {x=y=z=w=i;                  return T;}
    VecSB4& set (SByte x, SByte y, SByte z, SByte w) {T.x=x; T.y=y; T.z=z; T.w=w; return T;}
 
-   Bool operator==(C VecSB4 &v)C {return u==v.u;}
-   Bool operator!=(C VecSB4 &v)C {return u!=v.u;}
+   Bool operator==(C VecSB4 &v)C {return data==v.data;}
+   Bool operator!=(C VecSB4 &v)C {return data!=v.data;}
 
-   Bool    any         (         )C {return u!=0            ;}                             // if any component  is  non-zero, faster version of "x || y || z || w"
-   Bool    all         (         )C {return x && y && z && w;}                             // if all components are non-zero
-   Bool    allZero     (         )C {return u==0;}                                         // if all components are     zero
-   Bool    allDifferent(         )C {return x!=y && x!=z && x!=w && y!=z && y!=w && z!=w;} // if all components are different
-   Bool    anyDifferent(         )C {return x!=y || x!=z || x!=w                        ;} // if any component  is  different
-   Int     minI        (         )C {return MinI(x, y, z, w);}                             // components minimum index
-   Int     maxI        (         )C {return MaxI(x, y, z, w);}                             // components maximum index
-   Int     min         (         )C {return Min (x, y, z, w);}                             // components minimum
-   Int     max         (         )C {return Max (x, y, z, w);}                             // components maximum
-   Int     sum         (         )C {return      x+ y+ z+ w ;}                             // components sum
-   Int     find        (Int value)C;                                                       // get index of first component that equals 'value' (-1 if none)
-   VecSB4& reverse     (         )  {Swap(c[0], c[3]); Swap(c[1], c[2]); return T;}        // reverse components order
-   VecSB4& chsX        (         )  {CHS(x); return T;}                                    // change sign of X component
-   VecSB4& chsY        (         )  {CHS(y); return T;}                                    // change sign of Y component
-   VecSB4& chsZ        (         )  {CHS(z); return T;}                                    // change sign of Z component
-   VecSB4& chsW        (         )  {CHS(w); return T;}                                    // change sign of W component
+   Bool    any         ()C {return data!=0;}                                      // if any component  is  non-zero, faster version of "x || y || z || w"
+   Bool    all         ()C {return x && y && z && w;}                             // if all components are non-zero
+   Bool    allZero     ()C {return data==0;}                                      // if all components are     zero
+   Bool    allDifferent()C {return x!=y && x!=z && x!=w && y!=z && y!=w && z!=w;} // if all components are different
+   Bool    anyDifferent()C {return x!=y || x!=z || x!=w                        ;} // if any component  is  different
+   Int     minI        ()C {return MinI(x, y, z, w);}                             // components minimum index
+   Int     maxI        ()C {return MaxI(x, y, z, w);}                             // components maximum index
+   Int     min         ()C {return Min (x, y, z, w);}                             // components minimum
+   Int     max         ()C {return Max (x, y, z, w);}                             // components maximum
+   Int     sum         ()C {return      x+ y+ z+ w ;}                             // components sum
+   Int     find        (SByte value)C;                                            // get index of first component that equals 'value' (-1 if none)
+   VecSB4& reverse     ()  {Swap(c[0], c[3]); Swap(c[1], c[2]); return T;}        // reverse components order
+   VecSB4& chsX        ()  {CHS(x); return T;}                                    // change sign of X component
+   VecSB4& chsY        ()  {CHS(y); return T;}                                    // change sign of Y component
+   VecSB4& chsZ        ()  {CHS(z); return T;}                                    // change sign of Z component
+   VecSB4& chsW        ()  {CHS(w); return T;}                                    // change sign of W component
 
               VecSB4() {}
               VecSB4(SByte i                           ) {set(i         );}
               VecSB4(SByte x, SByte y, SByte z, SByte w) {set(x, y, z, w);}
    CONVERSION VecSB4(C VecI4 &v);
 };
+/******************************************************************************/
+struct VecB5 // Vector 5D (Byte)
+{
+   union
+   {
+      struct{Byte  x, y, z, w, u;};
+      struct{Byte  c[5]         ;}; // component
+      struct{VecB2 xy, zw       ;};
+      struct{VecB  xyz          ;};
+    //struct{VecB4 xyzw         ;};
+   };
+
+   VecB4& xyzw()  {return (VecB4&)T;}
+ C VecB4& xyzw()C {return (VecB4&)T;}
+
+   VecB5& zero(                                      ) {Zero(T);                           return T;}
+   VecB5& set (Byte i                                ) {x=y=z=w=u=i;                       return T;}
+   VecB5& set (Byte x, Byte y, Byte z, Byte w, Byte u) {T.x=x; T.y=y; T.z=z; T.w=w; T.u=u; return T;}
+   VecB5& set (C VecB4 &xyzw                 , Byte u) {T.xyzw()=xyzw;              T.u=u; return T;}
+
+   friend Vec5 operator+ (C VecB5 &v, Flt f) {return Vec5(v.x+f, v.y+f, v.z+f, v.w+f, v.u+f);}
+   friend Vec5 operator- (C VecB5 &v, Flt f) {return Vec5(v.x-f, v.y-f, v.z-f, v.w-f, v.u-f);}
+   friend Vec5 operator* (C VecB5 &v, Flt f) {return Vec5(v.x*f, v.y*f, v.z*f, v.w*f, v.u*f);}
+   friend Vec5 operator/ (C VecB5 &v, Flt f) {return Vec5(v.x/f, v.y/f, v.z/f, v.w/f, v.u/f);}
+
+   friend Vec5 operator+ (Flt f, C VecB5 &v) {return Vec5(f+v.x, f+v.y, f+v.z, f+v.w, f+v.u);}
+   friend Vec5 operator- (Flt f, C VecB5 &v) {return Vec5(f-v.x, f-v.y, f-v.z, f-v.w, f-v.u);}
+   friend Vec5 operator* (Flt f, C VecB5 &v) {return Vec5(f*v.x, f*v.y, f*v.z, f*v.w, f*v.u);}
+   friend Vec5 operator/ (Flt f, C VecB5 &v) {return Vec5(f/v.x, f/v.y, f/v.z, f/v.w, f/v.u);}
+
+   Bool operator==(C VecB5 &v)C {return x==v.x && y==v.y && z==v.z && w==v.w && u==v.u;}
+   Bool operator!=(C VecB5 &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w || u!=v.u;}
+
+   Bool any         ()C {return  x ||  y ||  z ||  w ||  u;}   // if any component  is  non-zero
+   Bool all         ()C {return  x &&  y &&  z &&  w &&  u;}   // if all components are non-zero
+   Bool allZero     ()C {return !x && !y && !z && !w && !u;}   // if all components are     zero
+   Bool anyDifferent()C {return x!=y || x!=z || x!=w || x!=u;} // if any component  is  different
+   Int  minI        ()C {return MinI(x, y, z, w, u);}          // components minimum index
+   Int  maxI        ()C {return MaxI(x, y, z, w, u);}          // components maximum index
+   Int  min         ()C {return Min (x, y, z, w, u);}          // components minimum
+   Int  max         ()C {return Max (x, y, z, w, u);}          // components maximum
+   Int  sum         ()C {return      x+ y+ z+ w+ u ;}          // components sum
+   Int  mul         ()C {return      x* y* z* w* u ;}          // components multiplication
+   Int  find        (Byte value)C;                             // get index of first component that equals 'value' (-1 if none)
+
+   VecB5() {}
+   VecB5(Byte i                                ) {set(i            );}
+   VecB5(Byte x, Byte y, Byte z, Byte w, Byte u) {set(x, y, z, w, u);}
+   VecB5(C VecB4 &xyzw                 , Byte u) {set(xyzw      , u);}
+};
+ASSERT(SIZE(VecB5)==5);
 /******************************************************************************/
 struct VecUS2 // Vector 2D (Unsigned Short)
 {
@@ -1420,6 +1737,12 @@ struct VecUS2 // Vector 2D (Unsigned Short)
    VecUS2& zero(                  ) {x=y=0;        return T;}
    VecUS2& set (UShort u          ) {x=y=u;        return T;}
    VecUS2& set (UShort x, UShort y) {T.x=x; T.y=y; return T;}
+
+#if EE_PRIVATE
+   VecUS2& remap   (C         Int  *map) {if(map){x=map[x]; y=map[y];} return T;} // remap if map is provided
+   VecUS2& remapAll(C CMemPtr<Int> &map) {x=(InRange(x, map) ? map[x] : -1); y=(InRange(y, map) ? map[y] : -1); return T;} // remap all components
+   VecUS2& remapFit(C CMemPtr<Int> &map) {if(InRange(x, map))x=map[x];       if(InRange(y, map))y=map[y];       return T;} // remap     components which are in range of the remap array
+#endif
 
    VecUS2& operator+=(Int i) {x+=i; y+=i; return T;}
    VecUS2& operator-=(Int i) {x-=i; y-=i; return T;}
@@ -1434,26 +1757,36 @@ struct VecUS2 // Vector 2D (Unsigned Short)
    Bool operator==(C VecI2  &v)C;
    Bool operator!=(C VecI2  &v)C;
 
-   friend VecUS2 operator+ (C VecUS2 &v, Int i) {return VecUS2(v.x+i, v.y+i);}
-   friend VecUS2 operator- (C VecUS2 &v, Int i) {return VecUS2(v.x-i, v.y-i);}
-   friend VecUS2 operator* (C VecUS2 &v, Int i) {return VecUS2(v.x*i, v.y*i);}
-   friend VecUS2 operator/ (C VecUS2 &v, Int i) {return VecUS2(v.x/i, v.y/i);}
-   friend VecUS2 operator% (C VecUS2 &v, Int i) {return VecUS2(v.x%i, v.y%i);}
+   friend VecUS2 operator+ (C VecUS2 &v, UShort i) {return VecUS2(v.x+i, v.y+i);}
+   friend VecUS2 operator- (C VecUS2 &v, UShort i) {return VecUS2(v.x-i, v.y-i);}
+   friend VecUS2 operator* (C VecUS2 &v, UShort i) {return VecUS2(v.x*i, v.y*i);}
+   friend VecUS2 operator/ (C VecUS2 &v, UShort i) {return VecUS2(v.x/i, v.y/i);}
+   friend VecUS2 operator% (C VecUS2 &v, UShort i) {return VecUS2(v.x%i, v.y%i);}
 
    friend Vec2 operator+ (C VecUS2 &v, Flt f) {return Vec2(v.x+f, v.y+f);}
    friend Vec2 operator- (C VecUS2 &v, Flt f) {return Vec2(v.x-f, v.y-f);}
    friend Vec2 operator* (C VecUS2 &v, Flt f) {return Vec2(v.x*f, v.y*f);}
    friend Vec2 operator/ (C VecUS2 &v, Flt f) {return Vec2(v.x/f, v.y/f);}
 
-   friend VecUS2 operator+ (Int i, C VecUS2 &v) {return VecUS2(i+v.x, i+v.y);}
-   friend VecUS2 operator- (Int i, C VecUS2 &v) {return VecUS2(i-v.x, i-v.y);}
-   friend VecUS2 operator* (Int i, C VecUS2 &v) {return VecUS2(i*v.x, i*v.y);}
-   friend VecUS2 operator/ (Int i, C VecUS2 &v) {return VecUS2(i/v.x, i/v.y);}
+   friend VecUS2 operator+ (UShort i, C VecUS2 &v) {return VecUS2(i+v.x, i+v.y);}
+   friend VecUS2 operator- (UShort i, C VecUS2 &v) {return VecUS2(i-v.x, i-v.y);}
+   friend VecUS2 operator* (UShort i, C VecUS2 &v) {return VecUS2(i*v.x, i*v.y);}
+   friend VecUS2 operator/ (UShort i, C VecUS2 &v) {return VecUS2(i/v.x, i/v.y);}
 
    friend Vec2 operator+ (Flt f, C VecUS2 &v) {return Vec2(f+v.x, f+v.y);}
    friend Vec2 operator- (Flt f, C VecUS2 &v) {return Vec2(f-v.x, f-v.y);}
    friend Vec2 operator* (Flt f, C VecUS2 &v) {return Vec2(f*v.x, f*v.y);}
    friend Vec2 operator/ (Flt f, C VecUS2 &v) {return Vec2(f/v.x, f/v.y);}
+
+   friend Vec2 operator+ (C VecUS2 &a, C Vec2 &b) {return Vec2(a.x+b.x, a.y+b.y);}
+   friend Vec2 operator- (C VecUS2 &a, C Vec2 &b) {return Vec2(a.x-b.x, a.y-b.y);}
+   friend Vec2 operator* (C VecUS2 &a, C Vec2 &b) {return Vec2(a.x*b.x, a.y*b.y);}
+   friend Vec2 operator/ (C VecUS2 &a, C Vec2 &b) {return Vec2(a.x/b.x, a.y/b.y);}
+
+   friend Vec2 operator+ (C Vec2 &a, C VecUS2 &b) {return Vec2(a.x+b.x, a.y+b.y);}
+   friend Vec2 operator- (C Vec2 &a, C VecUS2 &b) {return Vec2(a.x-b.x, a.y-b.y);}
+   friend Vec2 operator* (C Vec2 &a, C VecUS2 &b) {return Vec2(a.x*b.x, a.y*b.y);}
+   friend Vec2 operator/ (C Vec2 &a, C VecUS2 &b) {return Vec2(a.x/b.x, a.y/b.y);}
 
    Bool any()C {return x || y;} // if any component is non-zero
 
@@ -1477,6 +1810,12 @@ struct VecUS // Vector 3D (Unsigned Short)
    VecUS& set (UShort x, UShort y, UShort z) {T.x=x; T.y=y; T.z=z; return T;}
    VecUS& set (C VecUS2 &xy      , UShort z) {T.xy=xy;      T.z=z; return T;}
 
+#if EE_PRIVATE
+   VecUS& remap   (C         Int  *map) {if(map){x=map[x]; y=map[y]; z=map[z];} return T;} // remap if map is provided
+   VecUS& remapAll(C CMemPtr<Int> &map) {x=(InRange(x, map) ? map[x] : -1); y=(InRange(y, map) ? map[y] : -1); z=(InRange(z, map) ? map[z] : -1); return T;} // remap all components
+   VecUS& remapFit(C CMemPtr<Int> &map) {if(InRange(x, map))x=map[x];       if(InRange(y, map))y=map[y];       if(InRange(z, map))z=map[z];       return T;} // remap     components which are in range of the remap array
+#endif
+
    VecUS& operator+=(Int i) {x+=i; y+=i; z+=i; return T;}
    VecUS& operator-=(Int i) {x-=i; y-=i; z-=i; return T;}
    VecUS& operator*=(Int i) {x*=i; y*=i; z*=i; return T;}
@@ -1490,21 +1829,21 @@ struct VecUS // Vector 3D (Unsigned Short)
    Bool operator==(C VecI  &v)C;
    Bool operator!=(C VecI  &v)C;
 
-   friend VecUS operator+ (C VecUS &v, Int i) {return VecUS(v.x+i, v.y+i, v.z+i);}
-   friend VecUS operator- (C VecUS &v, Int i) {return VecUS(v.x-i, v.y-i, v.z-i);}
-   friend VecUS operator* (C VecUS &v, Int i) {return VecUS(v.x*i, v.y*i, v.z*i);}
-   friend VecUS operator/ (C VecUS &v, Int i) {return VecUS(v.x/i, v.y/i, v.z/i);}
-   friend VecUS operator% (C VecUS &v, Int i) {return VecUS(v.x%i, v.y%i, v.z%i);}
+   friend VecUS operator+ (C VecUS &v, UShort i) {return VecUS(v.x+i, v.y+i, v.z+i);}
+   friend VecUS operator- (C VecUS &v, UShort i) {return VecUS(v.x-i, v.y-i, v.z-i);}
+   friend VecUS operator* (C VecUS &v, UShort i) {return VecUS(v.x*i, v.y*i, v.z*i);}
+   friend VecUS operator/ (C VecUS &v, UShort i) {return VecUS(v.x/i, v.y/i, v.z/i);}
+   friend VecUS operator% (C VecUS &v, UShort i) {return VecUS(v.x%i, v.y%i, v.z%i);}
 
    friend Vec operator+ (C VecUS &v, Flt f) {return Vec(v.x+f, v.y+f, v.z+f);}
    friend Vec operator- (C VecUS &v, Flt f) {return Vec(v.x-f, v.y-f, v.z-f);}
    friend Vec operator* (C VecUS &v, Flt f) {return Vec(v.x*f, v.y*f, v.z*f);}
    friend Vec operator/ (C VecUS &v, Flt f) {return Vec(v.x/f, v.y/f, v.z/f);}
 
-   friend VecUS operator+ (Int i, C VecUS &v) {return VecUS(i+v.x, i+v.y, i+v.z);}
-   friend VecUS operator- (Int i, C VecUS &v) {return VecUS(i-v.x, i-v.y, i-v.z);}
-   friend VecUS operator* (Int i, C VecUS &v) {return VecUS(i*v.x, i*v.y, i*v.z);}
-   friend VecUS operator/ (Int i, C VecUS &v) {return VecUS(i/v.x, i/v.y, i/v.z);}
+   friend VecUS operator+ (UShort i, C VecUS &v) {return VecUS(i+v.x, i+v.y, i+v.z);}
+   friend VecUS operator- (UShort i, C VecUS &v) {return VecUS(i-v.x, i-v.y, i-v.z);}
+   friend VecUS operator* (UShort i, C VecUS &v) {return VecUS(i*v.x, i*v.y, i*v.z);}
+   friend VecUS operator/ (UShort i, C VecUS &v) {return VecUS(i/v.x, i/v.y, i/v.z);}
 
    friend Vec operator+ (Flt f, C VecUS &v) {return Vec(f+v.x, f+v.y, f+v.z);}
    friend Vec operator- (Flt f, C VecUS &v) {return Vec(f-v.x, f-v.y, f-v.z);}
@@ -1520,6 +1859,68 @@ struct VecUS // Vector 3D (Unsigned Short)
    CONVERSION VecUS(C VecB   &v);
    CONVERSION VecUS(C VecI   &v);
 };
+struct VecUS4 // Vector 4D (Unsigned Short)
+{
+   union
+   {
+      struct{UShort x, y, z, w;};
+      struct{UShort c[4]      ;}; // component
+      struct{VecUS2 xy  , zw  ;};
+      struct{VecUS  xyz       ;};
+   };
+
+   VecUS4& zero(                                      ) {x=y=z=w=0;                  return T;}
+   VecUS4& set (UShort u                              ) {x=y=z=w=u;                  return T;}
+   VecUS4& set (UShort x, UShort y, UShort z, UShort w) {T.x=x; T.y=y; T.z=z; T.w=w; return T;}
+
+#if EE_PRIVATE
+   VecUS4& remap   (C         Int  *map) {if(map){x=map[x]; y=map[y]; z=map[z]; w=map[w];} return T;} // remap if map is provided
+   VecUS4& remapAll(C CMemPtr<Int> &map) {x=(InRange(x, map) ? map[x] : -1); y=(InRange(y, map) ? map[y] : -1); z=(InRange(z, map) ? map[z] : -1); w=(InRange(w, map) ? map[w] : -1); return T;} // remap all components
+   VecUS4& remapFit(C CMemPtr<Int> &map) {if(InRange(x, map))x=map[x];       if(InRange(y, map))y=map[y];       if(InRange(z, map))z=map[z];       if(InRange(w, map))w=map[w];       return T;} // remap     components which are in range of the remap array
+#endif
+
+   VecUS4& operator+=(Int i) {x+=i; y+=i; z+=i; w+=i; return T;}
+   VecUS4& operator-=(Int i) {x-=i; y-=i; z-=i; w-=i; return T;}
+   VecUS4& operator*=(Int i) {x*=i; y*=i; z*=i; w*=i; return T;}
+   VecUS4& operator/=(Int i) {x/=i; y/=i; z/=i; w/=i; return T;}
+   VecUS4& operator%=(Int i) {x%=i; y%=i; z%=i; w%=i; return T;}
+
+   Bool operator==(C VecUS4 &v)C;
+   Bool operator!=(C VecUS4 &v)C;
+   Bool operator==(C VecB4  &v)C;
+   Bool operator!=(C VecB4  &v)C;
+   Bool operator==(C VecI4  &v)C;
+   Bool operator!=(C VecI4  &v)C;
+
+   friend VecUS4 operator+ (C VecUS4 &v, UShort i) {return VecUS4(v.x+i, v.y+i, v.z+i, v.w+i);}
+   friend VecUS4 operator- (C VecUS4 &v, UShort i) {return VecUS4(v.x-i, v.y-i, v.z-i, v.w-i);}
+   friend VecUS4 operator* (C VecUS4 &v, UShort i) {return VecUS4(v.x*i, v.y*i, v.z*i, v.w*i);}
+   friend VecUS4 operator/ (C VecUS4 &v, UShort i) {return VecUS4(v.x/i, v.y/i, v.z/i, v.w/i);}
+   friend VecUS4 operator% (C VecUS4 &v, UShort i) {return VecUS4(v.x%i, v.y%i, v.z%i, v.w%i);}
+
+   friend Vec4 operator+ (C VecUS4 &v, Flt f) {return Vec4(v.x+f, v.y+f, v.z+f, v.w+f);}
+   friend Vec4 operator- (C VecUS4 &v, Flt f) {return Vec4(v.x-f, v.y-f, v.z-f, v.w-f);}
+   friend Vec4 operator* (C VecUS4 &v, Flt f) {return Vec4(v.x*f, v.y*f, v.z*f, v.w*f);}
+   friend Vec4 operator/ (C VecUS4 &v, Flt f) {return Vec4(v.x/f, v.y/f, v.z/f, v.w/f);}
+
+   friend VecUS4 operator+ (UShort i, C VecUS4 &v) {return VecUS4(i+v.x, i+v.y, i+v.z, i+v.w);}
+   friend VecUS4 operator- (UShort i, C VecUS4 &v) {return VecUS4(i-v.x, i-v.y, i-v.z, i-v.w);}
+   friend VecUS4 operator* (UShort i, C VecUS4 &v) {return VecUS4(i*v.x, i*v.y, i*v.z, i*v.w);}
+   friend VecUS4 operator/ (UShort i, C VecUS4 &v) {return VecUS4(i/v.x, i/v.y, i/v.z, i/v.w);}
+
+   friend Vec4 operator+ (Flt f, C VecUS4 &v) {return Vec4(f+v.x, f+v.y, f+v.z, f+v.w);}
+   friend Vec4 operator- (Flt f, C VecUS4 &v) {return Vec4(f-v.x, f-v.y, f-v.z, f-v.w);}
+   friend Vec4 operator* (Flt f, C VecUS4 &v) {return Vec4(f*v.x, f*v.y, f*v.z, f*v.w);}
+   friend Vec4 operator/ (Flt f, C VecUS4 &v) {return Vec4(f/v.x, f/v.y, f/v.z, f/v.w);}
+
+   Bool any()C {return x || y || z || w;} // if any component is non-zero
+
+              VecUS4() {}
+              VecUS4(UShort u                              ) {set(u         );}
+              VecUS4(UShort x, UShort y, UShort z, UShort w) {set(x, y, z, w);}
+   CONVERSION VecUS4(C VecB4 &v);
+   CONVERSION VecUS4(C VecI4 &v);
+};
 /******************************************************************************/
 struct VecH2 // Vector 2D (Half)
 {
@@ -1529,19 +1930,34 @@ struct VecH2 // Vector 2D (Half)
       struct{Half c[2];}; // component
    };
 
-   VecH2& set(  Flt   f           ) {x=y=f;        return T;}
-   VecH2& set(C Half &h           ) {x=y=h;        return T;}
-   VecH2& set(C Half &x, C Half &y) {T.x=x; T.y=y; return T;}
+   VecH2& zero(                    ) {x=y=HalfZero; return T;}
+   VecH2& set (  Flt   f           ) {x=y=f;        return T;}
+   VecH2& set (C Half &h           ) {x=y=h;        return T;}
+   VecH2& set (C Half &x, C Half &y) {T.x=x; T.y=y; return T;}
+
+   VecH2& operator+=(Flt r) {x+=r; y+=r; return T;}
+   VecH2& operator-=(Flt r) {x-=r; y-=r; return T;}
+   VecH2& operator*=(Flt r) {x*=r; y*=r; return T;}
+   VecH2& operator/=(Flt r) {x/=r; y/=r; return T;}
+
+   VecH2& operator+=(C Vec2 &v) {x+=v.x; y+=v.y; return T;}
+   VecH2& operator-=(C Vec2 &v) {x-=v.x; y-=v.y; return T;}
+   VecH2& operator*=(C Vec2 &v) {x*=v.x; y*=v.y; return T;}
+   VecH2& operator/=(C Vec2 &v) {x/=v.x; y/=v.y; return T;}
 
    Bool any()C {return Any(x, y);} // if any component is non-zero
+
+   VecH2& rotateCosSin(Flt cos, Flt sin); // rotate by cos and sin of angle
 
    Str asText(Int precision=INT_MAX)C; // return as text
 
               VecH2() {}
-              VecH2(  Flt   f           ) {set(f       );}
-              VecH2(C Half &h           ) {set(h       );}
-              VecH2(C Half &x, C Half &y) {set(  x,   y);}
-   CONVERSION VecH2(C Vec2 &v           ) {set(v.x, v.y);}
+   CONVERSION VecH2(  Flt      f           ) {set(f       );}
+              VecH2(C Half    &h           ) {set(h       );}
+              VecH2(C Half    &x, C Half &y) {set(  x,   y);}
+   CONVERSION VecH2(C Vec2    &v           ) {set(v.x, v.y);}
+   CONVERSION VecH2(C VecSSN2 &v           );
+   CONVERSION VecH2(C VecUSN2 &v           );
 };
 struct VecH // Vector 3D (Half)
 {
@@ -1552,21 +1968,48 @@ struct VecH // Vector 3D (Half)
       struct{VecH2 xy     ;};
    };
 
-   VecH& set(  Flt    f                      ) {x=y=z=f;             return T;}
-   VecH& set(C Half  &h                      ) {x=y=z=h;             return T;}
-   VecH& set(C Half  &x, C Half &y, C Half &z) {T.x=x; T.y=y; T.z=z; return T;}
-   VecH& set(C VecH2 &xy          , C Half &z) {T.xy=xy;      T.z=z; return T;}
+   VecH& zero(                                ) {x=y=z=HalfZero;      return T;}
+   VecH& set (  Flt    f                      ) {x=y=z=f;             return T;}
+   VecH& set (C Half  &h                      ) {x=y=z=h;             return T;}
+   VecH& set (C Half  &x, C Half &y, C Half &z) {T.x=x; T.y=y; T.z=z; return T;}
+   VecH& set (C VecH2 &xy          , C Half &z) {T.xy=xy;      T.z=z; return T;}
+
+   friend Vec operator+ (C VecH &v, Flt r) {return Vec(v.x+r, v.y+r, v.z+r);}
+   friend Vec operator- (C VecH &v, Flt r) {return Vec(v.x-r, v.y-r, v.z-r);}
+   friend Vec operator* (C VecH &v, Flt r) {return Vec(v.x*r, v.y*r, v.z*r);}
+   friend Vec operator/ (C VecH &v, Flt r) {return Vec(v.x/r, v.y/r, v.z/r);}
+
+   friend Vec operator+ (Flt r, C VecH &v) {return Vec(r+v.x, r+v.y, r+v.z);}
+   friend Vec operator- (Flt r, C VecH &v) {return Vec(r-v.x, r-v.y, r-v.z);}
+   friend Vec operator* (Flt r, C VecH &v) {return Vec(r*v.x, r*v.y, r*v.z);}
+   friend Vec operator/ (Flt r, C VecH &v) {return Vec(r/v.x, r/v.y, r/v.z);}
+
+   friend Vec operator+ (C VecH &a, C Vec &b) {return Vec(a.x+b.x, a.y+b.y, a.z+b.z);}
+   friend Vec operator- (C VecH &a, C Vec &b) {return Vec(a.x-b.x, a.y-b.y, a.z-b.z);}
+   friend Vec operator* (C VecH &a, C Vec &b) {return Vec(a.x*b.x, a.y*b.y, a.z*b.z);}
+   friend Vec operator/ (C VecH &a, C Vec &b) {return Vec(a.x/b.x, a.y/b.y, a.z/b.z);}
+
+   friend Vec operator+ (C Vec &a, C VecH &b) {return Vec(a.x+b.x, a.y+b.y, a.z+b.z);}
+   friend Vec operator- (C Vec &a, C VecH &b) {return Vec(a.x-b.x, a.y-b.y, a.z-b.z);}
+   friend Vec operator* (C Vec &a, C VecH &b) {return Vec(a.x*b.x, a.y*b.y, a.z*b.z);}
+   friend Vec operator/ (C Vec &a, C VecH &b) {return Vec(a.x/b.x, a.y/b.y, a.z/b.z);}
+
+   friend Vec operator* (C VecH &v, C Matrix3 &m) {return Vec(v)*=m;}
+   friend Vec operator* (C VecH &v, C Matrix  &m) {return Vec(v)*=m;}
+   friend Vec operator/ (C VecH &v, C Matrix3 &m) {return Vec(v)/=m;}
+   friend Vec operator/ (C VecH &v, C Matrix  &m) {return Vec(v)/=m;}
 
    Bool any()C {return Any(x, y, z);} // if any component is non-zero
 
    Str asText(Int precision=INT_MAX)C; // return as text
 
               VecH() {}
-              VecH(  Flt    f                      ) {set(f            );}
-              VecH(C Half  &h                      ) {set(h            );}
-              VecH(C Half  &x, C Half &y, C Half &z) {set(  x,   y,   z);}
-              VecH(C VecH2 &xy          , C Half &z) {set(  xy    ,   z);}
-   CONVERSION VecH(C Vec   &v                      ) {set(v.x, v.y, v.z);}
+   CONVERSION VecH(  Flt     f                      ) {set(f            );}
+              VecH(C Half   &h                      ) {set(h            );}
+              VecH(C Half   &x, C Half &y, C Half &z) {set(  x,   y,   z);}
+              VecH(C VecH2  &xy          , C Half &z) {set(  xy    ,   z);}
+   CONVERSION VecH(C Vec    &v                      ) {set(v.x, v.y, v.z);}
+   CONVERSION VecH(C VecSSN &v                      );
 };
 struct VecH4 // Vector 4D (Half)
 {
@@ -1578,25 +2021,27 @@ struct VecH4 // Vector 4D (Half)
       struct{VecH  xyz       ;};
    };
 
-   VecH4& set(  Flt    f                                 ) {x=y=z=w=f;                  return T;}
-   VecH4& set(C Half  &h                                 ) {x=y=z=w=h;                  return T;}
-   VecH4& set(C Half  &x, C Half &y, C Half &z, C Half &w) {T.x=x; T.y=y; T.z=z; T.w=w; return T;}
-   VecH4& set(C VecH2 &xy          , C Half &z, C Half &w) {T.xy =xy ;    T.z=z; T.w=w; return T;}
-   VecH4& set(C VecH  &xyz                    , C Half &w) {T.xyz=xyz;           T.w=w; return T;}
-   VecH4& set(C VecH2 &xy          , C VecH2 &zw         ) {T.xy =xy ;    T.zw=zw;      return T;}
+   VecH4& zero(                                           ) {x=y=z=w=HalfZero;           return T;}
+   VecH4& set (  Flt    f                                 ) {x=y=z=w=f;                  return T;}
+   VecH4& set (C Half  &h                                 ) {x=y=z=w=h;                  return T;}
+   VecH4& set (C Half  &x, C Half &y, C Half &z, C Half &w) {T.x=x; T.y=y; T.z=z; T.w=w; return T;}
+   VecH4& set (C VecH2 &xy          , C Half &z, C Half &w) {T.xy =xy ;    T.z=z; T.w=w; return T;}
+   VecH4& set (C VecH  &xyz                    , C Half &w) {T.xyz=xyz;           T.w=w; return T;}
+   VecH4& set (C VecH2 &xy          , C VecH2 &zw         ) {T.xy =xy ;    T.zw=zw;      return T;}
 
    Bool any()C {return Any(x, y, z, w);} // if any component is non-zero
 
    Str asText(Int precision=INT_MAX)C; // return as text
 
               VecH4() {}
-              VecH4(  Flt    f                                 ) {set(f                 );}
-              VecH4(C Half  &h                                 ) {set(h                 );}
-              VecH4(C Half  &x, C Half &y, C Half &z, C Half &w) {set(  x,   y,   z,   w);}
-              VecH4(C VecH2 &xy          , C Half &z, C Half &w) {set(xy      ,   z,   w);}
-              VecH4(C VecH  &xyz                    , C Half &w) {set(xyz          ,   w);}
-              VecH4(C VecH2 &xy          , C VecH2 &zw         ) {set(xy      ,  zw     );}
-   CONVERSION VecH4(C Vec4  &v                                 ) {set(v.x, v.y, v.z, v.w);}
+   CONVERSION VecH4(  Flt      f                                 ) {set(f                 );}
+              VecH4(C Half    &h                                 ) {set(h                 );}
+              VecH4(C Half    &x, C Half &y, C Half &z, C Half &w) {set(  x,   y,   z,   w);}
+              VecH4(C VecH2   &xy          , C Half &z, C Half &w) {set(xy      ,   z,   w);}
+              VecH4(C VecH    &xyz                    , C Half &w) {set(xyz          ,   w);}
+              VecH4(C VecH2   &xy          , C VecH2 &zw         ) {set(xy      ,  zw     );}
+   CONVERSION VecH4(C Vec4    &v                                 ) {set(v.x, v.y, v.z, v.w);}
+   CONVERSION VecH4(C VecSSN4 &v                                 );
 };
 /******************************************************************************/
 struct VecI2 // Vector 2D (integer)
@@ -1643,6 +2088,7 @@ struct VecI2 // Vector 2D (integer)
    friend VecI2 operator* (C VecI2 &v, Int i) {return VecI2(v.x*i, v.y*i);}
    friend VecI2 operator/ (C VecI2 &v, Int i) {return VecI2(v.x/i, v.y/i);}
    friend VecI2 operator% (C VecI2 &v, Int i) {return VecI2(v.x%i, v.y%i);}
+   friend VecI2 operator& (C VecI2 &v, Int i) {return VecI2(v.x&i, v.y&i);}
 
    friend Vec2 operator+ (C VecI2 &v, Flt f) {return Vec2(v.x+f, v.y+f);}
    friend Vec2 operator- (C VecI2 &v, Flt f) {return Vec2(v.x-f, v.y-f);}
@@ -1674,6 +2120,7 @@ struct VecI2 // Vector 2D (integer)
    friend VecI2 operator* (C VecI2 &a, C VecI2 &b) {return VecI2(a.x*b.x, a.y*b.y);}
    friend VecI2 operator/ (C VecI2 &a, C VecI2 &b) {return VecI2(a.x/b.x, a.y/b.y);}
    friend VecI2 operator% (C VecI2 &a, C VecI2 &b) {return VecI2(a.x%b.x, a.y%b.y);}
+   friend VecI2 operator& (C VecI2 &a, C VecI2 &b) {return VecI2(a.x&b.x, a.y&b.y);}
 
    friend VecI2 operator+ (C VecI2 &a, C VecSB2 &b) {return VecI2(a.x+b.x, a.y+b.y);}
    friend VecI2 operator- (C VecI2 &a, C VecSB2 &b) {return VecI2(a.x-b.x, a.y-b.y);}
@@ -1729,32 +2176,42 @@ struct VecI2 // Vector 2D (integer)
    VecI _0xy()C; // return as VecI(0, x, y)
    VecI _0yx()C; // return as VecI(0, y, x)
 
-   Bool   any         (         )C {return    x ||  y;}         // if any  component  is  non-zero
-   Bool   all         (         )C {return    x &&  y;}         // if all  components are non-zero
-   Bool   allZero     (         )C {return   !x && !y;}         // if all  components are     zero
-   Bool   allDifferent(         )C {return      x!=y ;}         // if all  components are different
-   Bool   anyDifferent(         )C {return      x!=y ;}         // if any  component  is  different
-   Int    minI        (         )C {return MinI(x, y);}         // components minimum index
-   Int    maxI        (         )C {return MaxI(x, y);}         // components maximum index
-   Int    min         (         )C {return Min (x, y);}         // components minimum
-   Int    max         (         )C {return Max (x, y);}         // components maximum
-   Int    avgI        (         )C {return AvgI(x, y);}         // components average
-   Flt    avgF        (         )C {return AvgF(x, y);}         // components average
-   Int    sum         (         )C {return      x+ y ;}         // components sum
-   Int    mul         (         )C {return      x* y ;}         // components multiplication
-   Int    div         (         )C {return      x/ y ;}         // components division
-   Flt    divF        (         )C {return Flt(x)/ y ;}         // components division
-   Flt    length      (         )C;                             // get         length
-   Int    length2     (         )C {return  x*x + y*y;}         // get squared length
-   Int    find        (Int value)C;                             // get index of first component that equals 'value' (-1 if none)
-   VecI2& swap        (         ) {Swap(c[0], c[1]); return T;} // swap    components
-   VecI2& reverse     (         ) {Swap(c[0], c[1]); return T;} // reverse components order
-   VecI2& rotateOrder (         ) {Swap(c[0], c[1]); return T;} // rotate  components order
-   VecI2& chs         (         );                              // change sign of all components
-   VecI2& chsX        (         ) {CHS(x); return T;}           // change sign of X   component
-   VecI2& chsY        (         ) {CHS(y); return T;}           // change sign of Y   component
-   VecI2& abs         (         );                              // absolute       all components
-   VecI2& sat         (         );                              // saturate       all components
+   Bool   any         ()C {return    x ||  y;}          // if any  component  is  non-zero
+   Bool   all         ()C {return    x &&  y;}          // if all  components are non-zero
+   Bool   allZero     ()C {return   !x && !y;}          // if all  components are     zero
+   Bool   allDifferent()C {return      x!=y ;}          // if all  components are different
+   Bool   anyDifferent()C {return      x!=y ;}          // if any  component  is  different
+   Int    minI        ()C {return MinI(x, y);}          // components minimum index
+   Int    maxI        ()C {return MaxI(x, y);}          // components maximum index
+   Int    min         ()C {return Min (x, y);}          // components minimum
+   Int    max         ()C {return Max (x, y);}          // components maximum
+   Int    avgI        ()C {return AvgI(x, y);}          // components average
+   Flt    avgF        ()C {return Avg (x, y);}          // components average
+   Int    sum         ()C {return      x+ y ;}          // components sum
+   Int    mul         ()C {return      x* y ;}          // components multiplication
+   Int    div         ()C {return      x/ y ;}          // components division
+   Flt    divF        ()C {return Flt(x)/ y ;}          // components division
+   Int    length2     ()C {return  x*x + y*y;}          // get squared length
+   Flt    length      ()C {return SqrtFast(length2());} // get         length
+   Int    find        (Int value)C;                     // get index of first component that equals 'value' (-1 if none)
+   VecI2& swap        () {Swap(c[0], c[1]); return T;}  // swap    components
+   VecI2& reverse     () {Swap(c[0], c[1]); return T;}  // reverse components order
+   VecI2& rotateOrder () {Swap(c[0], c[1]); return T;}  // rotate  components order
+   VecI2& chs         ();                               // change sign of all components
+   VecI2& chsX        () {CHS(x); return T;}            // change sign of X   component
+   VecI2& chsY        () {CHS(y); return T;}            // change sign of Y   component
+   VecI2& abs         ();                               // absolute       all components
+   VecI2& sat         ();                               // saturate       all components
+
+#if EE_PRIVATE
+   VecI2& remap   (C         Int  *map) {if(map){x=map[x]; y=map[y];} return T;} // remap if map is provided
+   VecI2& remapAll(C CMemPtr<Int> &map) {x=(InRange(x, map) ? map[x] : -1); y=(InRange(y, map) ? map[y] : -1); return T;} // remap all components
+   VecI2& remapFit(C CMemPtr<Int> &map) {if(InRange(x, map))x=map[x];       if(InRange(y, map))y=map[y];       return T;} // remap     components which are in range of the remap array
+
+   VecI2 asIso  ()C {return VecI2(x+y  , y-x  );}
+   VecI2 asIso2 ()C {return VecI2(x*2+y, y*2-x);}
+   VecI2 asIso_2()C {return VecI2(x+y*2, y-x*2);}
+#endif
 
               VecI2() {}
               VecI2(Int i       ) {set(i       );}
@@ -1891,31 +2348,37 @@ struct VecI // Vector 3D (integer)
    VecI  x0z()C {return VecI (x, 0, z);} // return as VecI (x, 0, z)
    VecI  xy0()C {return VecI (x, y, 0);} // return as VecI (x, y, 0)
 
-   Bool  any         (         )C {return  x ||  y ||  z;}       // if any  component  is  non-zero
-   Bool  all         (         )C {return  x &&  y &&  z;}       // if all  components are non-zero
-   Bool  allZero     (         )C {return !x && !y && !z;}       // if all  components are     zero
-   Bool  allDifferent(         )C {return x!=y && x!=z && y!=z;} // if all  components are different
-   Bool  anyDifferent(         )C {return x!=y || x!=z        ;} // if any  component  is  different
-   Int   minI        (         )C {return MinI(x, y, z);}        // components minimum index
-   Int   maxI        (         )C {return MaxI(x, y, z);}        // components maximum index
-   Int   min         (         )C {return Min (x, y, z);}        // components minimum
-   Int   max         (         )C {return Max (x, y, z);}        // components maximum
-   Int   avgI        (         )C {return AvgI(x, y, z);}        // components average
-   Flt   avgF        (         )C {return AvgF(x, y, z);}        // components average
-   Int   sum         (         )C {return      x+ y+ z ;}        // components sum
-   Int   mul         (         )C {return      x* y* z ;}        // components multiplication
-   Flt   length      (         )C;                               // get         length
-   Int   length2     (         )C {return x*x + y*y + z*z;}      // get squared length
-   Int   find        (Int value)C;                               // get index of first component that equals 'value' (-1 if none)
-   VecI& swapXZ      (         ) {Swap(c[0], c[2]); return T;}   // swap X Z components
-   VecI& reverse     (         ) {Swap(c[0], c[2]); return T;}   // reverse  components order
-   VecI& rotateOrder (         );                                // rotate   components order
-   VecI& chs         (         );                                // change sign of all components
-   VecI& chsX        (         ) {CHS(x); return T;}             // change sign of X   component
-   VecI& chsY        (         ) {CHS(y); return T;}             // change sign of Y   component
-   VecI& chsZ        (         ) {CHS(z); return T;}             // change sign of Z   component
-   VecI& abs         (         );                                // absolute       all components
-   VecI& sat         (         );                                // saturate       all components
+   Bool  any         ()C {return  x ||  y ||  z;}       // if any  component  is  non-zero
+   Bool  all         ()C {return  x &&  y &&  z;}       // if all  components are non-zero
+   Bool  allZero     ()C {return !x && !y && !z;}       // if all  components are     zero
+   Bool  allDifferent()C {return x!=y && x!=z && y!=z;} // if all  components are different
+   Bool  anyDifferent()C {return x!=y || x!=z        ;} // if any  component  is  different
+   Int   minI        ()C {return MinI(x, y, z);}        // components minimum index
+   Int   maxI        ()C {return MaxI(x, y, z);}        // components maximum index
+   Int   min         ()C {return Min (x, y, z);}        // components minimum
+   Int   max         ()C {return Max (x, y, z);}        // components maximum
+   Int   avgI        ()C {return AvgI(x, y, z);}        // components average
+   Flt   avgF        ()C {return Avg (x, y, z);}        // components average
+   Int   sum         ()C {return      x+ y+ z ;}        // components sum
+   Int   mul         ()C {return      x* y* z ;}        // components multiplication
+   Int   length2     ()C {return x*x + y*y + z*z;}      // get squared length
+   Flt   length      ()C {return SqrtFast(length2());}  // get         length
+   Int   find        (Int value)C;                      // get index of first component that equals 'value' (-1 if none)
+   VecI& swapXZ      () {Swap(c[0], c[2]); return T;}   // swap X Z components
+   VecI& reverse     () {Swap(c[0], c[2]); return T;}   // reverse  components order
+   VecI& rotateOrder ();                                // rotate   components order
+   VecI& chs         ();                                // change sign of all components
+   VecI& chsX        () {CHS(x); return T;}             // change sign of X   component
+   VecI& chsY        () {CHS(y); return T;}             // change sign of Y   component
+   VecI& chsZ        () {CHS(z); return T;}             // change sign of Z   component
+   VecI& abs         ();                                // absolute       all components
+   VecI& sat         ();                                // saturate       all components
+
+#if EE_PRIVATE
+   VecI& remap   (C         Int  *map) {if(map){x=map[x]; y=map[y]; z=map[z];} return T;} // remap if map is provided
+   VecI& remapAll(C CMemPtr<Int> &map) {x=(InRange(x, map) ? map[x] : -1); y=(InRange(y, map) ? map[y] : -1); z=(InRange(z, map) ? map[z] : -1); return T;} // remap all components
+   VecI& remapFit(C CMemPtr<Int> &map) {if(InRange(x, map))x=map[x];       if(InRange(y, map))y=map[y];       if(InRange(z, map))z=map[z];       return T;} // remap     components which are in range of the remap array
+#endif
 
               VecI() {}
               VecI(Int i              ) {set(i            );}
@@ -1962,8 +2425,13 @@ struct VecI4 // Vector 4D (integer)
    VecI4& operator %=(C VecI4  &v) {x%=v.x; y%=v.y; z%=v.z; w%=v.w; return T;}
    VecI4& operator<<=(  Int     i) {x<<= i; y<<= i; z<<= i; w<<= i; return T;}
    VecI4& operator>>=(  Int     i) {x>>= i; y>>= i; z>>= i; w>>= i; return T;}
-   Bool   operator ==(C VecI4  &v)C{return x==v.x && y==v.y && z==v.z && w==v.w;}
-   Bool   operator !=(C VecI4  &v)C{return x!=v.x || y!=v.y || z!=v.z || w!=v.w;}
+
+   Bool operator ==(C VecI4  &v)C {return x==v.x && y==v.y && z==v.z && w==v.w;}
+   Bool operator !=(C VecI4  &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w;}
+   Bool operator ==(C VecB4  &v)C {return x==v.x && y==v.y && z==v.z && w==v.w;}
+   Bool operator !=(C VecB4  &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w;}
+   Bool operator ==(C VecUS4 &v)C {return x==v.x && y==v.y && z==v.z && w==v.w;}
+   Bool operator !=(C VecUS4 &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w;}
 
    friend VecI4 operator+ (C VecI4 &v, Int i) {return VecI4(v.x+i, v.y+i, v.z+i, v.w+i);}
    friend VecI4 operator- (C VecI4 &v, Int i) {return VecI4(v.x-i, v.y-i, v.z-i, v.w-i);}
@@ -2040,32 +2508,38 @@ struct VecI4 // Vector 4D (integer)
    friend VecI4 operator>> (C VecI4 &v, Int i) {return VecI4(v.x>>i, v.y>>i, v.z>>i, v.w>>i);}
    friend VecI4 operator - (C VecI4 &v       ) {return VecI4(-v.x, -v.y, -v.z, -v.w);}
 
-   Bool   any         (         )C {return  x ||  y ||  z ||  w;}                         // if any  component  is  non-zero
-   Bool   all         (         )C {return  x &&  y &&  z &&  w;}                         // if all  components are non-zero
-   Bool   allZero     (         )C {return !x && !y && !z && !w;}                         // if all  components are     zero
-   Bool   allDifferent(         )C {return x!=y && x!=z && x!=w && y!=z && y!=w && z!=w;} // if all  components are different
-   Bool   anyDifferent(         )C {return x!=y || x!=z || x!=w                        ;} // if any  component  is  different
-   Int    minI        (         )C {return  MinI(x, y, z, w);}                            // components minimum index
-   Int    maxI        (         )C {return  MaxI(x, y, z, w);}                            // components maximum index
-   Int    min         (         )C {return  Min (x, y, z, w);}                            // components minimum
-   Int    max         (         )C {return  Max (x, y, z, w);}                            // components maximum
-   Int    avgI        (         )C {return  AvgI(x, y, z, w);}                            // components average
-   Flt    avgF        (         )C {return  AvgF(x, y, z, w);}                            // components average
-   Int    sum         (         )C {return       x+ y+ z+ w ;}                            // components sum
-   Int    mul         (         )C {return       x* y* z* w ;}                            // components multiplication
-   Flt    length      (         )C;                                                       // get         length
-   Int    length2     (         )C {return x*x + y*y + z*z + w*w;}                        // get squared length
-   Int    find        (Int value)C;                                                       // get index of first component that equals 'value' (-1 if none)
-   VecI4& swapXZ      (         ) {Swap(c[0], c[2]);                   return T;}         // swap X Z components
-   VecI4& reverse     (         ) {Swap(c[0], c[3]); Swap(c[1], c[2]); return T;}         // reverse  components order
-   VecI4& rotateOrder (         );                                                        // rotate   components order
-   VecI4& chs         (         );                                                        // change sign of all components
-   VecI4& chsX        (         ) {CHS(x); return T;}                                     // change sign of X   component
-   VecI4& chsY        (         ) {CHS(y); return T;}                                     // change sign of Y   component
-   VecI4& chsZ        (         ) {CHS(z); return T;}                                     // change sign of Z   component
-   VecI4& chsW        (         ) {CHS(w); return T;}                                     // change sign of W   component
-   VecI4& abs         (         );                                                        // absolute       all components
-   VecI4& sat         (         );                                                        // saturate       all components
+   Bool   any         ()C {return  x ||  y ||  z ||  w;}                         // if any  component  is  non-zero
+   Bool   all         ()C {return  x &&  y &&  z &&  w;}                         // if all  components are non-zero
+   Bool   allZero     ()C {return !x && !y && !z && !w;}                         // if all  components are     zero
+   Bool   allDifferent()C {return x!=y && x!=z && x!=w && y!=z && y!=w && z!=w;} // if all  components are different
+   Bool   anyDifferent()C {return x!=y || x!=z || x!=w                        ;} // if any  component  is  different
+   Int    minI        ()C {return  MinI(x, y, z, w);}                            // components minimum index
+   Int    maxI        ()C {return  MaxI(x, y, z, w);}                            // components maximum index
+   Int    min         ()C {return  Min (x, y, z, w);}                            // components minimum
+   Int    max         ()C {return  Max (x, y, z, w);}                            // components maximum
+   Int    avgI        ()C {return  AvgI(x, y, z, w);}                            // components average
+   Flt    avgF        ()C {return  Avg (x, y, z, w);}                            // components average
+   Int    sum         ()C {return       x+ y+ z+ w ;}                            // components sum
+   Int    mul         ()C {return       x* y* z* w ;}                            // components multiplication
+   Int    length2     ()C {return x*x + y*y + z*z + w*w;}                        // get squared length
+   Flt    length      ()C {return SqrtFast(length2());}                          // get         length
+   Int    find        (Int value)C;                                              // get index of first component that equals 'value' (-1 if none)
+   VecI4& swapXZ      () {Swap(c[0], c[2]);                   return T;}         // swap X Z components
+   VecI4& reverse     () {Swap(c[0], c[3]); Swap(c[1], c[2]); return T;}         // reverse  components order
+   VecI4& rotateOrder ();                                                        // rotate   components order
+   VecI4& chs         ();                                                        // change sign of all components
+   VecI4& chsX        () {CHS(x); return T;}                                     // change sign of X   component
+   VecI4& chsY        () {CHS(y); return T;}                                     // change sign of Y   component
+   VecI4& chsZ        () {CHS(z); return T;}                                     // change sign of Z   component
+   VecI4& chsW        () {CHS(w); return T;}                                     // change sign of W   component
+   VecI4& abs         ();                                                        // absolute       all components
+   VecI4& sat         ();                                                        // saturate       all components
+
+#if EE_PRIVATE
+   VecI4& remap   (C         Int  *map) {if(map){x=map[x]; y=map[y]; z=map[z]; w=map[w];} return T;} // remap if map is provided
+   VecI4& remapAll(C CMemPtr<Int> &map) {x=(InRange(x, map) ? map[x] : -1); y=(InRange(y, map) ? map[y] : -1); z=(InRange(z, map) ? map[z] : -1); w=(InRange(w, map) ? map[w] : -1); return T;} // remap all components
+   VecI4& remapFit(C CMemPtr<Int> &map) {if(InRange(x, map))x=map[x];       if(InRange(y, map))y=map[y];       if(InRange(z, map))z=map[z];       if(InRange(w, map))w=map[w];       return T;} // remap     components which are in range of the remap array
+#endif
 
    VecI tri0()C {return VecI(x, y, w);}
    VecI tri1()C {return VecI(w, y, z);}
@@ -2080,170 +2554,276 @@ struct VecI4 // Vector 4D (integer)
               VecI4(C VecI2  &xy , C VecI2 &zw ) {set(xy      , zw      );}
    CONVERSION VecI4(C VecB4  &v                ) {set(v.x, v.y, v.z, v.w);}
    CONVERSION VecI4(C VecSB4 &v                ) {set(v.x, v.y, v.z, v.w);}
+   CONVERSION VecI4(C VecUS4 &v                ) {set(v.x, v.y, v.z, v.w);}
 };extern VecI4
    const VecI4Zero; // VecI4(0, 0, 0, 0)
 /******************************************************************************/
-// ROUNDING
+struct VecI5 // Vector 5D (integer)
+{
+   union
+   {
+      struct{Int   x, y, z, w, u;};
+      struct{Int   c[5]         ;}; // component
+      struct{VecI2 xy, zw       ;};
+      struct{VecI  xyz          ;};
+      struct{VecI4 xyzw         ;};
+   };
+
+   VecI5& zero(                                 ) {x=y=z=w=u=0;                       return T;}
+   VecI5& set (Int i                            ) {x=y=z=w=u=i;                       return T;}
+   VecI5& set (Int x, Int y, Int z, Int w, Int u) {T.x=x; T.y=y; T.z=z; T.w=w; T.u=u; return T;}
+   VecI5& set (C VecI4 &xyzw             , Int u) {T.xyzw=xyzw;                T.u=u; return T;}
+
+   VecI5& operator ++(  Int     ) {x++   ; y++   ; z++   ; w++   ; u++   ; return T;}
+   VecI5& operator --(  Int     ) {x--   ; y--   ; z--   ; w--   ; u--   ; return T;}
+   VecI5& operator +=(  Int    i) {x+=  i; y+=  i; z+=  i; w+=  i; u+=  i; return T;}
+   VecI5& operator -=(  Int    i) {x-=  i; y-=  i; z-=  i; w-=  i; u-=  i; return T;}
+   VecI5& operator *=(  Int    i) {x*=  i; y*=  i; z*=  i; w*=  i; u*=  i; return T;}
+   VecI5& operator /=(  Int    i) {x/=  i; y/=  i; z/=  i; w/=  i; u/=  i; return T;}
+   VecI5& operator %=(  Int    i) {x%=  i; y%=  i; z%=  i; w%=  i; u%=  i; return T;}
+   VecI5& operator +=(C VecI5 &v) {x+=v.x; y+=v.y; z+=v.z; w+=v.w; u+=v.u; return T;}
+   VecI5& operator +=(C VecB5 &v) {x+=v.x; y+=v.y; z+=v.z; w+=v.w; u+=v.u; return T;}
+   VecI5& operator -=(C VecI5 &v) {x-=v.x; y-=v.y; z-=v.z; w-=v.w; u-=v.u; return T;}
+   VecI5& operator -=(C VecB5 &v) {x-=v.x; y-=v.y; z-=v.z; w-=v.w; u-=v.u; return T;}
+   VecI5& operator *=(C VecI5 &v) {x*=v.x; y*=v.y; z*=v.z; w*=v.w; u*=v.u; return T;}
+   VecI5& operator /=(C VecI5 &v) {x/=v.x; y/=v.y; z/=v.z; w/=v.w; u/=v.u; return T;}
+   VecI5& operator %=(C VecI5 &v) {x%=v.x; y%=v.y; z%=v.z; w%=v.w; u%=v.u; return T;}
+   VecI5& operator<<=(  Int    i) {x<<= i; y<<= i; z<<= i; w<<= i; u<<= i; return T;}
+   VecI5& operator>>=(  Int    i) {x>>= i; y>>= i; z>>= i; w>>= i; u>>= i; return T;}
+
+   Bool operator ==(C VecI5 &v)C {return x==v.x && y==v.y && z==v.z && w==v.w && u==v.u;}
+   Bool operator !=(C VecI5 &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w || u!=v.u;}
+   Bool operator ==(C VecB5 &v)C {return x==v.x && y==v.y && z==v.z && w==v.w && u==v.u;}
+   Bool operator !=(C VecB5 &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w || u!=v.u;}
+
+   friend VecI5 operator+ (C VecI5 &v, Int i) {return VecI5(v.x+i, v.y+i, v.z+i, v.w+i, v.u+i);}
+   friend VecI5 operator- (C VecI5 &v, Int i) {return VecI5(v.x-i, v.y-i, v.z-i, v.w-i, v.u-i);}
+   friend VecI5 operator* (C VecI5 &v, Int i) {return VecI5(v.x*i, v.y*i, v.z*i, v.w*i, v.u*i);}
+   friend VecI5 operator/ (C VecI5 &v, Int i) {return VecI5(v.x/i, v.y/i, v.z/i, v.w/i, v.u/i);}
+   friend VecI5 operator% (C VecI5 &v, Int i) {return VecI5(v.x%i, v.y%i, v.z%i, v.w%i, v.u%i);}
+
+   friend Vec5 operator+ (C VecI5 &v, Flt f) {return Vec5(v.x+f, v.y+f, v.z+f, v.w+f, v.u+f);}
+   friend Vec5 operator- (C VecI5 &v, Flt f) {return Vec5(v.x-f, v.y-f, v.z-f, v.w-f, v.u-f);}
+   friend Vec5 operator* (C VecI5 &v, Flt f) {return Vec5(v.x*f, v.y*f, v.z*f, v.w*f, v.u*f);}
+   friend Vec5 operator/ (C VecI5 &v, Flt f) {return Vec5(v.x/f, v.y/f, v.z/f, v.w/f, v.u/f);}
+
+   friend VecI5 operator+ (Int i, C VecI5 &v) {return VecI5(i+v.x, i+v.y, i+v.z, i+v.w, i+v.u);}
+   friend VecI5 operator- (Int i, C VecI5 &v) {return VecI5(i-v.x, i-v.y, i-v.z, i-v.w, i-v.u);}
+   friend VecI5 operator* (Int i, C VecI5 &v) {return VecI5(i*v.x, i*v.y, i*v.z, i*v.w, i*v.u);}
+   friend VecI5 operator/ (Int i, C VecI5 &v) {return VecI5(i/v.x, i/v.y, i/v.z, i/v.w, i/v.u);}
+
+   friend Vec5 operator+ (Flt f, C VecI5 &v) {return Vec5(f+v.x, f+v.y, f+v.z, f+v.w, f+v.u);}
+   friend Vec5 operator- (Flt f, C VecI5 &v) {return Vec5(f-v.x, f-v.y, f-v.z, f-v.w, f-v.u);}
+   friend Vec5 operator* (Flt f, C VecI5 &v) {return Vec5(f*v.x, f*v.y, f*v.z, f*v.w, f*v.u);}
+   friend Vec5 operator/ (Flt f, C VecI5 &v) {return Vec5(f/v.x, f/v.y, f/v.z, f/v.w, f/v.u);}
+
+   friend VecI5 operator+ (C VecI5 &a, C VecI5 &b) {return VecI5(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w, a.u+b.u);}
+   friend VecI5 operator- (C VecI5 &a, C VecI5 &b) {return VecI5(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w, a.u-b.u);}
+   friend VecI5 operator* (C VecI5 &a, C VecI5 &b) {return VecI5(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w, a.u*b.u);}
+   friend VecI5 operator/ (C VecI5 &a, C VecI5 &b) {return VecI5(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w, a.u/b.u);}
+   friend VecI5 operator% (C VecI5 &a, C VecI5 &b) {return VecI5(a.x%b.x, a.y%b.y, a.z%b.z, a.w%b.w, a.u%b.u);}
+
+   friend VecI5 operator+ (C VecI5 &a, C VecB5 &b) {return VecI5(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w, a.u+b.u);}
+   friend VecI5 operator- (C VecI5 &a, C VecB5 &b) {return VecI5(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w, a.u-b.u);}
+   friend VecI5 operator* (C VecI5 &a, C VecB5 &b) {return VecI5(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w, a.u*b.u);}
+   friend VecI5 operator/ (C VecI5 &a, C VecB5 &b) {return VecI5(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w, a.u/b.u);}
+   friend VecI5 operator% (C VecI5 &a, C VecB5 &b) {return VecI5(a.x%b.x, a.y%b.y, a.z%b.z, a.w%b.w, a.u%b.u);}
+
+   friend VecI5 operator+ (C VecB5 &a, C VecI5 &b) {return VecI5(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w, a.u+b.u);}
+   friend VecI5 operator- (C VecB5 &a, C VecI5 &b) {return VecI5(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w, a.u-b.u);}
+   friend VecI5 operator* (C VecB5 &a, C VecI5 &b) {return VecI5(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w, a.u*b.u);}
+   friend VecI5 operator/ (C VecB5 &a, C VecI5 &b) {return VecI5(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w, a.u/b.u);}
+   friend VecI5 operator% (C VecB5 &a, C VecI5 &b) {return VecI5(a.x%b.x, a.y%b.y, a.z%b.z, a.w%b.w, a.u%b.u);}
+
+   friend Vec5 operator+ (C VecI5 &a, C Vec5 &b) {return Vec5(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w, a.u+b.u);}
+   friend Vec5 operator- (C VecI5 &a, C Vec5 &b) {return Vec5(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w, a.u-b.u);}
+   friend Vec5 operator* (C VecI5 &a, C Vec5 &b) {return Vec5(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w, a.u*b.u);}
+   friend Vec5 operator/ (C VecI5 &a, C Vec5 &b) {return Vec5(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w, a.u/b.u);}
+
+   friend Vec5 operator + (C Vec5 &a, C VecI5 &b) {return Vec5(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w, a.u+b.u);}
+   friend Vec5 operator - (C Vec5 &a, C VecI5 &b) {return Vec5(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w, a.u-b.u);}
+   friend Vec5 operator * (C Vec5 &a, C VecI5 &b) {return Vec5(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w, a.u*b.u);}
+   friend Vec5 operator / (C Vec5 &a, C VecI5 &b) {return Vec5(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w, a.u/b.u);}
+
+   friend VecI5 operator<< (C VecI5 &v, Int i) {return VecI5(v.x<<i, v.y<<i, v.z<<i, v.w<<i, v.u<<i);}
+   friend VecI5 operator>> (C VecI5 &v, Int i) {return VecI5(v.x>>i, v.y>>i, v.z>>i, v.w>>i, v.u>>i);}
+   friend VecI5 operator - (C VecI5 &v       ) {return VecI5(-v.x, -v.y, -v.z, -v.w, -v.u);}
+
+   Bool   any         ()C {return  x ||  y ||  z ||  w ||  u;}   // if any  component  is  non-zero
+   Bool   all         ()C {return  x &&  y &&  z &&  w &&  u;}   // if all  components are non-zero
+   Bool   allZero     ()C {return !x && !y && !z && !w && !u;}   // if all  components are     zero
+   Bool   anyDifferent()C {return x!=y || x!=z || x!=w || x!=u;} // if any  component  is  different
+   Int    minI        ()C {return  MinI(x, y, z, w, u);}         // components minimum index
+   Int    maxI        ()C {return  MaxI(x, y, z, w, u);}         // components maximum index
+   Int    min         ()C {return  Min (x, y, z, w, u);}         // components minimum
+   Int    max         ()C {return  Max (x, y, z, w, u);}         // components maximum
+   Int    avgI        ()C {return  AvgI(x, y, z, w, u);}         // components average
+   Flt    avgF        ()C {return  Avg (x, y, z, w, u);}         // components average
+   Int    sum         ()C {return       x+ y+ z+ w+ u ;}         // components sum
+   Int    mul         ()C {return       x* y* z* w* u ;}         // components multiplication
+   VecI5& chs         ();                                        // change sign of all components
+   VecI5& chsX        () {CHS(x); return T;}                     // change sign of X   component
+   VecI5& chsY        () {CHS(y); return T;}                     // change sign of Y   component
+   VecI5& chsZ        () {CHS(z); return T;}                     // change sign of Z   component
+   VecI5& chsW        () {CHS(w); return T;}                     // change sign of W   component
+   VecI5& chsU        () {CHS(u); return T;}                     // change sign of U   component
+   VecI5& abs         ();                                        // absolute       all components
+   VecI5& sat         ();                                        // saturate       all components
+   Int    find        (Int value)C;                              // get index of first component that equals 'value' (-1 if none)
+
+              VecI5() {}
+              VecI5(Int i                            ) {set(i                      );}
+              VecI5(Int x, Int y, Int z, Int w, Int u) {set(  x,   y,   z,   w,   u);}
+              VecI5(C VecI4 &xyzw             , Int u) {set(  xyzw            ,   u);}
+   CONVERSION VecI5(C VecB5 &v                       ) {set(v.x, v.y, v.z, v.w, v.u);}
+};
 /******************************************************************************/
-// truncate, remove fractional part, Sample Usage: Trunc(7.3) -> 7, Trunc(7.9) -> 7
-constexpr Int   Trunc  (  Int    x) {return       x ;} // truncate and return as Int
-constexpr Int   Trunc  (  Flt    x) {return Int  (x);} // truncate and return as Int
-constexpr Int   Trunc  (  Dbl    x) {return Int  (x);} // truncate and return as Int
-constexpr UInt  TruncU (  UInt   x) {return       x ;} // truncate and return as UInt
-constexpr UInt  TruncU (  Flt    x) {return UInt (x);} // truncate and return as UInt
-constexpr UInt  TruncU (  Dbl    x) {return UInt (x);} // truncate and return as UInt
-constexpr Long  TruncL (  Dbl    x) {return Long (x);} // truncate and return as Long
-constexpr ULong TruncUL(  Dbl    x) {return ULong(x);} // truncate and return as ULong
-inline    VecI2 Trunc  (C Vec2  &v) {return VecI2(Trunc(v.x), Trunc(v.y)                        );}
-inline    VecI2 Trunc  (C VecD2 &v) {return VecI2(Trunc(v.x), Trunc(v.y)                        );}
-inline    VecI  Trunc  (C Vec   &v) {return VecI (Trunc(v.x), Trunc(v.y), Trunc(v.z)            );}
-inline    VecI  Trunc  (C VecD  &v) {return VecI (Trunc(v.x), Trunc(v.y), Trunc(v.z)            );}
-inline    VecI4 Trunc  (C Vec4  &v) {return VecI4(Trunc(v.x), Trunc(v.y), Trunc(v.z), Trunc(v.w));}
-inline    VecI4 Trunc  (C VecD4 &v) {return VecI4(Trunc(v.x), Trunc(v.y), Trunc(v.z), Trunc(v.w));}
+struct VecUSN2 // Vector 2D (USN)
+{
+   union
+   {
+      struct{USN x, y;};
+      struct{USN c[2];}; // component
+   };
 
-// round, round to nearest integer, Sample Usage: Round(7.3) -> 7, Round(7.9) -> 8
-constexpr Int   Round  (  Int    x) {return x;}
-constexpr Int   Round  (  Flt    x) {return (x>=0) ? Trunc  (x+0.5f) : Trunc (x-0.5f);} // faster than 'lroundf'
-constexpr Int   Round  (  Dbl    x) {return (x>=0) ? Trunc  (x+0.5 ) : Trunc (x-0.5 );} // faster than 'lround'
-constexpr UInt  RoundU (  UInt   x) {return x;}
-constexpr UInt  RoundU (  Flt    x) {return          TruncU (x+0.5f);}
-constexpr UInt  RoundU (  Dbl    x) {return          TruncU (x+0.5 );}
-constexpr Long  RoundL (  Dbl    x) {return (x>=0) ? TruncL (x+0.5 ) : TruncL(x-0.5 );}
-constexpr ULong RoundUL(  Dbl    x) {return          TruncUL(x+0.5 );}
-inline    VecI2 Round  (C Vec2  &x) {return VecI2(Round(x.x), Round(x.y)                        );}
-inline    VecI2 Round  (C VecD2 &x) {return VecI2(Round(x.x), Round(x.y)                        );}
-inline    VecI  Round  (C Vec   &x) {return VecI (Round(x.x), Round(x.y), Round(x.z)            );}
-inline    VecI  Round  (C VecD  &x) {return VecI (Round(x.x), Round(x.y), Round(x.z)            );}
-inline    VecI4 Round  (C Vec4  &x) {return VecI4(Round(x.x), Round(x.y), Round(x.z), Round(x.w));}
-inline    VecI4 Round  (C VecD4 &x) {return VecI4(Round(x.x), Round(x.y), Round(x.z), Round(x.w));}
+   VecUSN2& zero(                  ) {x=y=USNZero;  return T;}
+   VecUSN2& set (  Flt  f          ) {x=y=f;        return T;}
+   VecUSN2& set (C USN &r          ) {x=y=r;        return T;}
+   VecUSN2& set (  Flt  x,   Flt  y) {T.x=x; T.y=y; return T;}
+   VecUSN2& set (C USN &x, C USN &y) {T.x=x; T.y=y; return T;}
 
-// floor, round to nearest integer which is smaller or equal to value, Sample Usage: Floor(7.3) -> 7, Floor(7.9) -> 7
-constexpr Int   Floor (  Int    x) {return x;}
-inline    Int   Floor (  Flt    x) {return (Int )floorf(x);}
-inline    Int   Floor (  Dbl    x) {return (Int )floor (x);}
-inline    Long  FloorL(  Dbl    x) {return (Long)floor (x);}
-inline    VecI2 Floor (C Vec2  &x) {return VecI2(Floor(x.x), Floor(x.y)                        );}
-inline    VecI2 Floor (C VecD2 &x) {return VecI2(Floor(x.x), Floor(x.y)                        );}
-inline    VecI  Floor (C Vec   &x) {return VecI (Floor(x.x), Floor(x.y), Floor(x.z)            );}
-inline    VecI  Floor (C VecD  &x) {return VecI (Floor(x.x), Floor(x.y), Floor(x.z)            );}
-inline    VecI4 Floor (C Vec4  &x) {return VecI4(Floor(x.x), Floor(x.y), Floor(x.z), Floor(x.w));}
-inline    VecI4 Floor (C VecD4 &x) {return VecI4(Floor(x.x), Floor(x.y), Floor(x.z), Floor(x.w));}
+   VecUSN2& operator+=(Flt r) {x+=r; y+=r; return T;}
+   VecUSN2& operator-=(Flt r) {x-=r; y-=r; return T;}
+   VecUSN2& operator*=(Flt r) {x*=r; y*=r; return T;}
+   VecUSN2& operator/=(Flt r) {x/=r; y/=r; return T;}
 
-// ceil, round to nearest integer which is greater or equal to value, Sample Usage: Ceil(7.3) -> 8, Ceil(7.9) -> 8
-constexpr Int   Ceil (  Int    x) {return x;}
-inline    Int   Ceil (  Flt    x) {return (Int )ceilf(x);}
-inline    Int   Ceil (  Dbl    x) {return (Int )ceil (x);}
-inline    Long  CeilL(  Dbl    x) {return (Long)ceil (x);}
-inline    VecI2 Ceil (C Vec2  &x) {return VecI2(Ceil(x.x), Ceil(x.y)                      );}
-inline    VecI2 Ceil (C VecD2 &x) {return VecI2(Ceil(x.x), Ceil(x.y)                      );}
-inline    VecI  Ceil (C Vec   &x) {return VecI (Ceil(x.x), Ceil(x.y), Ceil(x.z)           );}
-inline    VecI  Ceil (C VecD  &x) {return VecI (Ceil(x.x), Ceil(x.y), Ceil(x.z)           );}
-inline    VecI4 Ceil (C Vec4  &x) {return VecI4(Ceil(x.x), Ceil(x.y), Ceil(x.z), Ceil(x.w));}
-inline    VecI4 Ceil (C VecD4 &x) {return VecI4(Ceil(x.x), Ceil(x.y), Ceil(x.z), Ceil(x.w));}
+   VecUSN2& operator+=(C Vec2 &v) {x+=v.x; y+=v.y; return T;}
+   VecUSN2& operator-=(C Vec2 &v) {x-=v.x; y-=v.y; return T;}
+   VecUSN2& operator*=(C Vec2 &v) {x*=v.x; y*=v.y; return T;}
+   VecUSN2& operator/=(C Vec2 &v) {x/=v.x; y/=v.y; return T;}
 
-// get fraction, gets fractional part of a real value, Sample Usage: Frac(7.3) -> 0.3, Frac(7.9) -> 0.9
-inline    Flt  Frac(  Flt   x) {return x-floorf(x);} // [0..1), use 'floorf' instead of 'Floor' to avoid conversion to Int (faster this way)
-inline    Dbl  Frac(  Dbl   x) {return x-floor (x);} // [0..1), use 'floor'  instead of 'Floor' to avoid conversion to Int (faster this way)
-inline    Vec2 Frac(C Vec2 &v) {return Vec2(Frac(v.x), Frac(v.y)                      );}
-inline    Vec  Frac(C Vec  &v) {return Vec (Frac(v.x), Frac(v.y), Frac(v.z)           );}
-inline    Vec4 Frac(C Vec4 &v) {return Vec4(Frac(v.x), Frac(v.y), Frac(v.z), Frac(v.w));}
+   VecUSN2& rotateCosSin(Flt cos, Flt sin); // rotate by cos and sin of angle
 
-constexpr Flt FracS(Flt x) {return x-Trunc(x);} // (-1..1) (sign preserving)
-constexpr Dbl FracS(Dbl x) {return x-Trunc(x);} // (-1..1) (sign preserving)
+              VecUSN2() {}
+   CONVERSION VecUSN2(  Flt    f          ) {set(f       );}
+              VecUSN2(C USN   &r          ) {set(r       );}
+              VecUSN2(C USN   &x, C USN &y) {set(  x,   y);}
+   CONVERSION VecUSN2(C Vec2  &v          ) {set(v.x, v.y);}
+   CONVERSION VecUSN2(C VecH2 &v          ) {set(v.x, v.y);}
+};
+struct VecSSN2 // Vector 2D (SSN)
+{
+   union
+   {
+      struct{SSN x, y;};
+      struct{SSN c[2];}; // component
+   };
 
-inline    Flt Frac (Flt x, Flt range) {return Frac (x/range)*range;} // [     0..range)
-inline    Dbl Frac (Dbl x, Dbl range) {return Frac (x/range)*range;} // [     0..range)
-inline    Flt FracS(Flt x, Flt range) {return FracS(x/range)*range;} // (-range..range) (sign preserving)
-inline    Dbl FracS(Dbl x, Dbl range) {return FracS(x/range)*range;} // (-range..range) (sign preserving)
+   VecSSN2& zero(                  ) {x=y=SSNZero;  return T;}
+   VecSSN2& set (  Flt  f          ) {x=y=f;        return T;}
+   VecSSN2& set (C SSN &r          ) {x=y=r;        return T;}
+   VecSSN2& set (  Flt  x,   Flt  y) {T.x=x; T.y=y; return T;}
+   VecSSN2& set (C SSN &x, C SSN &y) {T.x=x; T.y=y; return T;}
 
-// align
-constexpr Int   AlignTrunc(Int   x, Int   align) {return          (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
-constexpr Long  AlignTrunc(Long  x, Long  align) {return          (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
-constexpr UInt  AlignTrunc(UInt  x, UInt  align) {return          (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
-constexpr ULong AlignTrunc(ULong x, ULong align) {return          (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
-constexpr Int   AlignTrunc(Flt   x, Int   align) {return    Trunc (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
-constexpr Flt   AlignTrunc(Flt   x, Flt   align) {return    Trunc (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
-constexpr Dbl   AlignTrunc(Dbl   x, Dbl   align) {return    Trunc (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
-constexpr Int   AlignRound(Int   x, Int   align) {return DivRound (x, align)*align;} // align 'x' to nearest multiple of 'align' using rounding
-constexpr Long  AlignRound(Long  x, Long  align) {return DivRound (x, align)*align;} // align 'x' to nearest multiple of 'align' using rounding
-constexpr UInt  AlignRound(UInt  x, UInt  align) {return DivRound (x, align)*align;} // align 'x' to nearest multiple of 'align' using rounding
-constexpr ULong AlignRound(ULong x, ULong align) {return DivRound (x, align)*align;} // align 'x' to nearest multiple of 'align' using rounding
-constexpr Int   AlignRound(Flt   x, Int   align) {return    Round (x/ align)*align;} // align 'x' to nearest multiple of 'align' using rounding
-constexpr Flt   AlignRound(Flt   x, Flt   align) {return    Round (x/ align)*align;} // align 'x' to nearest multiple of 'align' using rounding
-constexpr Dbl   AlignRound(Dbl   x, Dbl   align) {return    Round (x/ align)*align;} // align 'x' to nearest multiple of 'align' using rounding
-constexpr Int   AlignFloor(Int   x, Int   align) {return DivFloor (x, align)*align;} // align 'x' to nearest multiple of 'align' using floor
-constexpr Long  AlignFloor(Long  x, Long  align) {return DivFloor (x, align)*align;} // align 'x' to nearest multiple of 'align' using floor
-constexpr UInt  AlignFloor(UInt  x, UInt  align) {return DivFloor (x, align)*align;} // align 'x' to nearest multiple of 'align' using floor
-constexpr ULong AlignFloor(ULong x, ULong align) {return DivFloor (x, align)*align;} // align 'x' to nearest multiple of 'align' using floor
-inline    Int   AlignFloor(Flt   x, Int   align) {return    Floor (x/ align)*align;} // align 'x' to nearest multiple of 'align' using floor
-inline    Flt   AlignFloor(Flt   x, Flt   align) {return    floorf(x/ align)*align;} // align 'x' to nearest multiple of 'align' using floor, use 'floorf' instead of 'Floor' to avoid conversion to Int (faster this way)
-inline    Dbl   AlignFloor(Dbl   x, Dbl   align) {return    floor (x/ align)*align;} // align 'x' to nearest multiple of 'align' using floor, use 'floor'  instead of 'Floor' to avoid conversion to Int (faster this way)
-constexpr Int   AlignCeil (Int   x, Int   align) {return DivCeil  (x, align)*align;} // align 'x' to nearest multiple of 'align' using ceil
-constexpr Long  AlignCeil (Long  x, Long  align) {return DivCeil  (x, align)*align;} // align 'x' to nearest multiple of 'align' using ceil
-constexpr UInt  AlignCeil (UInt  x, UInt  align) {return DivCeil  (x, align)*align;} // align 'x' to nearest multiple of 'align' using ceil
-constexpr ULong AlignCeil (ULong x, ULong align) {return DivCeil  (x, align)*align;} // align 'x' to nearest multiple of 'align' using ceil
-inline    Int   AlignCeil (Flt   x, Int   align) {return    Ceil  (x/ align)*align;} // align 'x' to nearest multiple of 'align' using ceil
-inline    Flt   AlignCeil (Flt   x, Flt   align) {return    ceilf (x/ align)*align;} // align 'x' to nearest multiple of 'align' using ceil , use 'ceilf'  instead of 'Ceil'  to avoid conversion to Int (faster this way)
-inline    Dbl   AlignCeil (Dbl   x, Dbl   align) {return    ceil  (x/ align)*align;} // align 'x' to nearest multiple of 'align' using ceil , use 'ceil'   instead of 'Ceil'  to avoid conversion to Int (faster this way)
+   VecSSN2& operator+=(Flt r) {x+=r; y+=r; return T;}
+   VecSSN2& operator-=(Flt r) {x-=r; y-=r; return T;}
+   VecSSN2& operator*=(Flt r) {x*=r; y*=r; return T;}
+   VecSSN2& operator/=(Flt r) {x/=r; y/=r; return T;}
+
+   VecSSN2& operator+=(C Vec2 &v) {x+=v.x; y+=v.y; return T;}
+   VecSSN2& operator-=(C Vec2 &v) {x-=v.x; y-=v.y; return T;}
+   VecSSN2& operator*=(C Vec2 &v) {x*=v.x; y*=v.y; return T;}
+   VecSSN2& operator/=(C Vec2 &v) {x/=v.x; y/=v.y; return T;}
+
+              VecSSN2() {}
+   CONVERSION VecSSN2(  Flt    f          ) {set(f       );}
+              VecSSN2(C SSN   &r          ) {set(r       );}
+              VecSSN2(C SSN   &x, C SSN &y) {set(  x,   y);}
+   CONVERSION VecSSN2(C Vec2  &v          ) {set(v.x, v.y);}
+   CONVERSION VecSSN2(C VecH2 &v          ) {set(v.x, v.y);}
+};
+struct VecSSN // Vector 3D (SSN)
+{
+   union
+   {
+      struct{SSN     x, y, z;};
+      struct{SSN     c[3]   ;}; // component
+      struct{VecSSN2 xy     ;};
+   };
+
+   VecSSN& zero(                            ) {x=y=z=SSNZero;       return T;}
+   VecSSN& set (  Flt  f                    ) {x=y=z=f;             return T;}
+   VecSSN& set (C SSN &r                    ) {x=y=z=r;             return T;}
+   VecSSN& set (  Flt  x,   Flt  y,   Flt  z) {T.x=x; T.y=y; T.z=z; return T;}
+   VecSSN& set (C SSN &x, C SSN &y, C SSN &z) {T.x=x; T.y=y; T.z=z; return T;}
+
+   VecSSN& operator+=(Flt r) {x+=r; y+=r; z+=r; return T;}
+   VecSSN& operator-=(Flt r) {x-=r; y-=r; z-=r; return T;}
+   VecSSN& operator*=(Flt r) {x*=r; y*=r; z*=r; return T;}
+   VecSSN& operator/=(Flt r) {x/=r; y/=r; z/=r; return T;}
+
+   VecSSN& operator+=(C Vec &v) {x+=v.x; y+=v.y; z+=v.z; return T;}
+   VecSSN& operator-=(C Vec &v) {x-=v.x; y-=v.y; z-=v.z; return T;}
+   VecSSN& operator*=(C Vec &v) {x*=v.x; y*=v.y; z*=v.z; return T;}
+   VecSSN& operator/=(C Vec &v) {x/=v.x; y/=v.y; z/=v.z; return T;}
+
+   friend Vec operator+ (C VecSSN &a, C Vec &b) {return Vec(a.x+b.x, a.y+b.y, a.z+b.z);}
+   friend Vec operator- (C VecSSN &a, C Vec &b) {return Vec(a.x-b.x, a.y-b.y, a.z-b.z);}
+   friend Vec operator* (C VecSSN &a, C Vec &b) {return Vec(a.x*b.x, a.y*b.y, a.z*b.z);}
+   friend Vec operator/ (C VecSSN &a, C Vec &b) {return Vec(a.x/b.x, a.y/b.y, a.z/b.z);}
+
+   friend Vec operator+ (C Vec &a, C VecSSN &b) {return Vec(a.x+b.x, a.y+b.y, a.z+b.z);}
+   friend Vec operator- (C Vec &a, C VecSSN &b) {return Vec(a.x-b.x, a.y-b.y, a.z-b.z);}
+   friend Vec operator* (C Vec &a, C VecSSN &b) {return Vec(a.x*b.x, a.y*b.y, a.z*b.z);}
+   friend Vec operator/ (C Vec &a, C VecSSN &b) {return Vec(a.x/b.x, a.y/b.y, a.z/b.z);}
+
+   friend Vec operator* (C VecSSN &v, C Matrix3 &m) {return Vec(v)*=m;}
+   friend Vec operator* (C VecSSN &v, C Matrix  &m) {return Vec(v)*=m;}
+   friend Vec operator/ (C VecSSN &v, C Matrix3 &m) {return Vec(v)/=m;}
+   friend Vec operator/ (C VecSSN &v, C Matrix  &m) {return Vec(v)/=m;}
+
+              VecSSN() {}
+   CONVERSION VecSSN(  Flt   f                    ) {set(f            );}
+              VecSSN(C SSN  &r                    ) {set(r            );}
+              VecSSN(C SSN  &x, C SSN &y, C SSN &z) {set(  x,   y,   z);}
+   CONVERSION VecSSN(C Vec  &v                    ) {set(v.x, v.y, v.z);}
+   CONVERSION VecSSN(C VecH &v                    ) {set(v.x, v.y, v.z);}
+};
+struct VecSSN4 // Vector 4D (SSN)
+{
+   union
+   {
+      struct{SSN     x, y, z, w;};
+      struct{SSN     c[4]      ;}; // component
+      struct{VecSSN2 xy, zw    ;};
+      struct{VecSSN  xyz       ;};
+   };
+
+   VecSSN4& zero(                                      ) {x=y=z=w=SSNZero;            return T;}
+   VecSSN4& set (  Flt  f                              ) {x=y=z=w=f;                  return T;}
+   VecSSN4& set (C SSN &r                              ) {x=y=z=w=r;                  return T;}
+   VecSSN4& set (  Flt  x,   Flt  y,   Flt  z,   Flt  w) {T.x=x; T.y=y; T.z=z; T.w=w; return T;}
+   VecSSN4& set (C SSN &x, C SSN &y, C SSN &z, C SSN &w) {T.x=x; T.y=y; T.z=z; T.w=w; return T;}
+   VecSSN4& set (C VecSSN &xyz               , C SSN &w) {T.xyz=xyz;           T.w=w; return T;}
+
+   VecSSN4& operator+=(Flt r) {x+=r; y+=r; z+=r; w+=r; return T;}
+   VecSSN4& operator-=(Flt r) {x-=r; y-=r; z-=r; w-=r; return T;}
+   VecSSN4& operator*=(Flt r) {x*=r; y*=r; z*=r; w*=r; return T;}
+   VecSSN4& operator/=(Flt r) {x/=r; y/=r; z/=r; w/=r; return T;}
+
+   VecSSN4& operator+=(C Vec4 &v) {x+=v.x; y+=v.y; z+=v.z; w+=v.w; return T;}
+   VecSSN4& operator-=(C Vec4 &v) {x-=v.x; y-=v.y; z-=v.z; w-=v.w; return T;}
+   VecSSN4& operator*=(C Vec4 &v) {x*=v.x; y*=v.y; z*=v.z; w*=v.w; return T;}
+   VecSSN4& operator/=(C Vec4 &v) {x/=v.x; y/=v.y; z/=v.z; w/=v.w; return T;}
+
+              VecSSN4() {}
+   CONVERSION VecSSN4(  Flt    f                              ) {set(f                 );}
+              VecSSN4(C SSN   &r                              ) {set(r                 );}
+              VecSSN4(C SSN   &x, C SSN &y, C SSN &z, C SSN &w) {set(  x,   y,   z,   w);}
+   CONVERSION VecSSN4(C Vec4  &v                              ) {set(v.x, v.y, v.z, v.w);}
+   CONVERSION VecSSN4(C VecH4 &v                              ) {set(v.x, v.y, v.z, v.w);}
+};
 /******************************************************************************/
-// FUNCTIONS
-/******************************************************************************/
-inline VecB2 ::VecB2 (C VecI2  &v) {set(v.x, v.y          );}
-inline VecSB2::VecSB2(C VecI2  &v) {set(v.x, v.y          );}
-inline VecB  ::VecB  (C VecI   &v) {set(v.x, v.y, v.z     );}
-inline VecSB ::VecSB (C VecI   &v) {set(v.x, v.y, v.z     );}
-inline VecB4 ::VecB4 (C VecI4  &v) {set(v.x, v.y, v.z, v.w);}
-inline VecSB4::VecSB4(C VecI4  &v) {set(v.x, v.y, v.z, v.w);}
-inline VecUS2::VecUS2(C VecB2  &v) {set(v.x, v.y          );}
-inline VecUS2::VecUS2(C VecI2  &v) {set(v.x, v.y          );}
-inline VecUS ::VecUS (C VecB   &v) {set(v.x, v.y, v.z     );}
-inline VecUS ::VecUS (C VecI   &v) {set(v.x, v.y, v.z     );}
-inline Vec2  ::Vec2  (C VecH2  &v) {set(v.x, v.y          );}
-inline Vec2  ::Vec2  (C VecD2  &v) {set(v.x, v.y          );}
-inline Vec2  ::Vec2  (C VecI2  &v) {set(v.x, v.y          );}
-inline Vec2  ::Vec2  (C VecB2  &v) {set(v.x, v.y          );}
-inline Vec2  ::Vec2  (C VecSB2 &v) {set(v.x, v.y          );}
-inline Vec2  ::Vec2  (C VecUS2 &v) {set(v.x, v.y          );}
-inline VecD2 ::VecD2 (C VecH2  &v) {set(v.x, v.y          );}
-inline VecD2 ::VecD2 (C Vec2   &v) {set(v.x, v.y          );}
-inline VecD2 ::VecD2 (C VecI2  &v) {set(v.x, v.y          );}
-inline VecD2 ::VecD2 (C VecB2  &v) {set(v.x, v.y          );}
-inline VecD2 ::VecD2 (C VecSB2 &v) {set(v.x, v.y          );}
-inline VecD2 ::VecD2 (C VecUS2 &v) {set(v.x, v.y          );}
-inline Vec   ::Vec   (C VecH   &v) {set(v.x, v.y, v.z     );}
-inline Vec   ::Vec   (C VecD   &v) {set(v.x, v.y, v.z     );}
-inline Vec   ::Vec   (C VecI   &v) {set(v.x, v.y, v.z     );}
-inline Vec   ::Vec   (C VecB   &v) {set(v.x, v.y, v.z     );}
-inline Vec   ::Vec   (C VecSB  &v) {set(v.x, v.y, v.z     );}
-inline VecD  ::VecD  (C VecH   &v) {set(v.x, v.y, v.z     );}
-inline VecD  ::VecD  (C Vec    &v) {set(v.x, v.y, v.z     );}
-inline VecD  ::VecD  (C VecI   &v) {set(v.x, v.y, v.z     );}
-inline VecD  ::VecD  (C VecB   &v) {set(v.x, v.y, v.z     );}
-inline VecD  ::VecD  (C VecSB  &v) {set(v.x, v.y, v.z     );}
-inline Vec4  ::Vec4  (C VecH4  &v) {set(v.x, v.y, v.z, v.w);}
-inline Vec4  ::Vec4  (C VecD4  &v) {set(v.x, v.y, v.z, v.w);}
-inline Vec4  ::Vec4  (C VecI4  &v) {set(v.x, v.y, v.z, v.w);}
-inline Vec4  ::Vec4  (C VecB4  &v) {set(v.x, v.y, v.z, v.w);}
-inline Vec4  ::Vec4  (C VecSB4 &v) {set(v.x, v.y, v.z, v.w);}
-inline VecD4 ::VecD4 (C VecH4  &v) {set(v.x, v.y, v.z, v.w);}
-inline VecD4 ::VecD4 (C Vec4   &v) {set(v.x, v.y, v.z, v.w);}
-inline VecD4 ::VecD4 (C VecI4  &v) {set(v.x, v.y, v.z, v.w);}
-inline VecD4 ::VecD4 (C VecB4  &v) {set(v.x, v.y, v.z, v.w);}
-inline VecD4 ::VecD4 (C VecSB4 &v) {set(v.x, v.y, v.z, v.w);}
-
-inline Vec  Vec2 :: xy0()C {return Vec (x, y, 0);}
-inline Vec  Vec2 :: x0y()C {return Vec (x, 0, y);}
-inline Vec  Vec2 ::_0xy()C {return Vec (0, x, y);}
-inline Vec  Vec2 ::_0yx()C {return Vec (0, y, x);}
-inline VecD VecD2:: xy0()C {return VecD(x, y, 0);}
-inline VecD VecD2:: x0y()C {return VecD(x, 0, y);}
-inline VecD VecD2::_0xy()C {return VecD(0, x, y);}
-inline VecD VecD2::_0yx()C {return VecD(0, y, x);}
-inline VecI VecI2:: xy0()C {return VecI(x, y, 0);}
-inline VecI VecI2:: x0y()C {return VecI(x, 0, y);}
-inline VecI VecI2::_0xy()C {return VecI(0, x, y);}
-inline VecI VecI2::_0yx()C {return VecI(0, y, x);}
-
 inline Bool VecUS2::operator==(C VecUS2 &v)C {return x==v.x && y==v.y;}
 inline Bool VecUS2::operator!=(C VecUS2 &v)C {return x!=v.x || y!=v.y;}
 inline Bool VecUS2::operator==(C VecB2  &v)C {return x==v.x && y==v.y;}
@@ -2257,6 +2837,13 @@ inline Bool VecUS::operator==(C VecB  &v)C {return x==v.x && y==v.y && z==v.z;}
 inline Bool VecUS::operator!=(C VecB  &v)C {return x!=v.x || y!=v.y || z!=v.z;}
 inline Bool VecUS::operator==(C VecI  &v)C {return x==v.x && y==v.y && z==v.z;}
 inline Bool VecUS::operator!=(C VecI  &v)C {return x!=v.x || y!=v.y || z!=v.z;}
+
+inline Bool VecUS4::operator==(C VecUS4 &v)C {return x==v.x && y==v.y && z==v.z && w==v.w;}
+inline Bool VecUS4::operator!=(C VecUS4 &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w;}
+inline Bool VecUS4::operator==(C VecB4  &v)C {return x==v.x && y==v.y && z==v.z && w==v.w;}
+inline Bool VecUS4::operator!=(C VecB4  &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w;}
+inline Bool VecUS4::operator==(C VecI4  &v)C {return x==v.x && y==v.y && z==v.z && w==v.w;}
+inline Bool VecUS4::operator!=(C VecI4  &v)C {return x!=v.x || y!=v.y || z!=v.z || w!=v.w;}
 
 inline Vec2& Vec2::operator+=(C VecD2 &v) {x+=v.x; y+=v.y; return T;}
 inline Vec2& Vec2::operator-=(C VecD2 &v) {x-=v.x; y-=v.y; return T;}
@@ -2308,16 +2895,183 @@ inline VecD operator- (Dbl r, C Vec &v) {return VecD(r-v.x, r-v.y, r-v.z);}
 inline VecD operator* (Dbl r, C Vec &v) {return VecD(r*v.x, r*v.y, r*v.z);}
 inline VecD operator/ (Dbl r, C Vec &v) {return VecD(r/v.x, r/v.y, r/v.z);}
 
+inline VecD4 operator+ (C Vec4 &v, Dbl r) {return VecD4(v.x+r, v.y+r, v.z+r, v.w+r);}
+inline VecD4 operator- (C Vec4 &v, Dbl r) {return VecD4(v.x-r, v.y-r, v.z-r, v.w-r);}
+inline VecD4 operator* (C Vec4 &v, Dbl r) {return VecD4(v.x*r, v.y*r, v.z*r, v.w*r);}
+inline VecD4 operator/ (C Vec4 &v, Dbl r) {return VecD4(v.x/r, v.y/r, v.z/r, v.w/r);}
+
+inline VecD4 operator+ (Dbl r, C Vec4 &v) {return VecD4(r+v.x, r+v.y, r+v.z, r+v.w);}
+inline VecD4 operator- (Dbl r, C Vec4 &v) {return VecD4(r-v.x, r-v.y, r-v.z, r-v.w);}
+inline VecD4 operator* (Dbl r, C Vec4 &v) {return VecD4(r*v.x, r*v.y, r*v.z, r*v.w);}
+inline VecD4 operator/ (Dbl r, C Vec4 &v) {return VecD4(r/v.x, r/v.y, r/v.z, r/v.w);}
+
 inline VecD operator* (C Vec &v, C OrientD &o) {return VecD(v)*=o;}
 inline VecD operator* (C Vec &v, C OrientM &o) {return VecD(v)*=o;}
 
 inline VecD operator* (C Vec &v, C MatrixD3 &m) {return VecD(v)*=m;}
 inline VecD operator* (C Vec &v, C MatrixM  &m) {return VecD(v)*=m;}
+inline VecD operator* (C Vec &v, C MatrixO  &m) {return VecD(v)*=m;}
 inline VecD operator* (C Vec &v, C MatrixD  &m) {return VecD(v)*=m;}
 inline VecD operator/ (C Vec &v, C MatrixD3 &m) {return VecD(v)/=m;}
 inline VecD operator/ (C Vec &v, C MatrixM  &m) {return VecD(v)/=m;}
 inline VecD operator/ (C Vec &v, C MatrixD  &m) {return VecD(v)/=m;}
 
+inline VecI2 operator+ (C VecUS2 &v, Int i) {return VecI2(v.x+i, v.y+i);}
+inline VecI2 operator- (C VecUS2 &v, Int i) {return VecI2(v.x-i, v.y-i);}
+inline VecI2 operator* (C VecUS2 &v, Int i) {return VecI2(v.x*i, v.y*i);}
+inline VecI2 operator/ (C VecUS2 &v, Int i) {return VecI2(v.x/i, v.y/i);}
+inline VecI2 operator% (C VecUS2 &v, Int i) {return VecI2(v.x%i, v.y%i);}
+
+inline VecI2 operator+ (Int i, C VecUS2 &v) {return VecI2(i+v.x, i+v.y);}
+inline VecI2 operator- (Int i, C VecUS2 &v) {return VecI2(i-v.x, i-v.y);}
+inline VecI2 operator* (Int i, C VecUS2 &v) {return VecI2(i*v.x, i*v.y);}
+inline VecI2 operator/ (Int i, C VecUS2 &v) {return VecI2(i/v.x, i/v.y);}
+
+inline VecI operator+ (C VecUS &v, Int i) {return VecI(v.x+i, v.y+i, v.z+i);}
+inline VecI operator- (C VecUS &v, Int i) {return VecI(v.x-i, v.y-i, v.z-i);}
+inline VecI operator* (C VecUS &v, Int i) {return VecI(v.x*i, v.y*i, v.z*i);}
+inline VecI operator/ (C VecUS &v, Int i) {return VecI(v.x/i, v.y/i, v.z/i);}
+inline VecI operator% (C VecUS &v, Int i) {return VecI(v.x%i, v.y%i, v.z%i);}
+
+inline VecI operator+ (Int i, C VecUS &v) {return VecI(i+v.x, i+v.y, i+v.z);}
+inline VecI operator- (Int i, C VecUS &v) {return VecI(i-v.x, i-v.y, i-v.z);}
+inline VecI operator* (Int i, C VecUS &v) {return VecI(i*v.x, i*v.y, i*v.z);}
+inline VecI operator/ (Int i, C VecUS &v) {return VecI(i/v.x, i/v.y, i/v.z);}
+
+inline VecI4 operator+ (C VecUS4 &v, Int i) {return VecI4(v.x+i, v.y+i, v.z+i, v.w+i);}
+inline VecI4 operator- (C VecUS4 &v, Int i) {return VecI4(v.x-i, v.y-i, v.z-i, v.w-i);}
+inline VecI4 operator* (C VecUS4 &v, Int i) {return VecI4(v.x*i, v.y*i, v.z*i, v.w*i);}
+inline VecI4 operator/ (C VecUS4 &v, Int i) {return VecI4(v.x/i, v.y/i, v.z/i, v.w/i);}
+inline VecI4 operator% (C VecUS4 &v, Int i) {return VecI4(v.x%i, v.y%i, v.z%i, v.w%i);}
+
+inline VecI4 operator+ (Int i, C VecUS4 &v) {return VecI4(i+v.x, i+v.y, i+v.z, i+v.w);}
+inline VecI4 operator- (Int i, C VecUS4 &v) {return VecI4(i-v.x, i-v.y, i-v.z, i-v.w);}
+inline VecI4 operator* (Int i, C VecUS4 &v) {return VecI4(i*v.x, i*v.y, i*v.z, i*v.w);}
+inline VecI4 operator/ (Int i, C VecUS4 &v) {return VecI4(i/v.x, i/v.y, i/v.z, i/v.w);}
+/******************************************************************************/
+// ROUNDING
+/******************************************************************************/
+// truncate, remove fractional part, Sample Usage: Trunc(7.3) -> 7, Trunc(7.9) -> 7
+#if EE_PRIVATE
+          Dbl   TruncD (  Dbl    x);                   // truncate and return as Dbl
+#endif
+constexpr Int   Trunc  (  Int    x) {return       x ;} // truncate and return as Int
+constexpr Int   Trunc  (  Flt    x) {return Int  (x);} // truncate and return as Int
+constexpr Int   Trunc  (  Dbl    x) {return Int  (x);} // truncate and return as Int
+constexpr UInt  TruncU (  UInt   x) {return       x ;} // truncate and return as UInt
+constexpr UInt  TruncU (  Flt    x) {return UInt (x);} // truncate and return as UInt
+constexpr UInt  TruncU (  Dbl    x) {return UInt (x);} // truncate and return as UInt
+constexpr Long  TruncL (  Dbl    x) {return Long (x);} // truncate and return as Long
+constexpr ULong TruncUL(  Dbl    x) {return ULong(x);} // truncate and return as ULong
+inline    VecI2 Trunc  (C Vec2  &v) {return VecI2(Trunc(v.x), Trunc(v.y)                        );}
+inline    VecI2 Trunc  (C VecD2 &v) {return VecI2(Trunc(v.x), Trunc(v.y)                        );}
+inline    VecI  Trunc  (C Vec   &v) {return VecI (Trunc(v.x), Trunc(v.y), Trunc(v.z)            );}
+inline    VecI  Trunc  (C VecD  &v) {return VecI (Trunc(v.x), Trunc(v.y), Trunc(v.z)            );}
+inline    VecI4 Trunc  (C Vec4  &v) {return VecI4(Trunc(v.x), Trunc(v.y), Trunc(v.z), Trunc(v.w));}
+inline    VecI4 Trunc  (C VecD4 &v) {return VecI4(Trunc(v.x), Trunc(v.y), Trunc(v.z), Trunc(v.w));}
+
+// round, round to nearest integer, Sample Usage: Round(7.3) -> 7, Round(7.9) -> 8
+constexpr Int   Round  (  Int    x) {return x;}
+constexpr Int   Round  (  Flt    x) {return (x>=0) ? Trunc  (x+0.5f) : Trunc (x-0.5f);} // faster than 'lroundf'
+constexpr Int   Round  (  Dbl    x) {return (x>=0) ? Trunc  (x+0.5 ) : Trunc (x-0.5 );} // faster than 'lround'
+constexpr UInt  RoundU (  UInt   x) {return x;}
+constexpr UInt  RoundU (  Flt    x) {return          TruncU (x+0.5f);}
+constexpr UInt  RoundU (  Dbl    x) {return          TruncU (x+0.5 );}
+constexpr Long  RoundL (  Dbl    x) {return (x>=0) ? TruncL (x+0.5 ) : TruncL(x-0.5 );}
+constexpr ULong RoundUL(  Dbl    x) {return          TruncUL(x+0.5 );}
+inline    VecI2 Round  (C Vec2  &x) {return VecI2(Round(x.x), Round(x.y)                        );}
+inline    VecI2 Round  (C VecD2 &x) {return VecI2(Round(x.x), Round(x.y)                        );}
+inline    VecI  Round  (C Vec   &x) {return VecI (Round(x.x), Round(x.y), Round(x.z)            );}
+inline    VecI  Round  (C VecD  &x) {return VecI (Round(x.x), Round(x.y), Round(x.z)            );}
+inline    VecI4 Round  (C Vec4  &x) {return VecI4(Round(x.x), Round(x.y), Round(x.z), Round(x.w));}
+inline    VecI4 Round  (C VecD4 &x) {return VecI4(Round(x.x), Round(x.y), Round(x.z), Round(x.w));}
+#if EE_PRIVATE
+inline    UInt  RoundUClamp(  Flt   x) {return (x>=UINT_MAX) ? UINT_MAX : RoundU(x);} // this is needed because 1.0f*UINT_MAX=UINT_MAX+1 float, which converted to UInt overflows to 0
+constexpr Int   RoundEps   (  Flt   x, Flt eps) {return (x>=0) ? Trunc(x+eps) : Trunc(x-eps);}
+constexpr Int   RoundPos   (  Flt   x) {return Trunc(x+0.5f);} // doesn't care if round of negative value will not be precise, but unlike 'RoundU' the result will still be negative
+constexpr Int   RoundPos   (  Dbl   x) {return Trunc(x+0.5 );} // doesn't care if round of negative value will not be precise, but unlike 'RoundU' the result will still be negative
+constexpr Int   RoundGPU   (  Flt   x) {return Round(x-0.0001f);} // if the coordinate is located exactly between 2 pixels "Frac(x)==0.5" then due to numerical precision issues sometimes this can be rounded up and sometimes down, and flickering can occur for example when window is moved on the screen, to prevent that, apply a small offset, the value "0.0001f" has been tested having a Window and a button at 0.5 coordinates, then moving the window around the screen and noticing when does it stop flickering, keep as "-offset" instead of "+offset" because it works better with clipping (for example if Region draws a pixel border and it is located exactly between 2 pixels, then its children may overlap the border because the clipping has 1 extra pixel)
+inline    VecI2 RoundPos   (C Vec2 &x) {return VecI2(RoundPos(x.x), RoundPos(x.y)               );}
+inline    VecI  RoundPos   (C Vec  &x) {return VecI (RoundPos(x.x), RoundPos(x.y), RoundPos(x.z));}
+inline    VecI2 RoundGPU   (C Vec2 &v) {return VecI2(RoundGPU(v.x), RoundGPU(v.y)               );}
+#endif
+
+// floor, round to nearest integer which is smaller or equal to value, Sample Usage: Floor(7.3) -> 7, Floor(7.9) -> 7
+constexpr Int   Floor (  Int    x) {return x;}
+inline    Int   Floor (  Flt    x) {return (Int )floorf(x);}
+inline    Int   Floor (  Dbl    x) {return (Int )floor (x);}
+inline    Long  FloorL(  Dbl    x) {return (Long)floor (x);}
+inline    VecI2 Floor (C Vec2  &x) {return VecI2(Floor(x.x), Floor(x.y)                        );}
+inline    VecI2 Floor (C VecD2 &x) {return VecI2(Floor(x.x), Floor(x.y)                        );}
+inline    VecI  Floor (C Vec   &x) {return VecI (Floor(x.x), Floor(x.y), Floor(x.z)            );}
+inline    VecI  Floor (C VecD  &x) {return VecI (Floor(x.x), Floor(x.y), Floor(x.z)            );}
+inline    VecI4 Floor (C Vec4  &x) {return VecI4(Floor(x.x), Floor(x.y), Floor(x.z), Floor(x.w));}
+inline    VecI4 Floor (C VecD4 &x) {return VecI4(Floor(x.x), Floor(x.y), Floor(x.z), Floor(x.w));}
+
+// ceil, round to nearest integer which is greater or equal to value, Sample Usage: Ceil(7.3) -> 8, Ceil(7.9) -> 8
+constexpr Int   Ceil (  Int    x) {return x;}
+inline    Int   Ceil (  Flt    x) {return (Int )ceilf(x);}
+inline    Int   Ceil (  Dbl    x) {return (Int )ceil (x);}
+inline    Long  CeilL(  Dbl    x) {return (Long)ceil (x);}
+inline    VecI2 Ceil (C Vec2  &x) {return VecI2(Ceil(x.x), Ceil(x.y)                      );}
+inline    VecI2 Ceil (C VecD2 &x) {return VecI2(Ceil(x.x), Ceil(x.y)                      );}
+inline    VecI  Ceil (C Vec   &x) {return VecI (Ceil(x.x), Ceil(x.y), Ceil(x.z)           );}
+inline    VecI  Ceil (C VecD  &x) {return VecI (Ceil(x.x), Ceil(x.y), Ceil(x.z)           );}
+inline    VecI4 Ceil (C Vec4  &x) {return VecI4(Ceil(x.x), Ceil(x.y), Ceil(x.z), Ceil(x.w));}
+inline    VecI4 Ceil (C VecD4 &x) {return VecI4(Ceil(x.x), Ceil(x.y), Ceil(x.z), Ceil(x.w));}
+
+#if EE_PRIVATE
+inline    Int FloorSpecial(Flt x) {return Ceil (x-1);} // this works in a similar way to "Floor(x)" however if a value falls exactly on integer (which means that fraction==0) then previous integer is chosen
+inline    Int  CeilSpecial(Flt x) {return Floor(x+1);} // this works in a similar way to "Ceil (x)" however if a value falls exactly on integer (which means that fraction==0) then next     integer is chosen
+#endif
+
+// get fraction, gets fractional part of a real value, Sample Usage: Frac(7.3) -> 0.3, Frac(7.9) -> 0.9
+inline    Flt  Frac(  Flt   x) {return x-floorf(x);} // [0..1), use 'floorf' instead of 'Floor' to avoid conversion to Int (faster this way)
+inline    Dbl  Frac(  Dbl   x) {return x-floor (x);} // [0..1), use 'floor'  instead of 'Floor' to avoid conversion to Int (faster this way)
+inline    Vec2 Frac(C Vec2 &v) {return Vec2(Frac(v.x), Frac(v.y)                      );}
+inline    Vec  Frac(C Vec  &v) {return Vec (Frac(v.x), Frac(v.y), Frac(v.z)           );}
+inline    Vec4 Frac(C Vec4 &v) {return Vec4(Frac(v.x), Frac(v.y), Frac(v.z), Frac(v.w));}
+
+constexpr Flt FracS(Flt x) {return x-Trunc(x);} // (-1..1) (sign preserving)
+constexpr Dbl FracS(Dbl x) {return x-Trunc(x);} // (-1..1) (sign preserving)
+
+inline    Flt Frac (Flt x, Flt range) {return Frac (x/range)*range;} // [     0..range)
+inline    Dbl Frac (Dbl x, Dbl range) {return Frac (x/range)*range;} // [     0..range)
+inline    Flt FracS(Flt x, Flt range) {return FracS(x/range)*range;} // (-range..range) (sign preserving)
+inline    Dbl FracS(Dbl x, Dbl range) {return FracS(x/range)*range;} // (-range..range) (sign preserving)
+
+// align
+constexpr Int   AlignTrunc(Int   x, Int   align) {return          (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
+constexpr Long  AlignTrunc(Long  x, Long  align) {return          (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
+constexpr UInt  AlignTrunc(UInt  x, UInt  align) {return          (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
+constexpr ULong AlignTrunc(ULong x, ULong align) {return          (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
+constexpr Int   AlignTrunc(Flt   x, Int   align) {return    Trunc (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
+constexpr Flt   AlignTrunc(Flt   x, Flt   align) {return    Trunc (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
+constexpr Dbl   AlignTrunc(Dbl   x, Dbl   align) {return    Trunc (x/ align)*align;} // align 'x' to nearest multiple of 'align' using truncation
+constexpr Int   AlignRound(Int   x, Int   align) {return DivRound (x, align)*align;} // align 'x' to nearest multiple of 'align' using rounding
+constexpr Long  AlignRound(Long  x, Long  align) {return DivRound (x, align)*align;} // align 'x' to nearest multiple of 'align' using rounding
+constexpr UInt  AlignRound(UInt  x, UInt  align) {return DivRound (x, align)*align;} // align 'x' to nearest multiple of 'align' using rounding
+constexpr ULong AlignRound(ULong x, ULong align) {return DivRound (x, align)*align;} // align 'x' to nearest multiple of 'align' using rounding
+constexpr Int   AlignRound(Flt   x, Int   align) {return    Round (x/ align)*align;} // align 'x' to nearest multiple of 'align' using rounding
+constexpr Flt   AlignRound(Flt   x, Flt   align) {return    Round (x/ align)*align;} // align 'x' to nearest multiple of 'align' using rounding
+constexpr Dbl   AlignRound(Dbl   x, Dbl   align) {return    Round (x/ align)*align;} // align 'x' to nearest multiple of 'align' using rounding
+constexpr Int   AlignFloor(Int   x, Int   align) {return DivFloor (x, align)*align;} // align 'x' to nearest multiple of 'align' using floor
+constexpr Long  AlignFloor(Long  x, Long  align) {return DivFloor (x, align)*align;} // align 'x' to nearest multiple of 'align' using floor
+constexpr UInt  AlignFloor(UInt  x, UInt  align) {return DivFloor (x, align)*align;} // align 'x' to nearest multiple of 'align' using floor
+constexpr ULong AlignFloor(ULong x, ULong align) {return DivFloor (x, align)*align;} // align 'x' to nearest multiple of 'align' using floor
+inline    Int   AlignFloor(Flt   x, Int   align) {return    Floor (x/ align)*align;} // align 'x' to nearest multiple of 'align' using floor
+inline    Flt   AlignFloor(Flt   x, Flt   align) {return    floorf(x/ align)*align;} // align 'x' to nearest multiple of 'align' using floor, use 'floorf' instead of 'Floor' to avoid conversion to Int (faster this way)
+inline    Dbl   AlignFloor(Dbl   x, Dbl   align) {return    floor (x/ align)*align;} // align 'x' to nearest multiple of 'align' using floor, use 'floor'  instead of 'Floor' to avoid conversion to Int (faster this way)
+constexpr Int   AlignCeil (Int   x, Int   align) {return DivCeil  (x, align)*align;} // align 'x' to nearest multiple of 'align' using ceil
+constexpr Long  AlignCeil (Long  x, Long  align) {return DivCeil  (x, align)*align;} // align 'x' to nearest multiple of 'align' using ceil
+constexpr UInt  AlignCeil (UInt  x, UInt  align) {return DivCeil  (x, align)*align;} // align 'x' to nearest multiple of 'align' using ceil
+constexpr ULong AlignCeil (ULong x, ULong align) {return DivCeil  (x, align)*align;} // align 'x' to nearest multiple of 'align' using ceil
+inline    Int   AlignCeil (Flt   x, Int   align) {return    Ceil  (x/ align)*align;} // align 'x' to nearest multiple of 'align' using ceil
+inline    Flt   AlignCeil (Flt   x, Flt   align) {return    ceilf (x/ align)*align;} // align 'x' to nearest multiple of 'align' using ceil , use 'ceilf'  instead of 'Ceil'  to avoid conversion to Int (faster this way)
+inline    Dbl   AlignCeil (Dbl   x, Dbl   align) {return    ceil  (x/ align)*align;} // align 'x' to nearest multiple of 'align' using ceil , use 'ceil'   instead of 'Ceil'  to avoid conversion to Int (faster this way)
+/******************************************************************************/
+// FUNCTIONS
+/******************************************************************************/
 // minimum & maximum
 inline Vec2  Min(C Vec2  &a, C Vec2  &b) {return Vec2 (Min(a.x,b.x), Min(a.y,b.y)                            );}
 inline VecI2 Min(C VecI2 &a, C VecI2 &b) {return VecI2(Min(a.x,b.x), Min(a.y,b.y)                            );}
@@ -2345,14 +3099,21 @@ inline Vec   Avg(C Vec   &a, C Vec   &b                        ) {return (a+b   
 inline VecD  Avg(C VecD  &a, C VecD  &b                        ) {return (a+b    )*0.5  ;}
 inline Vec4  Avg(C Vec4  &a, C Vec4  &b                        ) {return (a+b    )*0.5f ;}
 inline VecD4 Avg(C VecD4 &a, C VecD4 &b                        ) {return (a+b    )*0.5  ;}
+inline Vec5  Avg(C Vec5  &a, C Vec5  &b                        ) {return (a+b    )*0.5f ;}
 inline Vec2  Avg(C Vec2  &a, C Vec2  &b, C Vec2  &c            ) {return (a+b+c  )/3.0f ;}
 inline VecD2 Avg(C VecD2 &a, C VecD2 &b, C VecD2 &c            ) {return (a+b+c  )/3.0  ;}
 inline Vec   Avg(C Vec   &a, C Vec   &b, C Vec   &c            ) {return (a+b+c  )/3.0f ;}
 inline VecD  Avg(C VecD  &a, C VecD  &b, C VecD  &c            ) {return (a+b+c  )/3.0  ;}
+inline Vec4  Avg(C Vec4  &a, C Vec4  &b, C Vec4  &c            ) {return (a+b+c  )/3.0f ;}
+inline VecD4 Avg(C VecD4 &a, C VecD4 &b, C VecD4 &c            ) {return (a+b+c  )/3.0  ;}
+inline Vec5  Avg(C Vec5  &a, C Vec5  &b, C Vec5  &c            ) {return (a+b+c  )/3.0f ;}
 inline Vec2  Avg(C Vec2  &a, C Vec2  &b, C Vec2  &c, C Vec2  &d) {return (a+b+c+d)*0.25f;}
 inline VecD2 Avg(C VecD2 &a, C VecD2 &b, C VecD2 &c, C VecD2 &d) {return (a+b+c+d)*0.25 ;}
 inline Vec   Avg(C Vec   &a, C Vec   &b, C Vec   &c, C Vec   &d) {return (a+b+c+d)*0.25f;}
 inline VecD  Avg(C VecD  &a, C VecD  &b, C VecD  &c, C VecD  &d) {return (a+b+c+d)*0.25 ;}
+inline Vec4  Avg(C Vec4  &a, C Vec4  &b, C Vec4  &c, C Vec4  &d) {return (a+b+c+d)*0.25f;}
+inline VecD4 Avg(C VecD4 &a, C VecD4 &b, C VecD4 &c, C VecD4 &d) {return (a+b+c+d)*0.25 ;}
+inline Vec5  Avg(C Vec5  &a, C Vec5  &b, C Vec5  &c, C Vec5  &d) {return (a+b+c+d)*0.25f;}
 
 VecB4 AvgI(C VecB4 &a, C VecB4 &b                        );
 VecB4 AvgI(C VecB4 &a, C VecB4 &b, C VecB4 &c            );
@@ -2361,9 +3122,14 @@ VecB4 AvgI(C VecB4 &a, C VecB4 &b, C VecB4 &c, C VecB4 &d);
 VecI2 AvgI(C VecI2 &a, C VecI2 &b);
 VecI  AvgI(C VecI  &a, C VecI  &b);
 VecI4 AvgI(C VecI4 &a, C VecI4 &b);
-Vec2  AvgF(C VecI2 &a, C VecI2 &b);
-Vec   AvgF(C VecI  &a, C VecI  &b);
-Vec4  AvgF(C VecI4 &a, C VecI4 &b);
+Vec2  Avg (C VecI2 &a, C VecI2 &b);
+Vec   Avg (C VecI  &a, C VecI  &b);
+Vec4  Avg (C VecI4 &a, C VecI4 &b);
+
+#if EE_PRIVATE
+// divide
+inline VecI2 DivCeil16(C VecI2 &v) {return VecI2(DivCeil16(v.x), DivCeil16(v.y));}
+#endif
 
 // distance between 2 points
 Flt Dist(C Vec2  &a, C Vec2  &b);
@@ -2396,6 +3162,11 @@ Dbl Dist2(C VecD  &a, C VecD  &b);
 Int Dist2(C VecI  &a, C VecI  &b);
 Flt Dist2(C Vec4  &a, C Vec4  &b);
 
+#if EE_PRIVATE
+// squared distance between 2 points, using 0..1 wrapping
+Flt Dist2Wrap(C Vec2 &a, C Vec2 &b);
+#endif
+
 // dot product
 inline Flt Dot(C Vec2   &a, C Vec2   &b) {return a.x*b.x + a.y*b.y                    ;}
 inline Dbl Dot(C Vec2   &a, C VecD2  &b) {return a.x*b.x + a.y*b.y                    ;}
@@ -2417,23 +3188,38 @@ inline Int Dot(C VecI4  &a, C VecI4  &b) {return a.x*b.x + a.y*b.y + a.z*b.z + a
 inline Int Dot(C VecSB4 &a, C VecSB4 &b) {return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w;}
 
 // cross product
-Flt Cross(C Vec2  &a, C Vec2  &b);
-Dbl Cross(C VecD2 &a, C VecD2 &b);
+inline Flt Cross(C Vec2  &a, C Vec2  &b) {return a.x*b.y - a.y*b.x;}
+inline Dbl Cross(C VecD2 &a, C VecD2 &b) {return a.x*b.y - a.y*b.x;}
 
 // cross product
-Vec  Cross(C Vec  &a, C Vec  &b);
-VecD Cross(C VecD &a, C VecD &b);
+inline Vec Cross(C Vec &a, C Vec &b) // the same version as "HLSL Cross"
+{
+   return Vec(a.y*b.z - a.z*b.y,
+              a.z*b.x - a.x*b.z,
+              a.x*b.y - a.y*b.x);
+}
+inline VecD Cross(C VecD &a, C VecD &b) // the same version as "HLSL Cross"
+{
+   return VecD(a.y*b.z - a.z*b.y,
+               a.z*b.x - a.x*b.z,
+               a.x*b.y - a.y*b.x);
+}
+
+inline Vec CrossRight  (C Vec &b) {return Vec(0, -b.z, b.y);} // same as "Cross(Vec(1, 0, 0), b)"
+inline Vec CrossUp     (C Vec &b) {return Vec(b.z, 0, -b.x);} // same as "Cross(Vec(0, 1, 0), b)"
+inline Vec CrossForward(C Vec &b) {return Vec(-b.y, b.x, 0);} // same as "Cross(Vec(0, 0, 1), b)"
 
 // cross product normalized
 Vec  CrossN(C Vec  &a, C Vec  &b);
 VecD CrossN(C VecD &a, C VecD &b);
 
 // perpendicular vector
-Vec2  Perp(C Vec2  &v); // returned vector is always rotated by 90 deg clockwise
-VecD2 Perp(C VecD2 &v); // returned vector is always rotated by 90 deg clockwise
-VecI2 Perp(C VecI2 &v); // returned vector is always rotated by 90 deg clockwise
-Vec   Perp(C Vec   &v);
-VecD  Perp(C VecD  &v);
+Vec2   Perp(C Vec2   &v); // returned vector is always rotated by 90 deg clockwise and same length as 'v'
+VecD2  Perp(C VecD2  &v); // returned vector is always rotated by 90 deg clockwise and same length as 'v'
+VecI2  Perp(C VecI2  &v); // returned vector is always rotated by 90 deg clockwise and same length as 'v'
+VecSB2 Perp(C VecSB2 &v); // returned vector is always rotated by 90 deg clockwise and same length as 'v'
+Vec    Perp(C Vec    &v); // returned vector length may be different than 'v'
+VecD   Perp(C VecD   &v); // returned vector length may be different than 'v'
 
 // perpendicular vector normalized
 Vec2  PerpN(C Vec2  &v); // returned vector is always rotated by 90 deg clockwise
@@ -2465,11 +3251,20 @@ VecD  Mirror(C VecD  &vec, C VecD  &plane_pos, C VecD  &plane_nrm); //
 // refract vector
 Vec Refract(C Vec &dir, C Vec &plane_nrm, Flt ior); // 'dir'=direction vector (must be normalized), 'plane_nrm'=plane normal (must be normalized), 'ior'=index of refraction (use 1.33 for air<->water)
 
+#if EE_PRIVATE
+// index of closer point to 'p' (returns 1 if 'p1' is closer to 'p', and 0 if 'p0' is closer to 'p')
+Int Closer(C Vec2  &p, C Vec2  &p0, C Vec2  &p1);
+Int Closer(C VecD2 &p, C VecD2 &p0, C VecD2 &p1);
+Int Closer(C Vec   &p, C Vec   &p0, C Vec   &p1);
+Int Closer(C VecD  &p, C VecD  &p0, C VecD  &p1);
+#endif
+
 // if equal (epsilon=EPS)
 Bool Equal(  Flt   r0,   Flt   r1);
 Bool Equal(C Vec2 &v0, C Vec2 &v1);
 Bool Equal(C Vec  &v0, C Vec  &v1);
 Bool Equal(C Vec4 &v0, C Vec4 &v1);
+Bool Equal(C Vec5 &v0, C Vec5 &v1);
 
 // if equal (epsilon=EPSD)
 Bool Equal(  Dbl    r0,   Dbl    r1);
@@ -2510,6 +3305,7 @@ Int Compare(C VecUS  &v0, C VecUS  &v1);
 Int Compare(C VecI4  &v0, C VecI4  &v1);
 Int Compare(C VecB4  &v0, C VecB4  &v1);
 Int Compare(C VecSB4 &v0, C VecSB4 &v1);
+Int Compare(C VecUS4 &v0, C VecUS4 &v1);
 Int Compare(C Color  &c0, C Color  &c1);
 Int Compare(C VecH2  &v0, C VecH2  &v1);
 Int Compare(C VecH   &v0, C VecH   &v1);
@@ -2528,7 +3324,10 @@ void Transform(Vec2 *v, C Matrix3  &m, Int num);
 void Transform(Vec2 *v, C Matrix   &m, Int num);
 void Transform(Vec  *v, C Matrix3  &m, Int num);
 void Transform(Vec  *v, C Matrix   &m, Int num);
+void Transform(Vec  *v, C MatrixM  &m, Int num);
 void Transform(VecD *v, C MatrixM  &m, Int num);
+
+void TransformNormalize(Vec *v, C Matrix3 &m, Int num); // transform and normalize
 
 // change sign of vectors
 void Chs(Vec2  *v, Int num);
@@ -2555,6 +3354,14 @@ void Reverse(VecI4 *v, Int num);
 // swap X Z components in vectors
 void SwapXZ(VecI  *v, Int num);
 void SwapXZ(VecI4 *v, Int num);
+
+inline Vec2  ProjectZ(C Vec  &v) {return v.xy/v.z;}
+inline VecD2 ProjectZ(C VecD &v) {return v.xy/v.z;}
+
+#if EE_PRIVATE
+// convert from right hand to left hand coordinate system
+void RightToLeft(Vec *vec, Int num);
+#endif
 
        CChar8*   DirToText(DIR_ENUM dir);                 // get direction in text format, "Right", "Left", "Up", "Down", "Forward", "Back"
 inline UInt      DirToFlag(DIR_ENUM dir) {return 1<<dir;} // convert DIR_ENUM to DIR_FLAG
@@ -2606,6 +3413,9 @@ private:
 struct SmoothValueTime
 {
    Flt update(Flt current_value, Flt dt); // update by giving current raw value, returns smooth result, 'dt'=time delta
+#if EE_PRIVATE
+   SmoothValueTime& historyTime(Flt time); // set how long keep the values in history
+#endif
 
    explicit SmoothValueTime(Flt history_time=4.0f/60); // 'history_time'=how long keep the values in history
 
@@ -2616,6 +3426,9 @@ private:
 struct SmoothValueTime2
 {
    Vec2 update(C Vec2 &current_value, Flt dt); // update by giving current raw value, returns smooth result, 'dt'=time delta
+#if EE_PRIVATE
+   SmoothValueTime2& historyTime(Flt time); // set how long keep the values in history
+#endif
 
    explicit SmoothValueTime2(Flt history_time=4.0f/60); // 'history_time'=how long keep the values in history
 
@@ -2686,4 +3499,9 @@ constexpr Int Elms(C VecD4  &v) {return 4;}
 constexpr Int Elms(C VecI4  &v) {return 4;}
 constexpr Int Elms(C VecB4  &v) {return 4;}
 constexpr Int Elms(C VecSB4 &v) {return 4;}
+constexpr Int Elms(C VecUS4 &v) {return 4;}
+
+constexpr Int Elms(C VecI5 &v) {return 5;}
+constexpr Int Elms(C VecB5 &v) {return 5;}
+constexpr Int Elms(C Vec5  &v) {return 5;}
 /******************************************************************************/

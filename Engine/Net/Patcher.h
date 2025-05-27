@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Patcher' for patching files on local device,
@@ -22,7 +19,7 @@ const_mem_addr struct Patcher // class for automatic downloading file updates fr
       TYPE     type           =PAK_FILE; // specifies how the file is stored on the local device
       UInt     xxHash64_32    =0       ; // file hash (this is optional, it can be left at 0 which will disable checking for hash differences, however when enabled, it can provide more reliable detecting differences between file versions)
       Long     file_size      =0       ; // file size in bytes (leave 0 for folders)
-      DateTime modify_time_utc; // file modification time in UTC time zone
+      DateTime modify_time_utc         ; // file modification time in UTC time zone
 
       LocalFile& set(C Str &full_name, C FileInfo &fi); // set from 'full_name' and 'FileInfo'
 
@@ -40,6 +37,11 @@ const_mem_addr struct Patcher // class for automatic downloading file updates fr
       File      data                     ; // file data
 
       Downloaded() {modify_time_utc.zero();}
+   #if EE_PRIVATE
+      void create     (C Pak &pak, Int index, Download &download, Cipher *cipher);
+      void createEmpty(C Pak &pak, Int index);
+      void createFail (C Pak &pak, Int index);
+   #endif
    };
 
    struct InstallerInfo
@@ -49,6 +51,9 @@ const_mem_addr struct Patcher // class for automatic downloading file updates fr
       DateTime modify_time_utc; // file modification time in UTC time zone
       VecI4    version        ; // file version
 
+   #if EE_PRIVATE
+      void zero() {size=0; xxHash64_32=0; modify_time_utc.zero(); version.zero();}
+   #endif
       InstallerInfo();
    };
 
@@ -66,11 +71,12 @@ const_mem_addr struct Patcher // class for automatic downloading file updates fr
     C InstallerInfo*   installerInfo     (); // get access to installer information (this will return a valid pointer only if 'installerInfoState' is equal to DWNL_DONE), null on fail
 
       // installer
-      Patcher& downloadInstaller            (); // initialize downloading of the installer, downloading will begin on secondary thread
-      DWNL_STATE       installerState       (); // get state  of installer download, once it's equal to DWNL_DONE you can access it
-      Int              installerDownloadDone(); // get number of completed bytes for installer download
-      Int              installerDownloadSize(); // get number of total     bytes for installer download
-      File*            installer            (); // get access to installer file data (this will return a valid pointer only if 'installerState' is equal to DWNL_DONE), null on fail
+      Patcher& downloadInstaller             (); // initialize downloading of the installer, downloading will begin on secondary thread
+      DWNL_STATE       installerState        (); // get state  of installer download, once it's equal to DWNL_DONE you can access it
+      Int              installerDownloadDone ()C {return _inst_download.done         ();} // get number of completed bytes          for installer download
+      Int              installerDownloadSize ()C {return _inst_download.size         ();} // get number of total     bytes          for installer download
+    C DateTime&        installerModifyTimeUTC()C {return _inst_download.modifyTimeUTC();} // get modification time in UTC time zone for installer download
+      File*            installer             (); // get access to installer file data (this will return a valid pointer only if 'installerState' is equal to DWNL_DONE), null on fail
 
       // index
       Patcher& downloadIndex     (); // initialize downloading of the index (list of all current files on the server), downloading will begin on secondary thread
@@ -95,12 +101,23 @@ const_mem_addr struct Patcher // class for automatic downloading file updates fr
   ~Patcher() {del();}
    Patcher();
 
+#if EE_PRIVATE
+   Bool is       () {return _http.is();}
+   void zero     ();
+   void update   ();
+   void delThread();
+#endif
+
    static Str Platform(OS_VER os=OSVer());
 
 private:
    struct FileDownload : Download
    {
       Int index;
+   #if EE_PRIVATE
+      void clearIndex   () {index=-1;}
+      void clearIndexDel() {clearIndex(); del();}
+   #endif
    };
    Str              _http, _name;
    Cipher          *_cipher;

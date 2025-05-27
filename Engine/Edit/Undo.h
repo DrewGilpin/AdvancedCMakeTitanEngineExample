@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Undo supports two modes:
@@ -73,6 +70,9 @@ private:
 
    Change* set(CPtr change_type, Bool force_create, Flt extra_time);
    Change* set( Int change_type, Bool force_create, Flt extra_time);
+#if EE_PRIVATE
+   void clean(Bool test_mem_usage);
+#endif
 
    explicit _Undo(Bool full, Ptr user, Flt time);
    T1(TYPE) friend struct Undo;

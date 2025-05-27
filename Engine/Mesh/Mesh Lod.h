@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    'MeshLod' represents a single level of detail, by containing an array of 'MeshPart's.
@@ -18,22 +15,34 @@ struct MeshLod // Level of Detail, array of Mesh Part's
 
    void copyParams(C MeshLod &src); // copy only parameters without meshes
 
+#if EE_PRIVATE
+   void zero();
+
+   void scaleParams(Flt scale);
+
+   MeshLod& include (MESH_FLAG flag); // include   elements specified with 'flag'
+#endif
    MeshLod& exclude (MESH_FLAG flag); // exclude   elements specified with 'flag'
    MeshLod& keepOnly(MESH_FLAG flag); // keep only elements specified with 'flag'
 
    // get
-   Bool      is       (                                     )C {return parts.elms()>0;}    // if  has any parts
-   MESH_FLAG flag     (                                     )C;                            // get available data
-   UInt      memUsage (                                     )C;                            // get memory usage
-   Int       vtxs     (                                     )C;                            // get total number of vertexes
-   Int       edges    (                                     )C;                            // get total number of edges
-   Int       tris     (                                     )C;                            // get total number of triangles
-   Int       quads    (                                     )C;                            // get total number of quads
-   Int       faces    (                                     )C;                            // get total number of faces                    , faces    =(triangles + quads  )
-   Int       trisTotal(                                     )C;                            // get total number of triangles including quads, trisTotal=(triangles + quads*2)
-   Bool      getBox   (Box &box, Bool skip_hidden_parts=true)C;                            // get box   encapsulating the MeshLod, 'skip_hidden_parts'=if MeshParts with MSHP_HIDDEN should not be included in the box, returns false on fail (if no vertexes are present)
-   Flt       area     (Vec *center=null                     )C;                            // get surface area of all mesh faces, 'center'=if specified then it will be calculated as the average surface center
-   Flt       dist     (                                     )C;   MeshLod& dist(Flt dist); // get/set LOD distance
+   Bool      is       (                                                        )C {return parts.elms()>0;}    // if  has any parts
+   MESH_FLAG flag     (                                                        )C;                            // get available data
+   UInt      memUsage (                                                        )C;                            // get memory usage
+   Int       vtxs     (                                                        )C;                            // get total number of vertexes
+#if EE_PRIVATE
+   Int       baseVtxs (                                                        )C;                            // get total number of vertexes in MeshBase only, without MeshRender
+#endif
+   Int       edges    (                                                        )C;                            // get total number of edges
+   Int       tris     (                                                        )C;                            // get total number of triangles
+   Int       quads    (                                                        )C;                            // get total number of quads
+   Int       faces    (                                                        )C;                            // get total number of faces                    , faces    =(triangles + quads  )
+   Int       trisTotal(                                                        )C;                            // get total number of triangles including quads, trisTotal=(triangles + quads*2)
+   Bool      getBox   (Box &box,                    Bool skip_hidden_parts=true)C;                            // get box   encapsulating the MeshLod, this method iterates through all vertexes, 'skip_hidden_parts'=if MeshParts with MSHP_HIDDEN should not be included in the box, returns false on fail (if no vertexes are present)
+   Bool      getBox   (Box &box, C Matrix3 &matrix, Bool skip_hidden_parts=true)C;                            // get box   encapsulating the MeshLod, this method iterates through all vertexes, 'skip_hidden_parts'=if MeshParts with MSHP_HIDDEN should not be included in the box, 'matrix'=matrix affecting vertex positions, false on fail (if no vertexes are present)
+   Bool      getBox   (Box &box, C Matrix  &matrix, Bool skip_hidden_parts=true)C;                            // get box   encapsulating the MeshLod, this method iterates through all vertexes, 'skip_hidden_parts'=if MeshParts with MSHP_HIDDEN should not be included in the box, 'matrix'=matrix affecting vertex positions, false on fail (if no vertexes are present)
+   Flt       area     (Vec *center=null                                        )C;                            // get surface area of all mesh faces, 'center'=if specified then it will be calculated as the average surface center
+   Flt       dist     (                                                        )C;   MeshLod& dist(Flt dist); // get/set LOD distance
 
    Bool hasDrawGroup           ( Int draw_group_index               )C; // check if at least one MeshPart has specified draw group enum index
    Bool hasDrawGroupMask       (UInt draw_group_mask                )C; // check if at least one MeshPart has specified draw group enum mask
@@ -42,6 +51,10 @@ struct MeshLod // Level of Detail, array of Mesh Part's
    Int partsAfterJoinAll(Bool test_material, Bool test_draw_group, Bool test_name, MESH_FLAG test_vtx_flag=MESH_NONE, Bool skip_hidden=true)C; // calculate how many parts this mesh will have after 'joinAll' would be called with specified parameters, 'test_material'=join only those MeshParts which have the same material, 'test_draw_group'=join only those MeshParts which have the same draw group, 'test_name'=join only those MeshParts which have the same name, 'test_vtx_flag'=join only those MeshParts which have same vertex flag, 'skip_hidden'=if skip calculating hidden parts
 
    // set
+#if EE_PRIVATE
+   MeshLod& setEdgeNormals(Bool flag=false); // recalculate edge 2D normals, 'flag'=if include ETQ_FLAG behavior
+   MeshLod& setNormals2D  (Bool flag=false); // recalculate edge and vertex 2D normals, 'flag'=if include ETQ_FLAG behavior
+#endif
    MeshLod& setNormals    (                                       ); // recalculate vertex            3D normals
    MeshLod& setNormalsAuto(Flt angle=EPS_NRM_AUTO, Flt pos_eps=EPS); // recalculate vertex            3D normals using an automatic smart algorithm, 'angle'=angle limit for merging vertex normals, this method will generate a lot of vertexes, it's recommended to call 'weldVtx' afterwards
    MeshLod& setFaceNormals(                                       ); // recalculate triangle and quad 3D normals
@@ -49,15 +62,19 @@ struct MeshLod // Level of Detail, array of Mesh Part's
    MeshLod& setTanBinDbl  (                                       ); // recalculate vertex            3D tangents and binormals using Dbl precision, which is slower but correctly handles huge meshes
    MeshLod& setAutoTanBin (                                       ); // automatically calculate vertex tangents and binormals if needed, if they're not needed then they will be removed
 
+#if EE_PRIVATE
+   MeshLod& setVtxColorAlphaAsTesselationIntensity(Bool tesselate_edges                                              ); // set vertex color alpha   (vtx.color.a) as tesselation intensity, 'tesselate_edges'=if tesselate non continuous edges
+   MeshLod& setVtxDup2D                           (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS); // set vertex 2D duplicates (vtx.dup)
+#endif
    MeshLod& setVtxDup     (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS); // set vertex 3D duplicates (vtx.dup)
    MeshLod& setAdjacencies(Bool faces=true, Bool edges=false                                 ); // set adjacencies, 'faces'=if set face adjacencies ('tri.adjFace', 'quad.adjFace'), 'edges'=if set edges ('edge') and edge adjacencies ('tri.adjEdge', 'quad.adjEdge', 'edge.adjFace')
 
-   MeshLod& delBase  (                                        ); // delete all software meshes (MeshBase  ) in this mesh
-   MeshLod& delRender(                                        ); // delete all hardware meshes (MeshRender) in this mesh
-   MeshLod& setBase  (Bool only_if_empty=true                 ); // set software  version, convert 'MeshRender' to 'MeshBase', 'only_if_empty'=perform conversion only if the MeshBase is empty (if set to false then conversion is always performed)
-   MeshLod& setRender(Bool optimize     =true, Int lod_index=0); // set rendering version, convert 'MeshBase'   to 'MeshRender', 'optimize'=if optimize the mesh by re-ordering the vertexes/triangles for optimal processing on the GPU, 'lod_index'=index of the LOD in the mesh (used to determine quality of the shader)
-   MeshLod& setShader(                         Int lod_index=0); // reset shader, 'lod_index'=index of the LOD in the mesh (used to determine quality of the shader)
-   MeshLod& material (C MaterialPtr &material, Int lod_index=0); // set material, 'lod_index'=index of the LOD in the mesh (used to determine quality of the shader, if it's <0 then shader will not be reset), 'material' must point to object in constant memory address (mesh will store only the pointer to the material and later use it if needed)
+   MeshLod& delBase  (                                                           ); // delete all software meshes (MeshBase  ) in this mesh
+   MeshLod& delRender(                                                           ); // delete all hardware meshes (MeshRender) in this mesh
+   MeshLod& setBase  (Bool only_if_empty=true                                    ); // set software  version, convert 'MeshRender' to 'MeshBase', 'only_if_empty'=perform conversion only if the MeshBase is empty (if set to false then conversion is always performed)
+   MeshLod& setRender(VTX_COMPRESS compress=VTX_COMPRESS_DEFAULT, Int lod_index=0); // set rendering version, convert 'MeshBase'   to 'MeshRender', 'lod_index'=index of the LOD in the mesh (used to determine quality of the shader)
+   MeshLod& setShader(                                            Int lod_index=0); // reset shader, 'lod_index'=index of the LOD in the mesh (used to determine quality of the shader)
+   MeshLod& material (C MaterialPtr &material,                    Int lod_index=0); // set material, 'lod_index'=index of the LOD in the mesh (used to determine quality of the shader, if it's <0 then shader will not be reset), 'material' must point to object in constant memory address (mesh will store only the pointer to the material and later use it if needed)
 
    // transform
    MeshLod& move         (              C Vec &move         ); //           move
@@ -73,21 +90,42 @@ struct MeshLod // Level of Detail, array of Mesh Part's
    MeshLod& mirrorY      (                                  ); // mirror in Y axis
    MeshLod& mirrorZ      (                                  ); // mirror in Z axis
    MeshLod& reverse      (                                  ); // reverse faces
+#if EE_PRIVATE
+   MeshLod& rightToLeft  (                                  ); // convert from right hand to left hand coordinate system
+#endif
 
-   // texture transform
-   MeshLod& texMove  (C Vec2 &move , Byte tex_index=0); // move   texture UV's
-   MeshLod& texScale (C Vec2 &scale, Byte tex_index=0); // scale  texture UV's
-   MeshLod& texRotate(  Flt   angle, Byte tex_index=0); // rotate texture UV's
+#if EE_PRIVATE
+   // texturize
+   MeshLod& uvMap(  Flt     scale=1, Byte uv_index=0); // map UVs according to vertex XY position and scale
+   MeshLod& uvMap(C Matrix &matrix , Byte uv_index=0); // map UVs according to matrix
+   MeshLod& uvMap(C Plane  &plane  , Byte uv_index=0); // map UVs according to plane
+   MeshLod& uvMap(C Ball   &ball   , Byte uv_index=0); // map UVs according to ball
+   MeshLod& uvMap(C Tube   &tube   , Byte uv_index=0); // map UVs according to tube
+#endif
+
+   // UV transform
+   MeshLod& uvMove  (C Vec2 &move , Byte uv_index=0); // move   UVs
+   MeshLod& uvScale (C Vec2 &scale, Byte uv_index=0); // scale  UVs
+   MeshLod& uvRotate(  Flt   angle, Byte uv_index=0); // rotate UVs
 
    // join / split
    MeshLod& join   (Int i0, Int i1                                                                             , Flt weld_pos_eps=EPS); // join i0-th and i1-th parts together, 'weld_pos_eps'=epsilon used for welding vertexes after joining (use <0 to disable welding)
    MeshLod& joinAll(Bool test_material, Bool test_draw_group, Bool test_name, MESH_FLAG test_vtx_flag=MESH_NONE, Flt weld_pos_eps=EPS); // join all parts, 'test_material'=join only those MeshParts which have the same material, 'test_draw_group'=join only those MeshParts which have the same draw group, 'test_name'=join only those MeshParts which have the same name, 'test_vtx_flag'=join only those MeshParts which have same vertex flag, 'weld_pos_eps'=epsilon used for welding vertexes after joining (use <0 to disable welding)
 
+#if EE_PRIVATE
+   MeshPart* splitVtxs (Int i, C CMemPtr<Bool> &vtx_is                                                    ); // split i-th part by given 'is' array of vertexes to a new MeshPart, pointer to that MeshPart is returned or null if it wasn't created
+   MeshPart* splitFaces(Int i, C CMemPtr<Bool> &edge_is, C CMemPtr<Bool> &tri_is, C CMemPtr<Bool> &quad_is); // split i-th part by given 'is' array of faces    to a new MeshPart, pointer to that MeshPart is returned or null if it wasn't created
+   MeshPart* splitBone (Int i, Int bone, C Skeleton *skeleton=null); // split i-th part by bone blend index to a new MeshPart, pointer to that MeshPart is returned or null if it wasn't created
+#endif
    MeshPart* splitVtxs (Int i, C CMemPtr<Int> &vtxs                                              ); // split i-th part by given array of vertexes to a new MeshPart, pointer to that MeshPart is returned or null if it wasn't created
    MeshPart* splitFaces(Int i, C CMemPtr<Int> &faces                                             ); // split i-th part by given array of faces    to a new MeshPart, pointer to that MeshPart is returned or null if it wasn't created, here 'faces' indexes can point to both triangles and quads, if face is a triangle then "face=triangle_index", if face is a quad then "face=quad_index^SIGN_BIT"
    MeshPart* splitFaces(Int i, C CMemPtr<Int> &edges, C CMemPtr<Int> &tris, C CMemPtr<Int> &quads); // split i-th part by given array of faces    to a new MeshPart, pointer to that MeshPart is returned or null if it wasn't created
 
    // operations
+#if EE_PRIVATE
+   MeshLod& weldEdge     (); // weld edges
+   MeshLod& weldVtx2D    (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld 2D vertexes     , this function will weld vertexes together if they share the same position (ignoring Z), 'flag'=if selected elements aren't equal then don't weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
+#endif
    MeshLod& weldVtx      (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld 3D vertexes     , this function will weld vertexes together if they share the same position             , 'flag'=if selected elements aren't equal then don't weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
    MeshLod& weldVtxValues(MESH_FLAG flag          , Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld    vertex values, this function will weld values of vertexes which  share the same position             , 'flag'=                                 elements to weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
 
@@ -96,9 +134,9 @@ struct MeshLod // Level of Detail, array of Mesh Part's
    MeshLod& tesselate(Flt weld_pos_eps=EPS); // smooth subdivide faces, preserving original vertexes, 'weld_pos_eps'=epsilon used for final vertex position welding
    MeshLod& subdivide(                    ); // smooth subdivide faces,  smoothing original vertexes
 
-   MeshLod&    boneRemap(C CMemPtr<Byte, 256> &old_to_new); // remap vertex bone/matrix indexes according to bone 'old_to_new' remap
-   void     setUsedBones(Bool (&bones)[256])C;
-   void includeUsedBones(Bool (&bones)[256])C;
+   MeshLod&    boneRemap(C CMemPtrN<BoneType, 256> &old_to_new); // remap vertex bone/matrix indexes according to bone 'old_to_new' remap
+   void     setUsedBones(   MemPtrN<Bool    , 256>  bones)C;
+   void includeUsedBones(   MemPtrN<Bool    , 256>  bones)C;
 
    MeshLod& setVtxAO(Flt strength, Flt bias, Flt max, Flt ray_length, Flt pos_eps=EPS, Int rays=1024, MESH_AO_FUNC func=MAF_FULL, Threads *threads=null); // calculate per-vertex ambient occlusion in vertex colors, 'strength'=0..1 AO strength, 'bias'=0..1, 'max'=AO limit 0..1, 'ray_length'=max ray distance to test, 'rays'=number of rays to use for AO calculation, 'func'=falloff function
 
@@ -107,8 +145,9 @@ struct MeshLod // Level of Detail, array of Mesh Part's
    Bool waitForStream()C; // wait until streaming has finished, false on fail
 
    // fix
-   MeshLod& fixTexOffset  (Byte tex_index=0); // fix texture offset  , this reduces big texture coordinates to small ones increasing texturing quality on low precision video cards
-   MeshLod& fixTexWrapping(Byte tex_index=0); // fix texture wrapping, fixes texture coordinates created by spherical/tube mapping (this can add new vertexes to the mesh)
+   MeshLod& fixUVOffset  (Byte uv_index=0); // fix texture offset  , this reduces big texture coordinates to small ones increasing texturing quality on low precision video cards
+   MeshLod& fixUVWrapping(Byte uv_index=0); // fix texture wrapping, fixes texture coordinates created by spherical/tube mapping (this can add new vertexes to the mesh)
+   MeshLod& fixFaceSide  (               ); // fix all faces to be on the same side in case some are reversed
 
    // convert
    MeshLod& edgeToDepth(Bool tex_align=true       ); // edges to depth (extrude 2D edges to 3D faces)
@@ -122,6 +161,13 @@ struct MeshLod // Level of Detail, array of Mesh Part's
    MeshLod& add(C MeshLod  &src, C Mesh *src_mesh=null, C Mesh *this_mesh=null); // add MeshLod  to self, 'src_mesh'=Mesh that 'src' belongs to, 'this_mesh'=Mesh that this belongs to, settings 'src_mesh' and 'this_mesh' is optional, it is used for remapping mesh part variations
 
    // optimize
+#if EE_PRIVATE
+   MeshLod& sortByMaterials  (); // sort MeshParts according to their materials
+   MeshLod& removeDoubleEdges();
+   MeshLod& removeSingleFaces(Flt fraction                                              ); // remove fraction of single faces (single triangles or quads not linked to any other face), 'fraction'=0..1
+   MeshLod& weldInlineEdges  (Flt cos_edge=EPS_COL_COS, Flt cos_vtx=-1, Bool z_test=true); // weld   inline edge vertexes, 'cos_edge'=minimum cosine between edge normals, 'cos_vtx'=minimum cosine between vertex normals, 'z_test'=if perform tests for inline 'z' vertex component
+#endif
+   MeshLod& optimizeCache        (Bool faces=true, Bool vertexes=true); // this method will re-order elements for best rendering performance, 'faces'=if re-order faces, 'vertexes'=if re-order vertexes
    MeshLod& removeDegenerateFaces(Flt eps=EPS);
    Bool     removeUnusedVtxs     (Bool include_edge_references=true); // remove vertexes which aren't used by any face or edge, if 'include_edge_references' is set to false then only face references are tested (without the edges), returns true if any vertex was removed
 
@@ -129,7 +175,15 @@ struct MeshLod // Level of Detail, array of Mesh Part's
 
    Bool weldCoplanarFaces(Flt cos_face=EPS_COL8_COS, Flt cos_vtx=EPS_COL8_COS, Bool safe=false, Flt max_face_length=-1); // weld coplanar faces, 'cos_face'=minimum cosine between face normals, 'cos_vtx'=minimum cosine between vertex normals, 'safe'=if process only faces without neighbors, 'max_face_length'=max allowed face length (-1=no limit), returns true if any change was made
 
+   void delMaterials(); // delete all materials from this mesh, this does not adjust shaders, but only clears materials
+
    // draw
+   #if EE_PRIVATE
+      // helper drawing
+      void draw2D       (C Color &vtx_color, C Color &edge_color, C Color &face_color, Flt vtx_r=0.04f, Flt side_width=0.01f                                             )C; // draw 2D
+      void drawNormals2D(  Flt    length   , C Color &edge_color, C Color &vtx_color=TRANSPARENT                                                                         )C; // draw 2D normals
+      void drawNormals  (  Flt    length   , C Color &face_color, C Color &vtx_color=TRANSPARENT, C Color &tangent_color=TRANSPARENT, C Color &binormal_color=TRANSPARENT)C; // draw 3D normals
+   #endif
       // default drawing, doesn't use automatic Frustum Culling, this doesn't draw the mesh immediately, instead it adds the mesh to a draw list
       void draw(C MatrixM          &matrix, C MatrixM &matrix_prev )C; // add mesh to draw list using 'matrix'    matrix   and    velocities based on 'matrix_prev' matrix from previous frame, this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
       void draw(C MatrixM          &matrix                         )C; // add mesh to draw list using 'matrix'    matrix   and no velocities                                                  , this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
@@ -143,14 +197,23 @@ struct MeshLod // Level of Detail, array of Mesh Part's
       void drawShadow(C AnimatedSkeleton &anim_skel, C Material &material)C; // add mesh to shadow draw list using 'anim_skel' skeleton, this should be called only in RM_SHADOW, 'anim_skel' must point to constant memory address (the pointer is stored through which the object can be accessed later during frame rendering), 'material'=material used for rendering which overrides the default material, however for performance reasons, the default shader is used, which means that the 'material' should be similar to the default material, and if it's too different then some artifacts can occur
 
       // draw blended, this is an alternative to default 'draw' (typically 'draw' draws blended meshes automatically for materials with technique in blend mode), this method however draws the mesh immediately (which allows to set custom shader parameters per draw call) and provides additional control over material color, it always uses blend shaders regardless if the material has technique set in blend mode, this can be called only in RM_BLEND rendering mode, doesn't use automatic Frustum culling
-      void drawBlend(                      C Vec4 *color=null)C; // draw with current matrix, 'color'=pointer to optional Material color multiplication
-      void drawBlend(C Material &material, C Vec4 *color=null)C; // draw with current matrix, 'color'=pointer to optional Material color multiplication, 'material'=material used for rendering which overrides the default material, however for performance reasons, the default shader is used, which means that the 'material' should be similar to the default material, and if it's too different then some artifacts can occur
+      void drawBlendCurMatrix(                      C Vec4 *color=null)C; // draw with current matrix, 'color'=pointer to optional Material color multiplication
+      void drawBlendCurMatrix(C Material &material, C Vec4 *color=null)C; // draw with current matrix, 'color'=pointer to optional Material color multiplication, 'material'=material used for rendering which overrides the default material, however for performance reasons, the default shader is used, which means that the 'material' should be similar to the default material, and if it's too different then some artifacts can occur
 
       // draw mesh outline, this can be optionally called in RM_OUTLINE in order to outline the mesh, doesn't use automatic Frustum culling
-      void drawOutline(C Color &color)C; // draw with current matrix
+      void drawOutlineCurMatrix(C Color &color)C; // draw with current matrix
 
       // draw using the "behind" effect, this can be optionally called in RM_BEHIND, doesn't use automatic Frustum culling
-      void drawBehind(C Color &color_perp, C Color &color_parallel)C; // draw with current matrix, 'color_perp'=color to be used for normals perpendicular to camera, 'color_parallel'=color to be used for normals parallel to camera
+      void drawBehindCurMatrix(C Color &color_perp, C Color &color_parallel)C; // draw with current matrix, 'color_perp'=color to be used for normals perpendicular to camera, 'color_parallel'=color to be used for normals parallel to camera
+
+#if EE_PRIVATE
+   // io
+   Bool save    (File &f, CChar *path=null                 )C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool load    (File &f, CChar *path=null                 ) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool saveData(File &f, CChar *path=null                 )C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadData(File &f, CChar *path=null, Int lod_index=0) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadOld (File &f, CChar *path=null                 ) ;
+#endif
 
    void operator*=(C Matrix3 &m) {transform(m);} // transform by matrix
    void operator*=(C Matrix  &m) {transform(m);} // transform by matrix

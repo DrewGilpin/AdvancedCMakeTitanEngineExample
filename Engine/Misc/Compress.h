@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use following functions to handle data compression.
@@ -16,6 +13,10 @@ enum COMPRESS_TYPE : Byte // Compression Library Type
    COMPRESS_LZ4   , // use LZ4                 compression, good    performance (16x), medium   size (~70%), the library was designed to achieve fastest compression/decompression speed at the cost of lower compression when compared to Zlib, compression is slower than Snappy, however decompression is faster and the file sizes are smaller
    COMPRESS_LZHAM , // use LZHAM               compression, slow    performance ( 2x), small    size (~57%), compression is slower than LZMA and it achieves slightly worse compression rates than LZMA, however decompression speeds are 1.5-8x higher
    COMPRESS_ZSTD  , // use Zstd                compression, medium  performance ( 8x), small    size (~63%), compression is slower than ZLIB and it achieves similar        compression rates to   ZLIB, however decompression speeds are     2x higher
+#if EE_PRIVATE
+   COMPRESS_BROTLI, // use Google Brotli       compression,         performance      ,          size
+   COMPRESS_LIZARD, // use LIZARD              compression,         performance      ,          size
+#endif
    COMPRESS_NUM   , // number of compression types
 };
 /******************************************************************************/
@@ -65,6 +66,22 @@ Bool DecompressRaw(File &src, File &dest, COMPRESS_TYPE type, ULong compressed_s
 // compress variable length
 Int CmpUIntVSize (UInt  u); // get number of bytes needed for storing 'u' using 'cmpUIntV'  algorithm
 Int CmpULongVSize(ULong u); // get number of bytes needed for storing 'u' using 'cmpULongV' algorithm
+
+#if EE_PRIVATE
+
+#define MIN_COMPRESSABLE_SIZE 3 // 3 is the minimum size that can actually get compressed (by COMPRESS_RLE)
+
+Bool DecompressHeader(File &src, COMPRESS_TYPE &type, ULong &compressed_size, ULong &decompressed_size);
+
+// deprecated do not use
+Bool _OldDecompressHeader(File &src, COMPRESS_TYPE &type, ULong &compressed_size, ULong &decompressed_size);
+Bool _OldDecompress      (File &src, File &dest, Bool memory=false, DataCallback *callback=null);
+
+UInt ZSTDDecompressBufSize(Long decompressed_size);
+
+const Int MaxCmpUIntVSize =5,
+          MaxCmpULongVSize=9;
+#endif
 /******************************************************************************/
 struct ZipFile
 {

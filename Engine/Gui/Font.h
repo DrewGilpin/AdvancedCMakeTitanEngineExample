@@ -1,7 +1,4 @@
 ﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
-/******************************************************************************
 
    Use 'FontMake' to create a base font image.
 
@@ -86,6 +83,14 @@ struct Font
    Bool save(File &f)C; // save, false on fail
    Bool load(File &f) ; // load, false on fail
 
+#if EE_PRIVATE
+   Int charWidth(Char  c0, Char  c1, SPACING_MODE spacing)C;
+   Int charWidth(Char8 c0, Char8 c1, SPACING_MODE spacing)C;
+
+   void setRemap();
+   void zero    ();
+#endif
+
    Font& del(); // delete manually
    Font();
 
@@ -115,7 +120,9 @@ struct Font
       Int paddingR()C {return _padd.z;} // get right  padding
       Int paddingB()C {return _padd.w;} // get bottom padding
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool        _sub_pixel;
    Byte        _height;
    VecB4       _padd;
@@ -126,4 +133,9 @@ private:
 };
 /******************************************************************************/
 DECLARE_CACHE(Font, Fonts, FontPtr); // 'Fonts' cache storing 'Font' objects which can be accessed by 'FontPtr' pointer
+/******************************************************************************/
+#if EE_PRIVATE
+void ShutFont();
+#define SUPPORT_EMOJI 1 // if enabled, then for simplicity/speed all emojis are assumed to be square, with size same as Font height, and everything that is not found in '_wide_to_font' is treated as emoji (even if not found), except '\0'
+#endif
 /******************************************************************************/

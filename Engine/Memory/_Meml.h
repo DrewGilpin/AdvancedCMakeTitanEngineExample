@@ -1,9 +1,8 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct _Meml // List Based Container Base - Do not use this class, use 'Meml' instead
 {
+   static constexpr Bool Continuous=false; // Meml memory is NOT continuous
+
    void del  ();
    void clear();
 
@@ -46,6 +45,11 @@ struct _Meml // List Based Container Base - Do not use this class, use 'Meml' in
 
    Bool saveRaw(File &f)C;
    Bool loadRaw(File &f) ;
+
+#if EE_PRIVATE
+   void copyTo  ( Ptr dest)C;
+   void copyFrom(CPtr src ) ;
+#endif
 
  ~_Meml() {del();}
 

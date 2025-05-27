@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Pak' for archiving multiple data files into one "*.pak" file.
@@ -29,6 +26,10 @@ struct PakFile // Single File stored in Pak
    DateTime      modify_time_utc     ; // file modification time (UTC time zone)
 
    FSTD_TYPE type()C {return (flag&PF_STD_DIR) ? FSTD_DIR : (flag&PF_STD_LINK) ? FSTD_LINK : FSTD_FILE;} // get type of the file
+#if EE_PRIVATE
+   PakFile& type (FSTD_TYPE type); // set type
+   PakFile& reset();
+#endif
 };
 /******************************************************************************/
 enum PAK_FLAG // Pak Creation Flags
@@ -85,6 +86,17 @@ struct Pak // Set of Pak Files
    Bool create(C CMemPtr<Str        > &files, C Str &pak_name=S, UInt flag=PAK_SHORTEN, Cipher *dest_cipher=null, Cipher *src_cipher=null, COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Bool (*Filter)(C Str &name)=null, COMPRESS_MODE (*CompressMode)(C Str &name)=null, Str *error_message=null, PakProgress *progress=null); // create Pak, 'files'=list of file/directories    , 'pak_name'=Pak file name to save to, 'flag'=PAK_FLAG, all elements listed in 'files' must be located in the same path, 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), false on fail, 'Filter'=optional pointer to custom callback function which will receive information about encountered files and folders (their name) for which it should return true if the element should be included in the Pak and false if not included (if 'Filter' is null then all encountered files/folders will be included), 'error_message'=will contain a message what went wrong upon error, 'progress'=optional parameter allowing to control creation from secondary thread
    Bool create(C CMemPtr<PakNode    > &files, C Str &pak_name  , UInt flag=          0, Cipher *dest_cipher=null                         , COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9                                                                                   , Str *error_message=null, PakProgress *progress=null); // create Pak, 'files'=list of file/directory nodes, 'pak_name'=Pak file name to save to, 'flag'=PAK_FLAG                                                                 , 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), false on fail                                                                                                                                                                                                                                                                                                                        , 'error_message'=will contain a message what went wrong upon error, 'progress'=optional parameter allowing to control creation from secondary thread
    Bool create(C CMemPtr<PakFileData> &files, C Str &pak_name  , UInt flag=          0, Cipher *dest_cipher=null                         , COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9                                                                                   , Str *error_message=null, PakProgress *progress=null); // create Pak, 'files'=list of file/directory data , 'pak_name'=Pak file name to save to, 'flag'=PAK_FLAG                                                                 , 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), false on fail                                                                                                                                                                                                                                                                                                                        , 'error_message'=will contain a message what went wrong upon error, 'progress'=optional parameter allowing to control creation from secondary thread
+#if EE_PRIVATE
+   Bool create(C CMemPtr<PakNode    > &files, C Str &pak_name  , UInt flag            , Cipher *dest_cipher                              , COMPRESS_TYPE compress              , Int compression_level                                                                                     , Str *error_message     , PakProgress *progress, PakInPlace *in_place, MemPtr<DataRangeAbs> used_file_ranges, PakPostHeader *post_header);
+   Bool create(C CMemPtr<PakFileData> &files, C Str &pak_name  , UInt flag            , Cipher *dest_cipher                              , COMPRESS_TYPE compress              , Int compression_level                                                                                     , Str *error_message     , PakProgress *progress, PakInPlace *in_place, MemPtr<DataRangeAbs> used_file_ranges, PakPostHeader *post_header);
+   Bool create(C Mems<C PakFileData*> &files, C Str &pak_name  , UInt flag            , Cipher *dest_cipher                              , COMPRESS_TYPE compress              , Int compression_level                                                                                     , Str *error_message     , PakProgress *progress, PakInPlace *in_place, MemPtr<DataRangeAbs> used_file_ranges, PakPostHeader *post_header);
+   Bool savePreHeader     (File &f, Long header_data_pos=LONG_MIN)C; // save Pak header     , false on fail
+   Bool saveHeaderData    (File &f                               )C; // save Pak header data, false on fail
+   Int      headerDataSize()C;
+   Bool update        (                                      C CMemPtr<PakFileData> &changes  , C Str &pak_name, UInt flag=0, Cipher *dest_cipher=null, COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null, PakInPlace *in_place=null, PakPostHeader *post_header=null);
+   Bool replace       (Memb<DataRangeAbs> &used_file_ranges, C CMemPtr<PakFileData> &new_files,                  UInt flag=0,                           COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null,                            PakPostHeader *post_header=null); // replace 'pak_name' Pak with        'new_files' in-place directly within the 'pak_name' file without creating any additional files                               , 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), 'compress'=compression algorithm for the 'changes' (files from 'pak_name' will preserve their original compression), this operates on existing Pak, adjusting it without creating new files, for example updating 1GB Pak with 1MB file will perform 1MB+ operations, it   will perform as few     Disk operations as possible, however created Pak will not be fully optimized, and may contain some useless data, if update failed for some reason then original Pak will remain unmodified                                        , this function replaces  original files with 'new_files'
+   Bool replaceInPlace(Memb<DataRangeAbs> &used_file_ranges, C CMemPtr<PakFileData> &new_files,                  UInt flag=0,                           COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null,                            PakPostHeader *post_header=null); // replace 'pak_name' Pak with        'new_files' in-place directly within the 'pak_name' file without creating any additional files                               , 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), 'compress'=compression algorithm for the 'changes' (files from 'pak_name' will preserve their original compression), this operates on existing Pak, adjusting it without creating new files, for example updating 1GB Pak with 1MB file will perform 1MB+ operations, it   will perform as few     Disk operations as possible, however created Pak will not be fully optimized, and may contain some useless data, if update failed for some reason then original Pak will remain unmodified                                        , this function replaces  original files with 'new_files'
+#endif
 
    // io
    Bool saveHeader(File &f)C; // save Pak header (information about files, without their data), false on fail
@@ -93,7 +105,9 @@ struct Pak // Set of Pak Files
   ~Pak() {del();}
    Pak();
 
+#if !EE_PRIVATE
 private:
+#endif
    UInt          _root_files;
    ULong         _data_offset;
    Mems<Byte   > _data_decompressed;
@@ -105,6 +119,10 @@ private:
    Cipher       *_file_cipher;
    Str           _file_name;
    CPtr          _data;
+#if EE_PRIVATE
+   void     zero      ();
+   PAK_LOAD loadHeader(File &f, Long *expected_size=null, Long *actual_size=null, MemPtr<DataRangeAbs> used_file_ranges=null); // load just the header, access to data will not be available by using this method
+#endif
    NO_COPY_CONSTRUCTOR(Pak);
 };
 /******************************************************************************/
@@ -139,6 +157,9 @@ struct PakSet // set of Pak's combined together with all their PakFile's combine
  C PaksFile* find    (C UID      &id                         )C; // get      file from its ID
 
    // operations
+#if EE_PRIVATE
+   Bool    addTry   (              C Str &name,           const_mem_addr Cipher *cipher     , Bool auto_rebuild, Long pak_offset); // add Pak from file, 'auto_rebuild'=if automatically call the 'rebuild' method, false on fail, 'cipher' must point to object in constant memory address (only pointer is stored through which the object can be later accessed), 'pak_offset'=offset of PAK data inside the file
+#endif
    Bool    addTry   (              C Str &name,           const_mem_addr Cipher *cipher=null, Bool auto_rebuild=true); // add Pak from file  , 'auto_rebuild'=if automatically call the 'rebuild' method, false on fail, 'cipher' must point to object in constant memory address (only pointer is stored through which the object can be later accessed)
    PakSet& add      (              C Str &name,           const_mem_addr Cipher *cipher=null, Bool auto_rebuild=true); // add Pak from file  , 'auto_rebuild'=if automatically call the 'rebuild' method, Exit  on fail, 'cipher' must point to object in constant memory address (only pointer is stored through which the object can be later accessed)
    Bool    addMemTry(const_mem_addr CPtr  data, Int size, const_mem_addr Cipher *cipher=null, Bool auto_rebuild=true); // add Pak from memory, 'auto_rebuild'=if automatically call the 'rebuild' method, false on fail, 'cipher' must point to object in constant memory address (only pointer is stored through which the object can be later accessed), 'data' must point to a constant memory address (only pointer is stored through which the data can be later accessed)
@@ -147,10 +168,15 @@ struct PakSet // set of Pak's combined together with all their PakFile's combine
    Bool    removeMem(               CPtr  data                                                                      ); // remove previously added "Pak from memory", true is returned if Pak was found and removed, false if it was not found, this method always calls 'rebuild' upon success
    void    rebuild  (                                                                                               ); // rebuild Pak files database from loaded Pak's, this needs to be called once after adding new Pak's
 
+   Int paks   (     )C {return _paks.elms();} // get number of loaded Paks
+   Str pakName(Int i)C;                       // get name   of i-th   Pak
+
    PakSet& del(); // delete manually
    PakSet();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Src : Pak
    {
       Str  name;
@@ -172,6 +198,9 @@ struct PakProgress // class that can be optionally passed to Pak creation functi
 
    PakProgress&   reset() {stop=false; progress=0; return T;} // reset members to initial values
    PakProgress() {reset();}
+#if EE_PRIVATE
+   Bool wantStop(Str *error_message=null)C;
+#endif
 };
 /******************************************************************************/
 struct DataSource
@@ -192,7 +221,7 @@ struct DataSource
            struct { C PakFile *pak_file; C Pak *pak        ; };    // used when "type==PAK_FILE"
            struct {      CPtr    memory;  Long  memory_size; }; }; // used when "type==MEM"
 
-   DataSource& set   (                                ) {type=NONE    ;                                           return T;} // set NONE     type
+   DataSource& zero  (                                ) {type=NONE    ;                                           return T;} // set NONE     type
    DataSource& set   (    C Str &    name             ) {type=NAME    ; T.    name=     name;                     return T;} // set NAME     type
    DataSource& setStd(    C Str &    name             ) {type=STD     ; T.    name=     name;                     return T;} // set STD      type
    DataSource& set   (     File &    file             ) {type=FILE    ; T.    file=&    file;                     return T;} // set FILE     type
@@ -200,12 +229,15 @@ struct DataSource
    DataSource& set   (     CPtr    memory,  Long  size) {type=MEM     ; T.  memory=   memory; T.memory_size=size; return T;} // set MEM      type
 
    File*     open          (File &temp)C;
+#if EE_PRIVATE
+   File*     openRaw       (File &temp)C;
+#endif
    Long      size          (          )C;
    Long      sizeCompressed(          )C;
    Str       srcName       (          )C;
    FSTD_TYPE fstdType      (          )C;
 
-   DataSource() {set();}
+   DataSource() {zero();}
 };
 /******************************************************************************/
 struct PakFileData // Pak File Data, used for creating or updating Pak's from custom files
@@ -243,6 +275,25 @@ struct PakNode // Pak File Node, used for creating Pak's from custom files
    DateTime      modify_time_utc  ; // file modification time (UTC time zone)
    Memb<PakNode> children         ; // sub-elements
 
+#if EE_PRIVATE
+   PakNode& newSetFolder(C Str &name, C DateTime &modify_time_utc) // call this only for objects that were just created (right after constructor called)
+   {
+      T.type=FSTD_DIR; T.name=name; T.modify_time_utc=modify_time_utc; return T;
+   }
+   PakNode& setRemoved(C Str &name, C DateTime &modify_time_utc, FSTD_TYPE type)
+   {
+      T.type=type; T.exists=false; T.compress_mode=COMPRESS_ENABLE; T.compressed=COMPRESS_NONE; T.decompressed_size=-1;
+      T.name=name; T.data.zero(); T.xxHash64_32=0; T.modify_time_utc=modify_time_utc; children.del(); // remove all existing children (they are not needed if this node is marked as removed)
+      return T;
+   }
+   PakNode& set(C Str &name, C PakFileData &pfd)
+   {
+      T.type=pfd.type; T.exists=true; T.compress_mode=pfd.compress_mode; T.compressed=pfd.compressed; T.decompressed_size=pfd.decompressed_size;
+      T.name=name; T.data=pfd.data; T.xxHash64_32=pfd.xxHash64_32; T.modify_time_utc=pfd.modify_time_utc;
+      return T;
+   }
+#endif
+
    PakNode() {type=FSTD_NONE; exists=true; compress_mode=COMPRESS_ENABLE; compressed=COMPRESS_NONE; decompressed_size=-1; xxHash64_32=0; modify_time_utc.zero();}
 };
 /******************************************************************************/
@@ -255,9 +306,9 @@ inline Bool PakCreate(C CMemPtr<PakNode    > &files, C Str &pak_name  , UInt fla
 inline Bool PakCreate(C CMemPtr<PakFileData> &files, C Str &pak_name  , UInt flag=          0, Cipher *dest_cipher=null                         , COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9                                                                                   , Str *error_message=null, PakProgress *progress=null) {return Pak().create(files, pak_name, flag, dest_cipher            , compress, compression_level                      , error_message, progress);}
 
 // Update Pak
-Bool PakUpdate        (Pak &src_pak, C CMemPtr<PakFileData> &changes  , C Str &pak_name, UInt flag=0, Cipher *dest_cipher=null, COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null); // update  'src_pak'  Pak by applying 'changes'   and saving the new Pak into 'pak_name' (if dest file is same as source file, then a temporary file will be used), 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), 'compress'=compression algorithm for the 'changes' (files from 'src_pak'  will preserve their original compression), this completely recreates the Pak fully rewriting its data            , for example updating 1GB Pak with 1MB file will perform 1GB+ operations, this will result in a lot of Disk operations            , however created Pak will     be fully optimized, and as small as possible         , if update failed for some reason then original Pak will remain unmodified and any temporary files will be deleted, this function preserves original files and only modifies those listed in 'changes'
-Bool PakUpdateInPlace (              C CMemPtr<PakFileData> &changes  , C Str &pak_name, UInt flag=0, Cipher *     cipher=null, COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null); // update  'pak_name' Pak by applying 'changes'   in-place directly within the 'pak_name' file without creating any additional files                              , 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), 'compress'=compression algorithm for the 'changes' (files from 'pak_name' will preserve their original compression), this operates on existing Pak, adjusting it without creating new files, for example updating 1GB Pak with 1MB file will perform 1MB+ operations, it   will perform as few     Disk operations as possible, however created Pak will not be fully optimized, and may contain some useless data, if update failed for some reason then original Pak will remain unmodified                                        , this function preserves original files and only modifies those listed in 'changes'
-Bool PakReplaceInPlace(              C CMemPtr<PakFileData> &new_files, C Str &pak_name, UInt flag=0, Cipher *     cipher=null, COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null); // replace 'pak_name' Pak with        'new_files' in-place directly within the 'pak_name' file without creating any additional files                              , 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), 'compress'=compression algorithm for the 'changes' (files from 'pak_name' will preserve their original compression), this operates on existing Pak, adjusting it without creating new files, for example updating 1GB Pak with 1MB file will perform 1MB+ operations, it   will perform as few     Disk operations as possible, however created Pak will not be fully optimized, and may contain some useless data, if update failed for some reason then original Pak will remain unmodified                                        , this function replaces  original files with 'new_files'
+Bool PakUpdate        (Pak &pak, C CMemPtr<PakFileData> &changes  , C Str &pak_name, UInt flag=0, Cipher *dest_cipher=null, COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null                                 ); // update  'pak'      Pak by applying 'changes'   and saving the new Pak into  'pak_name' (if dest file is same as source file, then a temporary file will be used), 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), 'compress'=compression algorithm for the 'changes' (files from 'pak'      will preserve their original compression), this completely recreates the Pak fully rewriting its data            , for example updating 1GB Pak with 1MB file will perform 1GB+ operations, this will result in a lot of Disk operations            , however created Pak will     be fully optimized, and as small as possible         , if update failed for some reason then original Pak will remain unmodified and any temporary files will be deleted, this function preserves original files and only modifies those listed in 'changes'
+Bool PakUpdateInPlace (          C CMemPtr<PakFileData> &changes  , C Str &pak_name, UInt flag=0, Cipher *     cipher=null, COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null                                 ); // update  'pak_name' Pak by applying 'changes'   in-place directly within the 'pak_name' file without creating any additional files                               , 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), 'compress'=compression algorithm for the 'changes' (files from 'pak_name' will preserve their original compression), this operates on existing Pak, adjusting it without creating new files, for example updating 1GB Pak with 1MB file will perform 1MB+ operations, it   will perform as few     Disk operations as possible, however created Pak will not be fully optimized, and may contain some useless data, if update failed for some reason then original Pak will remain unmodified                                        , this function preserves original files and only modifies those listed in 'changes'
+Bool PakReplaceInPlace(          C CMemPtr<PakFileData> &new_files, C Str &pak_name, UInt flag=0, Cipher *     cipher=null, COMPRESS_TYPE compress=COMPRESS_NONE, Int compression_level=9, Str *error_message=null, PakProgress *progress=null, PakPostHeader *post_header=null); // replace 'pak_name' Pak with        'new_files' in-place directly within the 'pak_name' file without creating any additional files                               , 'compression_level'=0..CompressionLevels(compress) (0=fastest/worst, ..=slowest/best), 'compress'=compression algorithm for the 'changes' (files from 'pak_name' will preserve their original compression), this operates on existing Pak, adjusting it without creating new files, for example updating 1GB Pak with 1MB file will perform 1MB+ operations, it   will perform as few     Disk operations as possible, however created Pak will not be fully optimized, and may contain some useless data, if update failed for some reason then original Pak will remain unmodified                                        , this function replaces  original files with 'new_files'
 
 // Compare Pak
 Bool  PakEqual(   MemPtr<PakFileData>  files, C Pak &pak                              ); // if 'files' are the same as the ones in 'pak'          (this will verify if all files from 'files' are of the same size, modification time and hash (if available) as those from 'pak'         , Warning: folders may get ignored)
@@ -267,4 +318,217 @@ Bool CPakEqual(C CMemPtr<PakFileData> &files, C Str &pak_name, Cipher *pak_ciphe
 
 inline Int Elms(C Pak    &pak ) {return pak .totalFiles();}
 inline Int Elms(C PakSet &paks) {return paks.totalFiles();}
+
+#if EE_PRIVATE
+// Emoji Pak
+extern Pak* EmojiPak;
+Bool AddEmojiPak(C Str &name, Bool auto_rebuild=true); // add pak containing emojis, false on fail
+
+Bool Equal(C PakFile     *a  , C PakFile *b ); // test if both PakFile's are of the same version
+Bool Equal(C PakFileData *pfd, C PakFile *pf); // test if both PakFile's are of the same version
+Bool Equal(  PakFileData *pfd, C PakFile *pf); // test if both PakFile's are of the same version
+
+struct PakInPlace
+{
+   Memb<DataRangeAbs> used_file_ranges;
+   Pak               &src_pak;
+
+   PakInPlace(Pak &src_pak) : src_pak(src_pak) {}
+};
+struct PakPostHeader
+{
+   virtual void save(File &f, C Pak &pak) {}
+};
+#endif
+/******************************************************************************/
+struct FileRanges
+{
+   Bool               set_used_file_ranges;
+   Long               write_pos; // used for in_place to append data at the end of the file
+   Long               updated_size; // size after in_place update
+   Memt<DataRangeRel> holes;
+   Memt<DataRangeAbs> used_file_ranges_temp;
+
+   void init(Int pre_header_size, C CMemPtr<DataRangeAbs> &src_used_file_ranges, Bool set_used_file_ranges);
+   Long posForWrite(Long size); // get position for writing 'size' amount of data
+};
+
+#define CC4_SPAK CC4('S','P','A','K')
+static const Int SPakPreHeaderSize=4+4;
+
+struct SPakFile // Simple PAK File
+{
+   UInt data_offset, data_size;
+
+   void save(File &f) {f<<T;}
+   void load(File &f) {f>>T;}
+};
+struct SPak // Simple PAK
+{
+   struct Load
+   {
+      Memt<DataRangeAbs> used_file_ranges;
+      void loaded(C SPakFile &pak_file);
+   };
+   struct Save : FileRanges
+   {
+      SPak &pak;
+      Memt<SPakFile> mem_data;
+      Save(SPak &pak);
+
+      void keep(C SPakFile &pak_file);
+      Bool save(  SPakFile &pak_file, CPtr data, Int size);
+      Bool save(Int files);
+   };
+
+ C Str& name()C {return _name;}
+
+   void del();
+   Bool open(C Str &name, Cipher *cipher=null);
+
+   virtual Bool loadHeader(File &f, Load &load, Int files) {return false;}
+   virtual Bool saveHeader(File &f, Save &save           ) {return false;}
+
+#if !EE_PRIVATE
+private:
+#endif
+   File f;
+   Str _name;
+   Memc<DataRangeAbs> used_file_ranges;
+};
+/******************************************************************************/
+T2(KEY, DATA) struct SPakMap : SPak // SPak that uses Map to store elements
+{
+   struct DataFile : DATA
+   {
+      SPakFile data;
+   };
+   struct DataMem : DATA
+   {
+      Mems<Byte> data;
+   };
+
+   Bool               changed=false;
+   Map<KEY, DataFile> file;
+   Map<KEY, DataMem > mem;
+
+   void del()
+   {
+      flush();
+      changed=false;
+      file . del();
+      mem  . del();
+      super::del();
+   }
+   Bool open(C Str &name, Cipher *cipher=null)
+   {
+      del(); return super::open(name, cipher);
+   }
+   DataMem& operator()(C KEY &key) // get 'mem' element to be modified, it will be flushed at later stage
+   {
+              file.removeKey(key); // can't have the same element in both 'file' and 'mem'
+      return *mem           (key); // no need to set 'changed' because having 'mem' already triggers flush
+   }
+   void remove(C KEY &key)
+   {
+      Int i=mem .findValidIndex(key); if(i>=0){mem .remove(i); changed=true; return;}
+          i=file.findValidIndex(key); if(i>=0){file.remove(i); changed=true; return;}
+   }
+   Bool read(File &f, C DataMem  &mem ) {       f.readMem(mem .data.data(), mem.data.elms()); return true;}
+   Bool read(File &f, C DataFile &file) {return f.read   (file.data       , T              );}
+   Bool read(File &f, C KEY      &key )
+   {
+      if(DataMem  *d=mem .find(key))return read(f, *d);
+      if(DataFile *d=file.find(key))return read(f, *d);
+      f.close(); return false;
+   }
+
+   // io
+   virtual Bool loadHeader(File &f, Load &load, Int files)override
+   {
+      file.clear();
+      REP(files)
+      {
+         KEY key; f>>key; DataFile &data=*file(key); data.data.load(f); if(!data.load(f))return false;
+         load.loaded(data.data); // notify of data presence
+      }
+      return true;
+   }
+   virtual Bool saveHeader(File &f, Save &save)override
+   { // saving sorted/merged file+mem would be difficult, instead data will be sorted during load
+      FREPA(file){f<<file.key(i); DataFile &data=file[i]; data.data       .save(f); if(!data.save(f))return false;}
+      FREPA(mem ){f<<mem .key(i); DataMem  &data=mem [i]; save.mem_data[i].save(f); if(!data.save(f))return false;}
+      return f.ok();
+   }
+   Bool flush()
+   {
+      if(mem.elms() || changed)
+      {
+         Save save(T);
+         FREPA(file)save.keep(file[i].data); // keep existing data
+         save.mem_data.setNum(mem.elms()); FREPA(mem) // save data from memory
+         {
+            DataMem &m=mem[i];
+            if(!save.save(save.mem_data[i], m.data.data(), m.data.elms()))return false;
+         }
+         if(!save.save(file.elms()+mem.elms()))return false; // save header with number of elements
+
+         // !! THESE ONLY AFTER SAVE SUCCESS SO WE CAN RETRY ON FAIL !!
+         changed=false;
+         FREPA(mem) // store data from 'mem' into 'file'
+         {
+            DataFile &data=*file(mem.key(i));
+            SCAST(DATA, data)=mem[i];
+            data.data=save.mem_data[i];
+         }
+         mem.clear();
+      }
+      return true;
+   }
+   Bool optimize()
+   {
+      if(!name().is())return true;
+      Str  temp_name=name()+"@new";
+      File f; if(f.write(temp_name, T.f.cipher()))
+      {
+         {
+            UInt data_pos=SPakPreHeaderSize;
+            if(!f.pos(data_pos))goto error; // skip pre-header, we will write it later
+
+            // write file data
+            {
+               File src;
+               FREPA(file){if(!read(src, file[i]) || !src.copy(f))goto error;}
+               FREPA(mem ){if(!read(src, mem [i]) || !src.copy(f))goto error;}
+            }
+
+            // header
+            UInt header_pos=f.pos();
+            f.cmpUIntV(file.elms()+mem.elms()); // elms
+            // saving sorted/merged file+mem would be difficult, instead data will be sorted during load
+            SPakFile pf;
+            FREPA(file){f<<file.key(i); DataFile &data=file[i]; pf.data_offset=data_pos; pf.data_size=data.data.data_size; pf.save(f); if(!data.save(f))goto error; data_pos+=pf.data_size;}
+            FREPA(mem ){f<<mem .key(i); DataMem  &data=mem [i]; pf.data_offset=data_pos; pf.data_size=data.data.elms()   ; pf.save(f); if(!data.save(f))goto error; data_pos+=pf.data_size;}
+
+            // pre-header
+            if(!f.pos(0))goto error;
+            f.putUInt(CC4_SPAK);
+            f.putUInt(header_pos-SPakPreHeaderSize); // header_offset
+            if(!f.flushOK())goto error;
+
+            // replace
+            Str name=T.name(); Cipher *cipher=f.cipher(); // copy before delete
+            f.del(); del(); // this might trigger 'flush' however it's better to do it in case something fails below
+            Bool ok=FRename(temp_name, name);
+            open(name, cipher); // if ok then this opens optimized, if failed then re-open old
+            if(ok)return true; // on fail goto error
+         }
+      error:
+         f.del(); FDelFile(temp_name);
+      }
+      return false;
+   }
+
+  ~SPakMap() {flush();}
+};
 /******************************************************************************/

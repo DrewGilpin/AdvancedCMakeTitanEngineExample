@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Memc' for continuous memory based dynamic array container.
@@ -109,6 +106,10 @@ T1(const_mem_addr TYPE) struct Memc : _Memc // Continuous Memory Based Container
 
    T1(BASE) operator   Memc<BASE>&() ; // casting to container of 'BASE' elements, 'TYPE' must be extended from BASE
    T1(BASE) operator C Memc<BASE>&()C; // casting to container of 'BASE' elements, 'TYPE' must be extended from BASE
+#if EE_PRIVATE
+   void  copyTo  (  TYPE *dest)C {_Memc::copyTo  (dest);          } // copy raw memory of all elements to   'dest'
+   Memc& copyFrom(C TYPE *src )  {_Memc::copyFrom(src ); return T;} // copy raw memory of all elements from 'src '
+#endif
 
    // io
    Bool save(File &f);   Bool save(File &f)C; // save elements with their own 'save' method, this method first saves number of current elements, and then for each element calls its 'save' method, false on fail
@@ -122,6 +123,13 @@ T1(const_mem_addr TYPE) struct Memc : _Memc // Continuous Memory Based Container
 
    Bool saveRaw(File &f)C; // save raw memory of elements (number of elements + elements raw memory), false on fail
    Bool loadRaw(File &f) ; // load raw memory of elements (number of elements + elements raw memory), false on fail
+
+#if EE_PRIVATE
+   Bool _saveRaw(File &f)C; // save raw memory of elements (number of elements + elements raw memory), false on fail, deprecated - do not use
+   Bool _loadRaw(File &f) ; // load raw memory of elements (number of elements + elements raw memory), false on fail, deprecated - do not use
+   Bool _save   (File &f)C; // save elements with their own 'save' method, this method first saves number of current elements, and then for each element calls its 'save' method, false on fail, deprecated - do not use
+   Bool _load   (File &f) ; // load elements with their own 'load' method, this method first loads number of saved   elements, and then for each element calls its 'load' method, false on fail, deprecated - do not use
+#endif
 
    Memc(            );
    Memc(C Memc  &src);
@@ -175,4 +183,57 @@ T1(TYPE) struct MemcAbstract : _Memc // Continuous Memory Based Container which 
 };
 /******************************************************************************/
 inline Int Elms(C _Memc &memc) {return memc.elms();}
+/******************************************************************************/
+#if EE_PRIVATE
+T2(A, B) struct std__pair
+{
+   A first;
+   B second;
+
+   std__pair() {}
+   std__pair(C A &a, C B &b) : first(a), second(b) {}
+};
+T1(TYPE) struct std__unique_ptr : private Mems<TYPE>
+{
+   TYPE& operator[](Int i)  {return super::operator[](i);}
+ C TYPE& operator[](Int i)C {return super::operator[](i);}
+
+   Bool  operator()(            )C {return super::elms()!=0;}
+   Bool  operator! (            )C {return super::elms()==0;}
+   Bool  operator==(C TYPE *data)C {return super::data()==data;}
+   Bool  operator!=(C TYPE *data)C {return super::data()!=data;}
+   void  reset     (Int     elms)  {       super::setNum(elms);}
+   TYPE* get       (            )  {return super::data();}
+
+   std__unique_ptr(        ) {}
+   std__unique_ptr(Int elms) {reset(elms);}
+};
+T1(TYPE) struct std__vector : private Memc<TYPE>
+{
+   TYPE& operator[](Int i)  {return super::operator[](i);}
+ C TYPE& operator[](Int i)C {return super::operator[](i);}
+
+   Bool empty()C {return !super::elms();}
+   Int  size ()C {return  super::elms();}
+
+   TYPE* begin() {return super::data();}
+   TYPE* end  () {return super::data()+super::elms();}
+
+ C TYPE* cbegin()C {return super::data();}
+ C TYPE* cend  ()C {return super::data()+super::elms();}
+
+   void        clear(         ) {super::clear();}
+   void emplace_back(C TYPE &t) {super::add(t);}
+   void    push_back(C TYPE &t) {super::add(t);}
+   void     pop_back(         ) {super::removeLast();}
+   TYPE&        back(         ) {return super::last();}
+   void      resize (Int elms ) {super::setNumZero(elms);} // yes, zero is required !!
+   void      reserve(Int elms ) {super::reserve(elms);}
+
+   std__vector() {}
+   std__vector(Int elms                 ) {resize(elms);}
+   std__vector(Int elms, C TYPE &def_val) {resize(elms); REPAO(T)=def_val;}
+};
+T1(TYPE) inline Int Elms(C std__vector<TYPE> &vector) {return vector.size();}
+#endif
 /******************************************************************************/

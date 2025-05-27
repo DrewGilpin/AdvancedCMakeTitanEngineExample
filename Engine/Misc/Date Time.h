@@ -1,19 +1,44 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'DateTime' to handle time and date information.
 
 /******************************************************************************/
+struct Date
+{
+   Byte  day  , // 1..31
+         month; // 1..12
+   Short year ;
+
+   // get
+   Bool valid      ()C; // if  current date is valid
+   Int  days       ()C; // get    days since 1 January 0 year
+   Long seconds    ()C; // get seconds since 1 January    0 year
+   Long seconds1970()C; // get seconds since 1 January 1970 year (Unix Time)
+   Str  asText     ()C; // get date in text format "YYYY-MM-DD"
+
+   // set
+   Date& zero       (        ); // set date to zero
+   Date& getLocal   (        ); // set from current Date (local time zone)
+   Date& getUTC     (        ); // set from current Date (UTC   time zone)
+   Date& incMonth   (        ); // increase by 1 month
+   Date& decMonth   (        ); // decrease by 1 month
+   Date& incDay     (        ); // increase by 1 day
+   Date& decDay     (        ); // decrease by 1 day
+   Date& fromSeconds( Long  s); // set date from      seconds since 1 January    0 year
+   Date& from1970s  (ULong  s); // set date from      seconds since 1 January 1970 year (Unix Time)
+   Date& fromText   (C Str &t); // set date from text format "YYYY-MM-DD", 'zero' method is called on fail
+
+   Date() {}
+   Date(C DateTime &dt);
+};
 struct DateTime
 {
-   Byte second, // 0..59
-        minute, // 0..59
-        hour  , // 0..23
-        day   , // 1..31
-        month ; // 1..12
-   Int  year  ;
+   Byte  second, // 0..59
+         minute, // 0..59
+         hour  , // 0..23
+         day   , // 1..31
+         month ; // 1..12
+   Short year  ;
 
    // get
    Bool valid      (                         )C; // if  current date time is valid
@@ -43,10 +68,16 @@ struct DateTime
    DateTime& from1970s  (ULong  s); // set date from      seconds since 1 January 1970 year (Unix Time)
    DateTime& from1970ms (ULong ms); // set date from milliseconds since 1 January 1970 year
    DateTime& fromText   (C Str &t); // set date from text format "YYYY-MM-DD HH:MM:SS" ("YYYY-MM-DD HH:MM" format is also supported), 'zero' method is called on fail
+#if EE_PRIVATE && APPLE
+   DateTime& from       (NSDate *date); // set date from milliseconds since 1 January 1970 year
+#endif
 
    // io
    Bool save(File &f)C; // false on fail
    Bool load(File &f) ; // false on fail
+
+   DateTime() {}
+   DateTime(C Date &dt);
 };
 struct DateTimeMs : DateTime // DateTime uncluding milliseconds
 {
@@ -63,14 +94,21 @@ struct DateTimeMs : DateTime // DateTime uncluding milliseconds
 };
 /******************************************************************************/
 // compare
+       Int  Compare    (C Date     &d0, C Date     &d1             ); // compare
        Int  Compare    (C DateTime &d0, C DateTime &d1             ); // compare
        Int  Compare    (C DateTime &d0, C DateTime &d1, Int epsilon); // compare using 'epsilon' for seconds tolerance
 inline Int  CompareFile(C DateTime &d0, C DateTime &d1             ) {return Compare(d0, d1, 1);} // compare file date time, +1 second tolerance needed due to FAT FileSystem
+inline Bool operator== (C Date     &d0, C Date     &d1             ) {return Compare(d0, d1)==0;} // if equal
 inline Bool operator== (C DateTime &d0, C DateTime &d1             ) {return Compare(d0, d1)==0;} // if equal
+inline Bool operator!= (C Date     &d0, C Date     &d1             ) {return Compare(d0, d1)!=0;} // if not equal
 inline Bool operator!= (C DateTime &d0, C DateTime &d1             ) {return Compare(d0, d1)!=0;} // if not equal
+inline Bool operator>= (C Date     &d0, C Date     &d1             ) {return Compare(d0, d1)>=0;} // if greater or equal
 inline Bool operator>= (C DateTime &d0, C DateTime &d1             ) {return Compare(d0, d1)>=0;} // if greater or equal
+inline Bool operator<= (C Date     &d0, C Date     &d1             ) {return Compare(d0, d1)<=0;} // if smaller or equal
 inline Bool operator<= (C DateTime &d0, C DateTime &d1             ) {return Compare(d0, d1)<=0;} // if smaller or equal
+inline Bool operator>  (C Date     &d0, C Date     &d1             ) {return Compare(d0, d1)> 0;} // if greater
 inline Bool operator>  (C DateTime &d0, C DateTime &d1             ) {return Compare(d0, d1)> 0;} // if greater
+inline Bool operator<  (C Date     &d0, C Date     &d1             ) {return Compare(d0, d1)< 0;} // if smaller
 inline Bool operator<  (C DateTime &d0, C DateTime &d1             ) {return Compare(d0, d1)< 0;} // if smaller
 
 Long operator+(C DateTime &d0, C DateTime &d1); // return sum             of DateTime seconds

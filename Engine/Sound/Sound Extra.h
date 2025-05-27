@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'AppVolume' to set the total application volume in the operating system.
@@ -10,11 +7,19 @@
 /******************************************************************************/
 struct AppVolumeClass // Application Volume (in the system) Control
 {
+#if EE_PRIVATE
+   void del   ();
+   Bool create();
+   void muteEx(Bool mute);   Bool muteEx()C;   Bool muteFinal()C;
+#endif
+
    // get / set
    void volume(Flt  volume);   Flt  volume(); // set/get volume (0..1)
    void mute  (Bool mute  );   Bool mute  (); // set/get mute   (true/false)
 
+#if !EE_PRIVATE
 private:
+#endif
    AppVolumeClass();
 }extern
    AppVolume;
@@ -27,7 +32,9 @@ const_mem_addr struct SoundRecord // !! must be stored in constant memory addres
 
       Device() {_id.zero();}
 
+   #if !EE_PRIVATE
    private:
+   #endif
       UID _id;
    };
 
@@ -46,23 +53,60 @@ const_mem_addr struct SoundRecord // !! must be stored in constant memory addres
    // callbacks
    virtual void receivedData(CPtr data, Int size) {} // this method will be called upon receiving audio data, you should override this method to be able to process it, warning: this may get called on secondary thread
 
+#if EE_PRIVATE
+   Int  curPosNoLock()C;
+   void updateNoLock();
+#endif
+
   ~SoundRecord() {del();}
    SoundRecord();
 
+#if !EE_PRIVATE
 private:
+#endif
 #if WINDOWS_OLD
+#if EE_PRIVATE
+   #if DIRECT_SOUND_RECORD
+      IDirectSoundCapture8      *_handle;
+      IDirectSoundCaptureBuffer *_dscb;
+   #elif OPEN_AL
+      ALCdevice                 *_handle;
+      UIntPtr                    _block;
+   #else
+      Ptr _handle, _dscb;
+   #endif
+#else
    Ptr  _handle, _dscb;
+#endif
    Int  _pos, _size;
 #elif WINDOWS_NEW
+#if EE_PRIVATE
+  _SoundRecord *_handle;
+#else
    Ptr  _handle;
+#endif
 #elif APPLE
+#if EE_PRIVATE
+   AudioComponentInstance _handle; ASSERT(SIZE(AudioComponentInstance)==SIZE(Ptr));
+#else
    Ptr  _handle;
+#endif
    UInt _flags;
 #elif ANDROID
    Ptr  _handle;
 #else
+#if EE_PRIVATE
+   #if OPEN_AL
+      ALCdevice *_handle;
+      Byte       _block;
+   #else
+      Ptr  _handle;
+      Byte _block;
+   #endif
+#else
    Ptr  _handle;
    Byte _block;
+#endif
 #endif
 
    NO_COPY_CONSTRUCTOR(SoundRecord);
@@ -89,6 +133,12 @@ struct OpusEncoder
    Int  bitRate     ()C;   OpusEncoder& bitRate    (Int  bit_rate); // get/set encoding bit-rate in bits per second (500 .. 512,000 range supported)
    Bool vbr         ()C;   OpusEncoder& vbr        (Bool on      ); // get/set variable bit-rate (VBR), default=true
    Flt  complexity  ()C;   OpusEncoder& complexity (Flt  complex ); // get/set computational complexity (0..1, 0=fastest/low quality, 1=slowest/high quality)
+#if EE_PRIVATE
+   void reset       ();
+   Int  delay       ()C;
+
+   Bool flush(Int &flushed_samples, MemPtr<Byte> compressed_data, MemPtr<Int> packet_sizes); // flush any remaining buffered data, 'flushed_samples'=number of samples in the last packet that were originally set in 'encode' method, returns false on fail
+#endif
 
    // encode
    Bool encode(CPtr data, Int size, MemPtr<Byte> compressed_data, MemPtr<Int> packet_sizes); // feed the encoder with additional portion of data, 'data'=array of 16-bit samples (this should contain data for all channels specified in 'create' method, stereo should have per-channel data interleaved), 'size'=total raw length of 'data' in bytes, 'compressed_data'=this will contain compressed data of all packets in sequential order (data of first packet will be stored first, followed by second, third etc.), 'packet_sizes'=sizes of individual packets (in bytes), returns false on fail. For example if 'packet_sizes' has 2 elements, then 2 packets were created, 'packet_sizes[0]' specifies size of first packet, and 'packet_sizes[1]' specifies size of second packet, size of 'compressed_data' will be "packet_sizes[0]+packet_sizes[1]", it will contain data of first packet, followed by second packet. This method should be called continuously, once encoder gathers enough data it will generate compressed packets, in other cases when there's not yet enough data gathered, no packets will be generated.
@@ -142,6 +192,9 @@ struct SndRawEncoder // Raw Encoder into Esenthel SND file format
    SndRawEncoder&   del();
   ~SndRawEncoder() {del();}
    SndRawEncoder();
+#if EE_PRIVATE
+   void zero();
+#endif
 
 private:
    File *_f;
@@ -160,6 +213,9 @@ struct WavEncoder // Raw Encoder into WAV file format
    WavEncoder&   del();
   ~WavEncoder() {del();}
    WavEncoder();
+#if EE_PRIVATE
+   void zero();
+#endif
 
 private:
    File *_f;
@@ -167,6 +223,24 @@ private:
 
    NO_COPY_CONSTRUCTOR(WavEncoder);
 };
+/******************************************************************************/
+#if EE_PRIVATE
+struct SndVorbisEncoder // Vorbis Encoder into Esenthel SND file format
+{
+   Bool create(File &f, Long samples, Int frequency=44100, Int channels=2, Flt quality=0.2f); // initialize the encoder, 'f'=file to write to (it should be already opened for writing), 'samples'=number of samples in audio, 'frequency'=sample rate per second, 'channels'=number of channels (1=mono, 2=stereo), 'quality'=sound quality (-0.1 .. 1.0), for 44100Hz stereo, following quality results in Kbit/s bit rate: -0.1->45, 0.0->64, 0.1->80, 0.2->96, 0.3->112, 0.4->128, 0.5->160, 0.6->192, 0.7->224, 0.8->256, 0.9->320, 1.0->500, returns false on fail
+   Bool encode(CPtr data, Int size); // feed the encoder with additional portion of data, 'data'=array of 16-bit samples (this should contain data for all channels specified in 'create' method, stereo should have per-channel data interleaved), 'size'=total raw length of 'data' in bytes, returns false on fail
+   Bool finish(); // you can optionally call this once after entire sound data has been passed to 'encode' calls to verify that last portion of data was compressed successfully, you don't need to call this as it is always called in 'del' method, returns false on fail
+
+   SndVorbisEncoder&   del();
+  ~SndVorbisEncoder() {del();}
+   SndVorbisEncoder() {_encoder=null;}
+
+private:
+   Ptr _encoder;
+
+   NO_COPY_CONSTRUCTOR(SndVorbisEncoder);
+};
+#endif
 /******************************************************************************/
 struct OggVorbisEncoder // Vorbis Encoder into OGG file format
 {
@@ -201,6 +275,10 @@ struct SndOpusEncoder // Opus Encoder into Esenthel SND file format
    SndOpusEncoder&   del();
   ~SndOpusEncoder() {del();}
    SndOpusEncoder();
+#if EE_PRIVATE
+   void zero();
+   void write(Memt<Byte> &compressed_data, Memt<Int> &packet_sizes);
+#endif
 
 private:
    OpusEncoder _encoder;
@@ -258,8 +336,61 @@ private:
    Image     _image;
    Memc<Flt> _samples, _fft_out;
 
+#if EE_PRIVATE
+   void free();
+   void zero();
+#endif
    NO_COPY_CONSTRUCTOR(Spectrometer);
 };
 /******************************************************************************/
+#if EE_PRIVATE
+struct SoundResampler
+{
+      Bool         end     ;
+    C Flt          speed   ; // !! must be copied to a temporary because it might get changed on a secondary thread !!
+      Flt         volume[2];
+    C Int     dest_channels,
+              dest_block   ,
+               src_channels,
+               src_block   ;
+      Int     dest_samples ,
+               src_samples ;
+      ResampleBuffer buffer;
+   union
+   {
+      Ptr     dest_data;
+      I16    *dest_mono;
+      Stereo *dest_stereo;
+   };
+   union
+   {
+     CPtr     src_data;
+    C I16    *src_mono;
+    C Stereo *src_stereo;
+   };
+
+   SoundResampler(Flt speed, Flt volume[2], Int dest_channels, Int dest_samples, Ptr dest_data, Int src_channels, C ResampleBuffer *buffer=null) :
+      end(false), speed(speed), volume{volume[0], volume[1]},
+      dest_channels(dest_channels), dest_block(SIZE(I16)*dest_channels),
+       src_channels( src_channels),  src_block(SIZE(I16)* src_channels),
+       dest_samples(dest_samples ), dest_data(dest_data)
+   {
+      if(src_channels==2 && dest_channels==1)REPAO(T.volume)/=2;
+      if(buffer)T.buffer=*buffer;else T.buffer.init();
+   }
+   void setSrc(Int src_samples, Ptr src_data) {T.src_samples=src_samples; T.src_data=src_data;}
+
+   I16     srcMono  (Int pos)C;
+ C Stereo& srcStereo(Int pos)C;
+
+   void process(void Process(I16 &sample, Flt value));
+   void set(); // dest =src
+   void add(); // dest+=src
+};
+#endif
 Bool SoundResample(Int src_samples, Int src_channels, I16 *src_data, MemPtr<I16> dest_data, Flt speed, Bool hi_quality, C Flt *volume=null); // resample source sound into 'dest_data', 'src_samples'=number of samples in source, 'src_channels'=number of channels in source, 'src_data'=source data, 'dest_data'=this container will get automatically resized, 'speed'=desired speed of source sound, 'hi_quality'=if use high quality but slow resampler, this operates on 16-bit samples only, false on fail
+/******************************************************************************/
+#if EE_PRIVATE
+extern Memc<SoundRecord*> SoundRecords;
+#endif
 /******************************************************************************/

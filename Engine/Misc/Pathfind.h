@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'PathMesh' to specify a path mesh for a single area.
@@ -15,6 +12,9 @@ enum PATH_MESH_TYPE
    PM_OBSTACLE, // can not be crossed
    PM_GROUND  , // can     be crossed if traveller supports PMF_WALK
    PM_WATER   , // can     be crossed if traveller supports PMF_SWIM
+#if EE_PRIVATE
+   PM_BLOCKED=63, // covered by obstacles
+#endif
 };
 enum PATH_MESH_FLAG
 {
@@ -68,6 +68,57 @@ private:
    NO_COPY_CONSTRUCTOR(PathObstacle);
 };
 /******************************************************************************/
+#if EE_PRIVATE
+struct RecastCompactHeightfield : rcCompactHeightfield
+{
+   void del();
+
+   Bool is()C;
+
+   void clean();
+
+   Bool save(File &f)C;
+   Bool load(File &f) ;
+
+   void operator=(C RecastCompactHeightfield &src);
+
+   void zero() {Zero(T);}
+
+  ~RecastCompactHeightfield() {del ();}
+   RecastCompactHeightfield() {zero();}
+   RecastCompactHeightfield(C RecastCompactHeightfield &src) {zero(); T=src;}
+};
+const_mem_addr struct _PathMesh
+{
+   VecI2                    xy;
+   PathWorld               *world;
+   Mems<Byte>               data, obstacle_data, chf_compressed;
+   RecastCompactHeightfield chf;
+
+   // manage
+   void del();
+
+   // operations
+   void link(PathWorld *world);
+
+   void preSave(); // compress data needed for saving
+
+   // get
+   Bool is    ()C; // if has any mesh data
+   Box  box   () ; // get mesh world box
+   Bool getChf() ; // get chf (decompress if needed), false on fail
+
+   // io
+   Bool save(File &f)C; // save to   file, false on fail
+   Bool load(File &f) ; // load from file, false on fail
+
+ ~_PathMesh() {del();}
+  _PathMesh() {xy.zero(); world=null;}
+
+   NO_COPY_CONSTRUCTOR(_PathMesh);
+};
+#endif
+/******************************************************************************/
 struct PathMesh
 {
    // manage
@@ -88,7 +139,12 @@ struct PathMesh
    PathMesh();
 
 private:
+#if EE_PRIVATE
+   friend struct PathWorld;
+  _PathMesh *_pm;
+#else
    Ptr _pm;
+#endif
 
    NO_COPY_CONSTRUCTOR(PathMesh);
 };
@@ -101,6 +157,20 @@ const_mem_addr struct PathWorld // !! must be stored in constant memory address 
 
    // operations
    Bool set(PathMesh *path_mesh, C VecI2 &area_xy); // set 'path_mesh' at specified 'area_xy' area coordinates (can be null for no path mesh at that location)
+#if EE_PRIVATE
+   Bool _set       (_PathMesh *path_mesh, C VecI2 &area_xy, Bool set_obstacles); // set 'path_mesh' at specified 'area_xy' area coordinates (can be null for no path mesh at that location), 'set_obstacles'=if set obstacles on that mesh before setting it
+   void  update    (                                                          ); // update changes in obstacles by rebuilding affected path meshes
+   void  changed   (C Shape &shape                                            ); // call when 'shape' obstacle was changed in the world
+   void  threadFunc();
+   void  zero      ();
+
+   VecI2     worldToArea(C Vec2  &xz     )C {return                                Floor(xz/areaSize());} // convert World Position to Area Coordinates
+   VecI2     worldToArea(C Vec   &pos    )C {return                              worldToArea(pos .xz());} // convert World Position to Area Coordinates
+   RectI     worldToArea(C Rect  &rect   )C {return RectI(worldToArea(rect.min), worldToArea(rect.max));} // convert World Position to Area Coordinates
+   RectI     worldToArea(C Box   &box    )C {return RectI(worldToArea(box .min), worldToArea(box .max));} // convert World Position to Area Coordinates
+   Box       obstacleBox(C Shape &shape  )C;
+  _PathMesh* pathMesh   (C VecI2 &area_xy)C; // get PathMesh at 'area_xy' area coordinates
+#endif
 
    // get
    Flt areaSize()C {return _area_size;} // get area size
@@ -119,10 +189,35 @@ const_mem_addr struct PathWorld // !! must be stored in constant memory address 
   ~PathWorld() {del();}
    PathWorld();
 
+#if !EE_PRIVATE
 private:
+#endif
    Flt              _area_size, _ctrl_r, _ctrl_h, _max_climb;
+#if EE_PRIVATE
+   struct Build
+   {
+      RecastCompactHeightfield chf;
+      Mems<Shape>              shapes;
+      VecI2                    xy;
+      Ptr                      user;
+   };
+   struct Built
+   {
+      Mems<Byte> data;
+      VecI2      xy;
+      Ptr        user;
+   };
+
+   dtNavMesh       *_mesh;
+   dtNavMeshQuery  *_query;
+   dtQueryFilter   *_filter;
+   Memc<_PathMesh*> _changed;
+   Memc<Build>      _build;
+   Memc<Built>      _built;
+#else
    Ptr              _mesh, _query, _filter;
   _Memc             _changed, _build, _built;
+#endif
    Memx<Shape>      _obstacles;
    Thread           _thread;
    SyncEvent        _event;

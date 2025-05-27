@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Following functions accept 'CChar*' and 'CChar8*' parameters,
@@ -24,6 +21,18 @@ inline Bool Is        (CChar8 *t) {return t && t[0];} // if  text has any data
        Bool HasUnicode(CChar8 *t);                    // if  text contains unicode characters
        Bool HasUnicode(C Str  &s);                    // if  text contains unicode characters
        Bool HasUnicode(C Str8 &s);                    // if  text contains unicode characters
+#if EE_PRIVATE
+       Bool HasWide(CChar  *t);                // if text contains wide characters
+inline Bool HasWide(CChar8 *t) {return false;} // if text contains wide characters
+       Bool HasWide(C Str  &s);                // if text contains wide characters
+inline Bool HasWide(C Str8 &s) {return false;} // if text contains wide characters
+
+Int  SetReturnLength(Char  *dest, CChar  *src, Int dest_elms); // set text, return written length, 'dest_elms'=maximum available elements in the 'dest' pointer
+Int  SetReturnLength(Char8 *dest, CChar8 *src, Int dest_elms); // set text, return written length, 'dest_elms'=maximum available elements in the 'dest' pointer
+
+void MergePath(Char  *dest, CChar  *first, CChar  *second, Int dest_elms); // merge paths: dest=first; dest.tailSlash(true); dest+=second;
+void MergePath(Char8 *dest, CChar8 *first, CChar8 *second, Int dest_elms); // merge paths: dest=first; dest.tailSlash(true); dest+=second;
+#endif
 
 Char * Set   (Char  *dest, CChar  *src, Int dest_elms); // set    'dest' text from 'src' and return 'dest', 'dest_elms'=maximum available elements in the 'dest' pointer
 Char * Set   (Char  *dest, CChar8 *src, Int dest_elms); // set    'dest' text from 'src' and return 'dest', 'dest_elms'=maximum available elements in the 'dest' pointer
@@ -33,6 +42,19 @@ Char * Append(Char  *dest, CChar  *src, Int dest_elms); // append 'dest' text fr
 Char * Append(Char  *dest, CChar8 *src, Int dest_elms); // append 'dest' text from 'src' and return 'dest', 'dest_elms'=maximum available elements in the 'dest' pointer
 Char8* Append(Char8 *dest, CChar  *src, Int dest_elms); // append 'dest' text from 'src' and return 'dest', 'dest_elms'=maximum available elements in the 'dest' pointer
 Char8* Append(Char8 *dest, CChar8 *src, Int dest_elms); // append 'dest' text from 'src' and return 'dest', 'dest_elms'=maximum available elements in the 'dest' pointer
+
+#if EE_PRIVATE
+inline Bool Is    (C wchar_t *t) {return t && t[0];} // if text has any data
+       Int  Length(C wchar_t *t); // get text length (number of characters)
+       Char * _Set(Char  *dest, C wchar_t *src, Int dest_elms); // set 'dest' text from 'src' and return 'dest', 'dest_elms'=maximum available elements in the 'dest' pointer
+       Char8* _Set(Char8 *dest, C wchar_t *src, Int dest_elms); // set 'dest' text from 'src' and return 'dest', 'dest_elms'=maximum available elements in the 'dest' pointer
+
+template<Int elms>  Int  SetReturnLength(Char  (&dest)[elms], CChar  *src) {return SetReturnLength(dest, src, elms);} // set text, return written length (autodetect dest_elms)
+template<Int elms>  Int  SetReturnLength(Char8 (&dest)[elms], CChar8 *src) {return SetReturnLength(dest, src, elms);} // set text, return written length (autodetect dest_elms)
+
+template<Int elms>  void  MergePath(Char  (&dest)[elms], CChar  *first, CChar  *second) {return MergePath(dest, first, second, elms);} // merge paths (autodetect dest_elms)
+template<Int elms>  void  MergePath(Char8 (&dest)[elms], CChar8 *first, CChar8 *second) {return MergePath(dest, first, second, elms);} // merge paths (autodetect dest_elms)
+#endif
 
 template<Int elms>  Char *  Set   (Char  (&dest)[elms], CChar  *src) {return Set   (dest, src, elms);} // set    'dest' text from 'src' and return 'dest' (autodetect 'dest_elms')
 template<Int elms>  Char *  Set   (Char  (&dest)[elms], CChar8 *src) {return Set   (dest, src, elms);} // set    'dest' text from 'src' and return 'dest' (autodetect 'dest_elms')
@@ -125,11 +147,34 @@ Bool ContainsAll(CChar  *src, CChar8 *t, Bool case_sensitive=false, WHOLE_WORD w
 Bool ContainsAll(CChar8 *src, CChar  *t, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO); // if 'src' contains all words from 't' (words are separated by spaces)
 Bool ContainsAll(CChar8 *src, CChar8 *t, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO); // if 'src' contains all words from 't' (words are separated by spaces)
 
+#if EE_PRIVATE
+inline CChar * _SkipChar           (CChar  *t               ) {return Is(t)          ? t+1 : null;} // return next character in the text
+inline CChar8* _SkipChar           (CChar8 *t               ) {return Is(t)          ? t+1 : null;} // return next character in the text
+inline CChar * _SkipComma          (CChar  *t               ) {return (t && *t==',') ? t+1 : null;} // return next character in the text, this expects text to start with comma, if it doesn't then null is returned
+inline CChar8* _SkipComma          (CChar8 *t               ) {return (t && *t==',') ? t+1 : null;} // return next character in the text, this expects text to start with comma, if it doesn't then null is returned
+       CChar * _SkipWhiteChars     (CChar  *t               ); // skip all starting white chars                  , Sample Usage: SkipWhiteChars     ("   a b c") ->  "a b c"
+       CChar8* _SkipWhiteChars     (CChar8 *t               ); // skip all starting white chars                  , Sample Usage: SkipWhiteChars     ("   a b c") ->  "a b c"
+       CChar * _SkipWhiteCharsComma(CChar  *t               ); // skip all starting white chars followed by comma, Sample Usage: SkipWhiteCharsComma(" , a b c") -> " a b c", if no comma is found after white chars, then null is returned
+       CChar8* _SkipWhiteCharsComma(CChar8 *t               ); // skip all starting white chars followed by comma, Sample Usage: SkipWhiteCharsComma(" , a b c") -> " a b c", if no comma is found after white chars, then null is returned
+       CChar * _SkipWhiteCharsDot  (CChar  *t               ); // skip all starting white chars followed by dot  , Sample Usage: SkipWhiteCharsDot  (" . a b c") -> " a b c", if no dot   is found after white chars, then null is returned
+       CChar8* _SkipWhiteCharsDot  (CChar8 *t               ); // skip all starting white chars followed by dot  , Sample Usage: SkipWhiteCharsDot  (" . a b c") -> " a b c", if no dot   is found after white chars, then null is returned
+       CChar * _SkipStart          (CChar  *t, CChar  *start); // if 't' starts with 'start'      then return 't' after 'start', in other case return full 't', Sample Usage: _SkipStart    ("abcd", "ab") -> "cd", SkipStart("abcd", "ef") -> "abcd"
+       CChar * _SkipStart          (CChar  *t, CChar8 *start); // if 't' starts with 'start'      then return 't' after 'start', in other case return full 't', Sample Usage: _SkipStart    ("abcd", "ab") -> "cd", SkipStart("abcd", "ef") -> "abcd"
+       CChar8* _SkipStart          (CChar8 *t, CChar  *start); // if 't' starts with 'start'      then return 't' after 'start', in other case return full 't', Sample Usage: _SkipStart    ("abcd", "ab") -> "cd", SkipStart("abcd", "ef") -> "abcd"
+       CChar8* _SkipStart          (CChar8 *t, CChar8 *start); // if 't' starts with 'start'      then return 't' after 'start', in other case return full 't', Sample Usage: _SkipStart    ("abcd", "ab") -> "cd", SkipStart("abcd", "ef") -> "abcd"
+       CChar * _SkipStartPath      (CChar  *t, CChar  *start); // if 't' starts with 'start' path then return 't' after 'start', in other case return full 't', Sample Usage: _SkipStartPath("C:/Folder/temp/file.ext", "C:/Folder") -> "temp/file.ext" (treats '/' as equal to '\\')
+       CChar8* _SkipStartPath      (CChar8 *t, CChar8 *start); // if 't' starts with 'start' path then return 't' after 'start', in other case return full 't', Sample Usage: _SkipStartPath("C:/Folder/temp/file.ext", "C:/Folder") -> "temp/file.ext" (treats '/' as equal to '\\')
+       CChar * _AfterPath          (CChar  *t, CChar  *start); // if 't' starts with 'start' path then return 't' after 'start', in other case return null    , Sample Usage: _AfterPath    ("C:/Folder/temp/file.ext", "C:/Folder") -> "temp/file.ext" (treats '/' as equal to '\\')
+#endif
 Str SkipWhiteChars(C Str &t              ); // skip all starting white chars, Sample Usage: SkipWhiteChars("   a b c") -> "a b c"
 Str SkipStartPath (C Str &t, C Str &start); // if 't' starts with 'start' path then return 't' after   'start', in other case return full 't', Sample Usage: SkipStartPath("C:/Folder/Temp/file.ext", "C:/Folder") -> "Temp/file.ext" (treats '/' as equal to '\\')
 Str SkipStart     (C Str &t, C Str &start); // if 't' starts with 'start'      then return 't' after   'start', in other case return full 't', Sample Usage: SkipStart    ("abcd", "ab") -> "cd", SkipStart("abcd", "ef") -> "abcd"
 Str SkipEnd       (C Str &t, C Str &end  ); // if 't' ends   with 'end'        then return 't' without 'end'  , in other case return full 't', Sample Usage: SkipEnd      ("abcd", "cd") -> "ab", SkipEnd  ("abcd", "ef") -> "abcd"
 
+#if EE_PRIVATE
+Char * ReplaceSelf(Char  *text, Char  from, Char  to);
+Char8* ReplaceSelf(Char8 *text, Char8 from, Char8 to);
+#endif
 Str Replace(C Str &text, Char   from, Char   to                                                                ); // replace 'from' -> 'to' in 'text', Sample Usage: Replace("abcde", 'd', '7') -> "abc7e"
 Str Replace(C Str &text, C Str &from, C Str &to, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO); // replace 'from' -> 'to' in 'text', Sample Usage: Replace("This is not a cat", "not ", "") -> "This is a cat"
 
@@ -139,8 +184,14 @@ Str8 Trim(C Str8 &text, Int pos, Int length); // trim string by removing start a
 Str CaseDown(C Str &t); // return case down version of the string, Sample Usage: CaseDown("AbCdEFG") -> "abcdefg"
 Str CaseUp  (C Str &t); // return case up   version of the string, Sample Usage: CaseUp  ("AbCdEFG") -> "ABCDEFG"
 
-void      Split(MemPtr<Str> splits, C Str &string, Char separator); // split 'string' into an array of strings separated by 'separator', Sample Usage: Split("123:45::6:", ':') -> {"123", "45", "", "6", ""}
-Memc<Str> Split(                    C Str &string, Char separator); // split 'string' into an array of strings separated by 'separator', Sample Usage: Split("123:45::6:", ':') -> {"123", "45", "", "6", ""}
+void       Split(MemPtr<Str > splits, C Str  &string, Char  separator); // split 'string' into an array of strings separated by 'separator', Sample Usage: Split("123:45::6:", ':') -> {"123", "45", "", "6", ""}
+void       Split(MemPtr<Str > splits, C Str  &string, Char8 separator); // split 'string' into an array of strings separated by 'separator', Sample Usage: Split("123:45::6:", ':') -> {"123", "45", "", "6", ""}
+void       Split(MemPtr<Str8> splits, C Str8 &string, Char8 separator); // split 'string' into an array of strings separated by 'separator', Sample Usage: Split("123:45::6:", ':') -> {"123", "45", "", "6", ""}
+Memc<Str > Split(                     C Str  &string, Char  separator); // split 'string' into an array of strings separated by 'separator', Sample Usage: Split("123:45::6:", ':') -> {"123", "45", "", "6", ""}
+Memc<Str > Split(                     C Str  &string, Char8 separator); // split 'string' into an array of strings separated by 'separator', Sample Usage: Split("123:45::6:", ':') -> {"123", "45", "", "6", ""}
+Memc<Str8> Split(                     C Str8 &string, Char8 separator); // split 'string' into an array of strings separated by 'separator', Sample Usage: Split("123:45::6:", ':') -> {"123", "45", "", "6", ""}
+
+void SplitURLParams(MemPtr<TextParam> params, C Str &url); // split 'url' parameters into 'params'. Example: SplitURLParams("http://domain.com?param=1&other=2") -> {{name="param", value="1"}, {name="other", value="2"}}
 
 void Tokenize(MemPtr<Str> tokens, C Str &string); // tokenize 'string' into tokens, this works by removing all white chars and making sure that symbols are separate from words, Sample Usage: Split("Sample value   = 15") -> {"Sample", "value", "=", "15"}
 
@@ -157,6 +208,15 @@ Int     TextPosI(CChar8 *src, CChar8 *t, Bool case_sensitive=false, WHOLE_WORD w
 CChar * TextPos (CChar  *src, CChar  *t, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO); // get pointer to position of first 't' text in 'src' text (null if none)
 CChar * TextPos (CChar  *src, CChar8 *t, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO); // get pointer to position of first 't' text in 'src' text (null if none)
 CChar8* TextPos (CChar8 *src, CChar8 *t, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO); // get pointer to position of first 't' text in 'src' text (null if none)
+
+#if EE_PRIVATE
+Int TextPosIN(CChar  *src, Char  c, Int i); // get position of i-th 'c' character in 'src' text (-1 if none)
+Int TextPosIN(CChar8 *src, Char8 c, Int i); // get position of i-th 'c' character in 'src' text (-1 if none)
+
+Int TextPosIN(CChar8 *src, CChar8 *t, Int i, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO); // get position of i-th 't' text in 'src' text (-1 if none)
+
+Int TextPosSkipSpaceI(CChar *src, CChar *t, Int &match_length, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO, WHOLE_WORD whole_word_sub=WHOLE_WORD_STRICT); // get position of 't' text in 'src' text (-1 if none), 'whole_word'=checks at the start and end of 't', 'whole_word_sub'=checks in the middle of 't' where spaces occur
+#endif
 
 Str StrInside(C Str &str, C Str &from, C Str &to, Bool case_sensitive=false, WHOLE_WORD whole_word=WHOLE_WORD_NO); // get part of the string located between 'from' and 'to' strings, "" is returned if not found
 
@@ -208,9 +268,14 @@ VecD4  TextVecD4 (CChar *t);   VecD4  TextVecD4 (CChar8 *t); // (0,0,0,0) on fai
 VecI4  TextVecI4 (CChar *t);   VecI4  TextVecI4 (CChar8 *t); // (0,0,0,0) on fail
 VecB4  TextVecB4 (CChar *t);   VecB4  TextVecB4 (CChar8 *t); // (0,0,0,0) on fail
 VecSB4 TextVecSB4(CChar *t);   VecSB4 TextVecSB4(CChar8 *t); // (0,0,0,0) on fail
+VecUS4 TextVecUS4(CChar *t);   VecUS4 TextVecUS4(CChar8 *t); // (0,0,0,0) on fail
 Color  TextColor (CChar *t);   Color  TextColor (CChar8 *t); // (0,0,0,0) on fail
 UID    TextUID   (CChar *t);   UID    TextUID   (CChar8 *t); // 'UIDZero' on fail
 VecI4  TextVer   (CChar *t);   VecI4  TextVer   (CChar8 *t); // (0,0,0,0) on fail
+
+#if EE_PRIVATE
+Bool TextHexMem(C Str &t, Ptr data, Int size); // convert text hex representation to memory, this function assumes that there's no "0x" prefix at the start, false on fail
+#endif
 
 Str  FromUTF8(CChar8 *text); // convert 'text' from UTF-8 format into Str
 Str8 UTF8    (C Str  &text); // convert 'text' from   Str        into UTF-8 format
@@ -265,4 +330,127 @@ Str Censor(C Str &text); // censor 'text' by removing profanities [Supported Pla
    inline Bool operator!=(C Str8 &s, Char8   c) {return s.length()!=1 || Compare(s[0], c);}
    inline Bool operator!=(Char    c, C Str8 &s) {return s.length()!=1 || Compare(s[0], c);}
    inline Bool operator!=(Char8   c, C Str8 &s) {return s.length()!=1 || Compare(s[0], c);}
+/******************************************************************************/
+#if EE_PRIVATE
+
+Str8 MultiByte(Int code_page, C Str &text);
+
+typedef Str StrO; // String that doesn't require 16-bit wide-char support, but is also optimal in performance, for example 'Str' is used instead of 'Str8', because 'Str' is more widely used across the engine (in most class members and function parameters) allowing to do fast copying through Rvalue References, and fast passing to function params
+
+struct Str8Temp // allows casts from 'CChar8*' to 'Str8' without any memory allocations, however in read-only mode
+{
+   operator C Str8&()C {return _;} // cast to C Str8&
+
+   Int length()C {return _.length();}
+
+   explicit Str8Temp(CChar8 *name)
+   {
+      if(name)
+      {
+         _._length=Length(name);
+         _._d.setTemp(ConstCast(name), _._length+1); // including null character
+      }
+   }
+  ~Str8Temp() {_._d.setTemp(null, 0);}
+
+private:
+   Str8 _;
+};
+
+#define PRECISION_HALF 2
+#define PRECISION_FLT  3
+#define PRECISION_DBL  9
+
+template<Int size> struct TempChar8 { Char8 c[size]; };
+template<Int size> struct TempChar  { Char  c[size]; };
+
+Int CompareCS(C Str &a, C BStr &b);
+
+       Str      TextHexMem(File &file,                                                 Bool prefix=false);
+       CChar8*  TextInt   (Int   i, Char8 (&temp)[256], Int digits=-1, Int separate=0                   );
+       CChar8*  TextInt   (Long  i, Char8 (&temp)[256], Int digits=-1, Int separate=0                   );
+       CChar8*  TextInt   (UInt  u, Char8 (&temp)[256], Int digits=-1, Int separate=0                   );
+       CChar8*  TextInt   (ULong u, Char8 (&temp)[256], Int digits=-1, Int separate=0                   );
+       CChar8*  TextBin   (UInt  u, Char8 (&temp)[256], Int digits=-1, Int separate=0, Bool prefix=false);
+       CChar8*  TextBin   (ULong u, Char8 (&temp)[256], Int digits=-1, Int separate=0, Bool prefix=false);
+       CChar8*  TextHex   (UInt  u, Char8 (&temp)[256], Int digits=-1, Int separate=0, Bool prefix=false);
+       CChar8*  TextHex   (ULong u, Char8 (&temp)[256], Int digits=-1, Int separate=0, Bool prefix=false);
+       CChar8* _TextHex   (Flt   f, Char8 (&temp)[17]=NoTemp(TempChar8<17>()).c);
+       CChar8* _TextHex   (Dbl   d, Char8 (&temp)[25]=NoTemp(TempChar8<25>()).c);
+       CChar8*  TextReal  (Dbl   r, Char8 (&temp)[256], Int precision, Int separate=0                   );
+inline CChar8*  TextFlt   (Dbl   r, Char8 (&temp)[256],                Int separate=0                   ) {return TextReal(r, temp, PRECISION_FLT, separate);}
+inline CChar8*  TextDbl   (Dbl   r, Char8 (&temp)[256],                Int separate=0                   ) {return TextReal(r, temp, PRECISION_DBL, separate);}
+
+   #if WINDOWS
+      ASSERT(SIZE(wchar_t)==SIZE(Char));
+      inline   wchar_t* WChar(   Char   *t) {return (wchar_t*)t;}
+      inline C wchar_t* WChar(C  Char   *t) {return (wchar_t*)t;}
+      inline    Char  * WChar(  wchar_t *t) {return ( Char  *)t;}
+      inline C  Char  * WChar(C wchar_t *t) {return ( Char  *)t;}
+   #endif
+
+   #if APPLE
+      CFStringRef AppleString1(C Str      &str);
+      NSString*   AppleString (C Str      &str);
+      Str         AppleString (NSString   *str);
+      Str         AppleString (CFStringRef str);
+
+      inline      Str::Str       (NSString *s) :      Str(AppleString(s)) {}
+      inline Str& Str::operator =(NSString *s) {return T =AppleString(s);}
+      inline Str& Str::operator+=(NSString *s) {return T+=AppleString(s);}
+      inline Str  Str::operator+ (NSString *s)C{return T+ AppleString(s);}
+
+      inline      Str::Str       (CFStringRef s) :      Str(AppleString(s)) {}
+      inline Str& Str::operator =(CFStringRef s) {return T =AppleString(s);}
+      inline Str& Str::operator+=(CFStringRef s) {return T+=AppleString(s);}
+      inline Str  Str::operator+ (CFStringRef s)C{return T+ AppleString(s);}
+
+      struct NSStringAuto // 'NSString' with auto-release
+      {
+         operator   NSString*()C {return str;}
+         NSString* operator()()C {return str;}
+
+        ~NSStringAuto(           ) {[str release]; /*str=null;*/} // it's safe to call "[null release]"
+         NSStringAuto(           ) {str=null;}
+         NSStringAuto(C Str  &str) {T.str=AppleString(str);}
+         NSStringAuto(C Str8 &str) {T.str=AppleString(str);}
+         NSStringAuto(CChar  *str) {T.str=AppleString(str);}
+         NSStringAuto(CChar   chr) {T.str=AppleString(chr);}
+
+      private:
+         NSString *str;
+         NO_COPY_CONSTRUCTOR(NSStringAuto);
+      };
+      struct CFStringAuto // 'CFStringRef' with auto-release
+      {
+         operator   CFStringRef()C {return str;}
+         CFStringRef operator()()C {return str;}
+
+        ~CFStringAuto(               ) {if(str){CFRelease(str); /*str=null;*/}}
+         CFStringAuto(               ) {T.str=null;}
+         CFStringAuto(C Str      &str) {T.str=AppleString1(str);}
+         CFStringAuto(C Str8     &str) {T.str=AppleString1(str);}
+         CFStringAuto(CChar      *str) {T.str=AppleString1(str);}
+         CFStringAuto(CChar       chr) {T.str=AppleString1(chr);}
+         CFStringAuto(CFStringRef str) {T.str=str;}
+
+      private:
+         CFStringRef str;
+         NO_COPY_CONSTRUCTOR(CFStringAuto);
+      };
+      struct NSURLAuto : NSStringAuto // 'NSURL' with auto-release
+      {
+         operator   Bool  ()C {return url!=null;}
+         operator   NSURL*()C {return url;}
+         NSURL* operator()()C {return url;}
+
+      //~NSURLAuto() {[url release]; /*url=null;*/} this is always created using 'URLWithString' and it can't be released because that would cause crash (probably it reuses the same memory from 'NSString')
+         NSURLAuto(C Str &str);
+
+      private:
+         NSURL *url;
+         NO_COPY_CONSTRUCTOR(NSURLAuto);
+      };
+   #endif
+#endif
 /******************************************************************************/

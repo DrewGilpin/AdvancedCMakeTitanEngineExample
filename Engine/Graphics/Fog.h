@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Fog' to set custom global fog.
@@ -15,6 +12,17 @@ struct FogClass
 
  C Vec& colorL()C {return color_l;}   void colorL(C Vec &color_l) {T.color_l=color_l;} // get/set Linear Gamma color
    Vec  colorS()C;                    void colorS(C Vec &color_s);                     // get/set sRGB   Gamma color
+
+#if EE_PRIVATE
+   void Draw(Bool after_sky);
+   #if LINEAR_GAMMA
+      INLINE C Vec& colorD()C {return colorL();}
+   #else
+      INLINE   Vec  colorD()C {return colorS();}
+   #endif
+
+   FogClass();
+#endif
 }extern
    Fog; // Global Fog Control
 /******************************************************************************/

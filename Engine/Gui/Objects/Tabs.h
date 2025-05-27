@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum TABS_LAYOUT : Byte
 {
@@ -20,10 +17,19 @@ struct Tab : Button // single Tab
 
    Tab& text(C Str &text);   C Str& text()C {return super::text;} // set/get Tab text
 
+#if EE_PRIVATE
+   void    addChild(GuiObj &child);
+   void removeChild(GuiObj &child);
+   friend struct Tabs;
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    GuiObjChildren _children;
 protected:
    virtual void parentClientRectChanged(C Rect *old_client, C Rect *new_client)override;
+   virtual void        childRectChanged(C Rect *old_rect  , C Rect *new_rect, GuiObj &child)override;
    virtual Bool load(File &f, CChar *path=null)override;
 };
 /******************************************************************************/
@@ -70,10 +76,22 @@ const_mem_addr struct Tabs : GuiObj // Gui Tabs !! must be stored in constant me
    virtual void    update(C GuiPC &gpc)override; // update object
    virtual void    draw  (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   TABS_LAYOUT actualLayout()C;
+   void    setButtonSubType();
+   void           setParams();
+   void             setRect();
+   void                zero();
+   void                call(Bool sound);
+   void         removeChild(GuiObj &child);
+#endif
+
   ~Tabs() {del();}
    Tabs();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool        _valid, _auto_size, _func_immediate;
    TABS_LAYOUT _layout, _actual_layout;
    Int         _sel;
@@ -85,6 +103,7 @@ private:
 
 protected:
    virtual void parentClientRectChanged(C Rect *old_client, C Rect *new_client)override;
+   virtual void        childRectChanged(C Rect *old_rect  , C Rect *new_rect, GuiObj &child)override;
    virtual void nearest(C GuiPC &gpc, GuiObjNearest &gon)override;
    virtual Bool save(File &f, CChar *path=null)C override;
    virtual Bool load(File &f, CChar *path=null)  override;

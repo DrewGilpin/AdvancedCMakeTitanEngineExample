@@ -60,7 +60,7 @@ if (WIN32)
             uuid winspool runtimeobject
     )
 else()
-    set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Lib/EsenthelEngine.a")
+    set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Lib/Engine.a")
     set(SYS_LIBS                                     # original Linux set
             pthread dl m X11 Xi Xinerama Xrandr Xmu Xcursor Xxf86vm rt
             GL openal z odbc udev

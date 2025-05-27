@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Camera' to handle setting the viewing camera,
@@ -33,11 +30,12 @@ struct Camera
    VecD    at    ; // point where camera is looking at               , default=VecD(0,0,0)
    MatrixM matrix; // camera object matrix                           , default=MatrixIdentity-Vec(0,0,1)
 
-   Vec        vel, // camera         velocity (this gets modified when calling 'updateEnd')
-          ang_vel; // camera angular velocity (this gets modified when calling 'updateEnd')
-
-   Camera& operator+=(C VecD &offset) {at+=offset; matrix.pos+=offset; return T;} // move camera by 'offset'
-   Camera& operator-=(C VecD &offset) {at-=offset; matrix.pos-=offset; return T;} // move camera by 'offset'
+   // transform
+   Camera& operator+=(C VecD    &delta) {at+=delta; matrix+=delta;                      return T;} // move     by 'delta' offset   , this method is to be used for local   smooth  position modifications, it will     affect motion/velocities
+   Camera& operator-=(C VecD    &delta) {at-=delta; matrix-=delta;                      return T;} // move     by 'delta' offset   , this method is to be used for local   smooth  position modifications, it will     affect motion/velocities
+   Camera& teleport  (C VecD    &delta) {at+=delta; matrix+=delta; _matrix_prev+=delta; return T;} // teleport by 'delta' offset   , this method is to be used for distant instant position modifications, it will NOT affect motion/velocities
+   Camera& teleport  (C MatrixM &delta) {at*=delta; matrix*=delta; _matrix_prev*=delta; return T;} // teleport by 'delta' transform, this method is to be used for distant instant position modifications, it will NOT affect motion/velocities
+   Camera& teleport  (C MatrixO &delta) {at*=delta; matrix*=delta; _matrix_prev*=delta; return T;} // teleport by 'delta' transform, this method is to be used for distant instant position modifications, it will NOT affect motion/velocities
 
    // update
       // begin
@@ -65,12 +63,19 @@ struct Camera
 
    Camera();
 
+   static C Camera& Active() {return _active;}
+
+#if !EE_PRIVATE
 private:
+#endif
    MatrixM _matrix_prev;
-   VecD    _pos_prev1;
+#if EE_PRIVATE
+private:
+#endif
+   static Camera _active;
 };
-extern   Camera       Cam; // default camera, you can use it to manipulate the camera
-extern C Camera ActiveCam; // active  camera in read-only mode, this object is always changed when you activate any 'Camera' using its 'set' method, when rendering mirror/reflections, its 'matrix' temporarily gets adjusted
+extern   Camera        Cam;                             // default camera, you can use it to manipulate the camera
+inline C Camera& ActiveCam() {return Camera::Active();} // active  camera in read-only mode, this object is always changed when you activate any 'Camera' using its 'set' method, when rendering mirror/reflections, its 'matrix' temporarily gets adjusted
 /******************************************************************************/
 //
 // Following functions work on active viewport
@@ -92,15 +97,16 @@ Bool PosToScreen (C VecD &pos, Vec2 &screen); // convert 3D position to 2D scree
 Bool PosToScreenM(C Vec  &pos, Vec2 &screen); // convert 3D position to 2D screen position (transformed by current object matrix), false on fail (point is behind the camera)
 Bool PosToScreenM(C VecD &pos, Vec2 &screen); // convert 3D position to 2D screen position (transformed by current object matrix), false on fail (point is behind the camera)
 
-Vec  ScreenToPosD   (C Vec2 &screen_d, Flt z=ActiveCam.dist); // convert 2D screen delta    to 3D world-space delta    (affected by camera)
-VecD ScreenToPos    (C Vec2 &screen  , Flt z=ActiveCam.dist); // convert 2D screen position to 3D world-space position (affected by camera)
-Vec  ScreenToViewPos(C Vec2 &screen  , Flt z=ActiveCam.dist); // convert 2D screen position to 3D  view-space position (in camera space)
-Vec  ScreenToPosDM  (C Vec2 &screen_d, Flt z=ActiveCam.dist); // convert 2D screen delta    to 3D world-space delta    (affected by camera, transformed by current object drawing matrix which is set by 'SetMatrix')
-VecD ScreenToPosM   (C Vec2 &screen  , Flt z=ActiveCam.dist); // convert 2D screen position to 3D world-space position (affected by camera, transformed by current object drawing matrix which is set by 'SetMatrix')
+Vec  ScreenToPosD   (C Vec2 &screen_d, Flt z=ActiveCam().dist); // convert 2D screen delta    to 3D world-space delta    (affected by camera)
+VecD ScreenToPos    (C Vec2 &screen  , Flt z=ActiveCam().dist); // convert 2D screen position to 3D world-space position (affected by camera)
+Vec  ScreenToViewPos(C Vec2 &screen  , Flt z=ActiveCam().dist); // convert 2D screen position to 3D  view-space position (in camera space)
+Vec  ScreenToPosDM  (C Vec2 &screen_d, Flt z=ActiveCam().dist); // convert 2D screen delta    to 3D world-space delta    (affected by camera, transformed by current object drawing matrix which is set by 'SetMatrix')
+VecD ScreenToPosM   (C Vec2 &screen  , Flt z=ActiveCam().dist); // convert 2D screen position to 3D world-space position (affected by camera, transformed by current object drawing matrix which is set by 'SetMatrix')
 
-Vec  ScreenToDir   (C Vec2 &screen                     ); // convert 2D screen position to world space                       3D direction
-void ScreenToPosDir(C Vec2 &screen, Vec  &pos, Vec &dir); // convert 2D screen position to world space 3D position start and 3D direction
-void ScreenToPosDir(C Vec2 &screen, VecD &pos, Vec &dir); // convert 2D screen position to world space 3D position start and 3D direction
+Vec  ScreenToDir   (C Vec2 &screen                     ); // convert 2D screen position to world space                       3D direction, direction is     normalized
+Vec  ScreenToDir1  (C Vec2 &screen                     ); // convert 2D screen position to world space                       3D direction, direction is NOT normalized, it's on the plane in front of camera
+void ScreenToPosDir(C Vec2 &screen, Vec  &pos, Vec &dir); // convert 2D screen position to world space 3D position start and 3D direction, direction is     normalized
+void ScreenToPosDir(C Vec2 &screen, VecD &pos, Vec &dir); // convert 2D screen position to world space 3D position start and 3D direction, direction is     normalized
 
 Bool ToScreenRect(C Box      &box    ,             Rect &rect); // project 3D box     to 2D on-screen rectangle, false on fail (shape is behind the camera)
 Bool ToScreenRect(C OBox     &obox   ,             Rect &rect); // project 3D obox    to 2D on-screen rectangle, false on fail (shape is behind the camera)
@@ -116,4 +122,44 @@ Int CompareTransparencyOrderDepth(C Vec  &pos_a, C Vec  &pos_b); // return compa
 Int CompareTransparencyOrderDepth(C VecD &pos_a, C VecD &pos_b); // return comparing value -1/0/+1 determining the order of transparent objects rendering according to their depth    (linear    distance along camera look direction)
 Int CompareTransparencyOrderDist (C Vec  &pos_a, C Vec  &pos_b); // return comparing value -1/0/+1 determining the order of transparent objects rendering according to their distance (spherical distance from  camera position)
 Int CompareTransparencyOrderDist (C VecD &pos_a, C VecD &pos_b); // return comparing value -1/0/+1 determining the order of transparent objects rendering according to their distance (spherical distance from  camera position)
+
+#if EE_PRIVATE
+Bool ViewPosToScreen    (C Vec &pos, Vec2 &screen); // convert 3D view-space position to 2D                    screen position
+Bool ViewPosToFullScreen(C Vec &pos, Vec2 &screen); // convert 3D view-space position to 2D (full and not gui) screen position
+
+Vec2 PosToFullScreen(C Vec  &pos              ); // convert 3D position to 2D (full and not gui) screen position
+Vec2 PosToFullScreen(C VecD &pos              ); // convert 3D position to 2D (full and not gui) screen position
+Bool PosToFullScreen(C Vec  &pos, Vec2 &screen); // convert 3D position to 2D (full and not gui) screen position, false on fail (point is behind the camera)
+Bool PosToFullScreen(C VecD &pos, Vec2 &screen); // convert 3D position to 2D (full and not gui) screen position, false on fail (point is behind the camera)
+
+VecD FullScreenToPos    (C Vec2 &screen, Flt z=ActiveCam().dist); // convert 2D (full and not gui) screen position to 3D world-space position (affected by camera)
+Vec  FullScreenToViewPos(C Vec2 &screen, Flt z=ActiveCam().dist); // convert 2D (full and not gui) screen position to 3D  view-space position (in camera space)
+
+Bool     ViewToScreenRect(C Ball    &ball   , Rect &rect); // project 3D view-space ball    to 2D                    on-screen rectangle, false on fail (shape is behind the camera)
+Bool     ViewToScreenRect(C Capsule &capsule, Rect &rect); // project 3D view-space capsule to 2D                    on-screen rectangle, false on fail (shape is behind the camera)
+Bool ViewToFullScreenRect(C Ball    &ball   , Rect &rect); // project 3D view-space ball    to 2D (full and not gui) on-screen rectangle, false on fail (shape is behind the camera)
+Bool ViewToFullScreenRect(C Capsule &capsule, Rect &rect); // project 3D view-space capsule to 2D (full and not gui) on-screen rectangle, false on fail (shape is behind the camera)
+
+Bool ToFullScreenRect(C Ball     &ball   , Rect &rect); // project 3D ball    to 2D (full and not gui) on-screen rectangle, false on fail (shape is behind the camera)
+Bool ToFullScreenRect(C BallM    &ball   , Rect &rect); // project 3D ball    to 2D (full and not gui) on-screen rectangle, false on fail (shape is behind the camera)
+Bool ToFullScreenRect(C Capsule  &capsule, Rect &rect); // project 3D capsule to 2D (full and not gui) on-screen rectangle, false on fail (shape is behind the camera)
+Bool ToFullScreenRect(C CapsuleM &capsule, Rect &rect); // project 3D capsule to 2D (full and not gui) on-screen rectangle, false on fail (shape is behind the camera)
+Bool ToFullScreenRect(C Pyramid  &pyramid, Rect &rect); // project 3D pyramid to 2D (full and not gui) on-screen rectangle, false on fail (shape is behind the camera)
+Bool ToFullScreenRect(C PyramidM &pyramid, Rect &rect); // project 3D pyramid to 2D (full and not gui) on-screen rectangle, false on fail (shape is behind the camera)
+
+Bool ToEyeRect(Rect &rect); // convert rectangle to active eye rect, false if invalid
+#endif
+/******************************************************************************/
+#if EE_PRIVATE
+void InitCamera   ();
+void  SetCam      (C MatrixM &matrix                        ); // 'Frustum' may have to be reset after calling this method
+void  SetCam      (C MatrixM &matrix, C MatrixM &matrix_prev); // 'Frustum' may have to be reset after calling this method
+void  SetEyeMatrix();
+void  ActiveCamChanged();
+void  SetViewToViewPrev();
+
+extern Dbl ActiveCamZ;
+
+inline Dbl DistPointActiveCamPlaneZ(C VecD &point) {return Dot(point, ActiveCam().matrix.z)-ActiveCamZ;}
+#endif
 /******************************************************************************/

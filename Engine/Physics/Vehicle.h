@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Vehicle' to create vehicle type physical actor (like car).
@@ -18,15 +15,33 @@ inline Bool IsFront(WHEEL_TYPE wheel) {return   wheel<=WHEEL_RIGHT_FRONT;} // if
 inline Bool IsRear (WHEEL_TYPE wheel) {return   wheel>=WHEEL_LEFT_REAR  ;} // if wheel type is rear  wheel
 inline Bool IsLeft (WHEEL_TYPE wheel) {return !(wheel&1)                ;} // if wheel type is left  wheel
 inline Bool IsRight(WHEEL_TYPE wheel) {return  (wheel&1)                ;} // if wheel type is right wheel
+
+enum WHEEL_DRIVE : Byte
+{
+   WD_AWD, // all   wheel drive (also known as 4WD four wheel drive)
+   WD_FWD, // front wheel drive
+   WD_RWD, // rear  wheel drive
+};
+inline Int HasAccel(WHEEL_DRIVE wd)
+{
+   switch(wd)
+   {
+      case WD_AWD: return WHEEL_NUM;
+      default    : return 2; // WD_FWD, WD_RWD
+   }
+}
+inline Bool HasAccel(WHEEL_TYPE wheel, WHEEL_DRIVE wd)
+{
+   switch(wd)
+   {
+      default    : return true; // WD_AWD
+      case WD_FWD: return IsFront(wheel);
+      case WD_RWD: return IsRear (wheel);
+   }
+}
 /******************************************************************************/
 const_mem_addr struct Vehicle // Physical actor of vehicle type !! must be stored in constant memory address !!
 {
-   enum WHEEL_DRIVE : Byte
-   {
-      AWD, // all   wheel drive (also known as 4WD four wheel drive)
-      FWD, // front wheel drive
-      RWD, // rear  wheel drive
-   };
    struct Wheel
    {
       Flt radius, // wheel radius, default=0.35 m
@@ -54,6 +69,10 @@ const_mem_addr struct Vehicle // Physical actor of vehicle type !! must be store
    Bool       onGroundAny()C;                                            // if      vehicle is       on ground (at least one wheel  on ground)
    Bool       onGroundAll()C;                                            // if      vehicle is       on ground (all          wheels on ground)
    Bool          onGround(WHEEL_TYPE wheel)C;                            // if      wheel   is       on ground
+#if EE_PRIVATE
+   Vec      wheelAxis    (WHEEL_TYPE wheel)C;                            // get     wheel   rotation  axis (X)
+   Vec      wheelDir     (WHEEL_TYPE wheel)C;                            // get     wheel   direction axis (Z)
+#endif
    Matrix   wheelMatrix  (WHEEL_TYPE wheel, Int flip_side=-1)C;          // get     wheel   matrix           in world space, 'flip_side'=if flip/mirror the wheel matrix (-1=flip left wheels only, 0=don't flip, 1=flip right wheels only)
    Vec      wheelVel     (WHEEL_TYPE wheel)C;                            // get     wheel           velocity in world space
    Vec      wheelAngVel  (WHEEL_TYPE wheel)C;                            // get     wheel   angular velocity in world space
@@ -61,6 +80,10 @@ const_mem_addr struct Vehicle // Physical actor of vehicle type !! must be store
    Vec      wheelContactN(WHEEL_TYPE wheel)C;                            // get     wheel   last contact point normal with the ground, Vec(0,1,0) if never was on ground
    Flt      wheelRadius  (WHEEL_TYPE wheel)C;                            // get     wheel   radius
    Flt      wheelCompress(WHEEL_TYPE wheel)C;                            // get     wheel   compression, value <0 means wheel is loose in air, value 0 means wheel is at rest, value 1 means wheel is fully compressed
+#if EE_PRIVATE
+   Flt      wheelLongSlip(WHEEL_TYPE wheel)C;                            // get     wheel   longitudinal slip (how much does the wheel slip on ground in "forward" direction)
+   Flt      wheelLatSlip (WHEEL_TYPE wheel)C;                            // get     wheel   lateral      slip (how much does the wheel slip on ground in "side   " direction)
+#endif
    Flt              speed()C;                                            // get     vehicle forward  speed (this value is positive when moving forward and negative when moving backward)
    Flt          sideSpeed()C;                                            // get     vehicle side     speed (this value is positive when moving right   and negative when moving left    )
    Flt              accel()C;   Vehicle&          accel(Flt   accel   ); // get/set           acceleration      , -1..1
@@ -76,7 +99,7 @@ const_mem_addr struct Vehicle // Physical actor of vehicle type !! must be store
    Flt       suspSpring  ()C;   Vehicle&   suspSpring  (Flt   spring  ); // get/set   suspension spring strength,  0..Inf , default=20  , this parameter specifies bounciness strength of the suspension
    Flt       suspDamping ()C;   Vehicle&   suspDamping (Flt   damping ); // get/set   suspension spring damping ,  0..Inf , default=0.7 , this parameter specifies how quickly does the suspension stabilize
    Flt       suspCompress()C;   Vehicle&   suspCompress(Flt   compress); // get/set   suspension max compression,  0..1   , default=0.75 (1.0 means full wheel radius)
-   WHEEL_DRIVE wheelDrive()C;   Vehicle&     wheelDrive(WHEEL_DRIVE wd); // get/set wheel drive                           , default=WHEEL_AWD
+   WHEEL_DRIVE wheelDrive()C;   Vehicle&     wheelDrive(WHEEL_DRIVE wd); // get/set wheel drive                           , default=WD_AWD
 
    Flt      energy    (                )C;                                             // get     kinetic energy , 0..Inf
    Flt      damping   (                )C;   Vehicle&  damping   (  Flt      damping); // get/set linear  damping, 0..Inf, default=0.05
@@ -120,10 +143,16 @@ const_mem_addr struct Vehicle // Physical actor of vehicle type !! must be store
    Bool saveState(File &f)C; // save vehicle state (following data is not  saved: physical body, mass, density, scale, damping, max ang vel, mass center, inertia, material), false on fail
    Bool loadState(File &f) ; // load vehicle state (following data is not loaded: physical body, mass, density, scale, damping, max ang vel, mass center, inertia, material), false on fail, typically you should first create a vehicle from a physical body and then call this method to set its state according to data from the file
 
+#if EE_PRIVATE
+   void zero  ();
+   void update();
+#endif
   ~Vehicle() {del();}
    Vehicle();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct _Wheel
    {
       Flt   radius, compress, angle, angle_vel;

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Param' to store a custom parameter consisting of name and value.
@@ -82,6 +79,11 @@ struct Param // Parameter
    // io
    Bool save(File &f, CChar *path=null)C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    Bool load(File &f, CChar *path=null) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+#if EE_PRIVATE
+   Int  arrayIDs(       )C; // !! only for PARAM_ID_ARRAY !!
+   void loadOld (File &f);
+   void zero    (       );
+#endif
 
    Param();
 };

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'DLL' class to load a dll/so file.
@@ -19,6 +16,9 @@ struct DLL // DLL/SO loader
    Bool is     (            )C {return _dll_file || _dll_mem;} // if  DLL is created
    Ptr  getFunc(CChar8 *name)C;                                // get DLL function from its 'name'
 
+#if EE_PRIVATE
+   void delForce(); // delete continuously until it's completely released
+#endif
    DLL&   del(); // delete manually
   ~DLL() {del();}
    DLL() {}

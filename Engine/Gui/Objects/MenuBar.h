@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct MenuBar : GuiObj // Gui Menu Bar !! must be stored in constant memory address !!
 {
@@ -11,8 +8,14 @@ const_mem_addr struct MenuBar : GuiObj // Gui Menu Bar !! must be stored in cons
       Menu menu        ;
 
       Elm();
+   #if EE_PRIVATE
+      Elm& create(C Elm &src);
+      Flt  x1()C {return x+w;}
+   #endif
 
+   #if !EE_PRIVATE
    private:
+   #endif
       Bool hidden;
       Flt  x, w;
    };
@@ -44,10 +47,17 @@ const_mem_addr struct MenuBar : GuiObj // Gui Menu Bar !! must be stored in cons
    virtual void update(C GuiPC &gpc)override; // update object
    virtual void draw  (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   void zero   ();
+   void setElms();
+#endif
+
   ~MenuBar() {del();}
    MenuBar();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool       _alt;
    Int        _lit, _push, _menu_prev;
    GuiSkinPtr _skin;
@@ -56,6 +66,9 @@ private:
 protected:
    virtual void parentClientRectChanged(C Rect *old_client, C Rect *new_client)override;
    virtual void nearest(C GuiPC &gpc, GuiObjNearest &gon)override;
+#if EE_PRIVATE
+   friend struct GUI; friend struct GuiObjChildren; friend struct GuiObj;
+#endif
 };
 /******************************************************************************/
 inline Int Elms(C MenuBar &menu) {return menu.elms();}

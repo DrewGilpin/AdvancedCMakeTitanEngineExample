@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Memb' for block based dynamic array container.
@@ -97,6 +94,10 @@ T1(const_mem_addr TYPE) struct Memb : _Memb // Block Based Container
 
    T1(BASE) operator   Memb<BASE>&() ; // casting to container of 'BASE' elements, 'TYPE' must be extended from BASE
    T1(BASE) operator C Memb<BASE>&()C; // casting to container of 'BASE' elements, 'TYPE' must be extended from BASE
+#if EE_PRIVATE
+   void  copyTo  (  TYPE *dest)C {_Memb::copyTo  (dest);          } // copy raw memory of all elements to   'dest'
+   Memb& copyFrom(C TYPE *src )  {_Memb::copyFrom(src ); return T;} // copy raw memory of all elements from 'src '
+#endif
 
    // io
    Bool save(File &f);   Bool save(File &f)C; // save elements with their own 'save' method, this method first saves number of current elements, and then for each element calls its 'save' method, false on fail

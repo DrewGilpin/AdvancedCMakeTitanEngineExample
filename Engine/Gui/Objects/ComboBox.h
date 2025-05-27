@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum COMBOBOX_FLAG // Combobox Flag
 {
@@ -49,6 +46,9 @@ const_mem_addr struct ComboBox : Button // Gui ComboBox !! must be stored in con
            ComboBox&   set    (  Int   abs_sel         , SET_MODE mode=SET_DEFAULT);   Int   operator()()C {return                    _abs_sel ;} // set/get active absolute selection, -1=none 
            ComboBox&   setText(C Str  &text, Bool force, SET_MODE mode=SET_DEFAULT);                                                              // set     active          selection from text, if 'text' not found : -1 is set and text is set depending on 'force' (false: set(""), true: set(text))
            ComboBox& resetText(                                                   );                                                              // reset   text from active selection
+#if EE_PRIVATE
+           ComboBox& setAbsText(Int abs, C Str &text);
+#endif
    virtual ComboBox& rect     (C Rect &rect                                       )override; C Rect&       rect()C {return super::rect();} // set/get rectangle
            ComboBox& skin     (C GuiSkinPtr &skin, Bool sub_objects=true          );         C GuiSkinPtr& skin()C {return super::skin  ;} // set/get skin override, default=null (if set to null then current value of 'Gui.skin' is used), 'sub_objects'=if additionally change the skin of sub-menus
 
@@ -63,10 +63,19 @@ const_mem_addr struct ComboBox : Button // Gui ComboBox !! must be stored in con
    virtual GuiObj* test  (C GuiPC &gpc, C Vec2 &pos, GuiObj* &mouse_wheel)override; // test if 'pos' screen position intersects with the object, by returning pointer to object or its children upon intersection and null in case no intersection, 'mouse_wheel' may be modified upon intersection either to the object or its children or null
    virtual void    update(C GuiPC &gpc)override; // update object
 
+#if EE_PRIVATE
+   void zero     ();
+   void call     ();
+   void setMenu  ();
+   void setParams();
+#endif
+
   ~ComboBox() {del();}
    ComboBox();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool   _func_immediate;
    Int    _abs_sel;
    Ptr    _func_user;

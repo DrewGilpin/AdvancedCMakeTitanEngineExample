@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Particles' for simplified particles management (updating and drawing).
@@ -110,6 +107,10 @@ struct Particles // Set of Particles
    Particles&   source    (C MeshPtr          &dynamic_mesh    , C AnimatedSkeleton *dynamic_skeleton);                     // set particle generation source to a dynamic mesh animated by skeleton (these objects  will not be copied to the Particles object, which means that the Particles object will access each frame the memory address of 'dynamic_mesh' and 'dynamic_skeleton', you'll need to make sure that the memory address of 'dynamic_mesh' and 'dynamic_skeleton' will remain constant throughout the life of Particles)
 
    // operations
+#if EE_PRIVATE
+   Particles& setRenderMode(); // set _render_mode according to current particle settings
+   void       zero         ();
+#endif
    void       reset    (Int i          ); // reset i-th particle                             , if 'reborn' is false then the particle will be set as dead
    Particles& reset    (               ); // reset  all particles using 'reset(Int i)' method, if 'reborn' is false then the particle will be set as dead
    Particles& resetFull(               ); // reset 'emitter_life' and all particles          , this method ignores 'reborn' and always sets particles to alive
@@ -127,7 +128,9 @@ struct Particles // Set of Particles
   ~Particles() {del();}
    Particles();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool         _palette      ;
    Byte         _palette_index;
    PARTICLE_SRC _src_type     ;
@@ -161,6 +164,10 @@ struct RawParticles // buffered particles
 
    // get / set
    RENDER_MODE renderMode()C; // get RENDER_MODE in which particles should be drawn (can be RM_BLEND, RM_PALETTE or RM_PALETTE1)
+#if EE_PRIVATE
+   RawParticles& setRenderMode();
+   void          zero         ();
+#endif
 
    RawParticles& palette     (Bool palette);   Bool palette     ()C {return _palette      ;} // if draw particles in palette mode (RM_PALETTE or RM_PALETTE1) instead of blend mode (RM_BLEND)        , false/true, default=false (particles in palette mode use only Alpha component from the Texture, while blend mode uses all RGBA channels from the Texture)
    RawParticles& paletteIndex(Byte index  );   Byte paletteIndex()C {return _palette_index;} // specifies which      palette mode (RM_PALETTE or RM_PALETTE1) should be used when 'palette' is enabled,    0..1   , defailt=0     (if 'palette' is enabled then this will specify whether RM_PALETTE index=0 or RM_PALETTE1 index=1 should be used)
@@ -207,9 +214,16 @@ Bool DrawAnimatedMaterialParticleBegin(C Material &material, Int x_frames, Int y
 void DrawAnimatedMaterialParticleAdd  (C Color &color, Flt radius, Flt angle, C Vec &pos, Int frame); // call this repeatedly for each animated material particle, 'frame'=current frame
 void DrawAnimatedMaterialParticleEnd  (                                                            ); // call this after drawing  all  animated material particles
 
+void DrawPerspectiveParticle   (C Image &image, C Color &color, Byte glow, C VecD &pos, Flt radius);
+void DrawPerspectiveParticleFar(C Image &image, C Color &color, Byte glow, C VecD &pos, Flt radius);
+
 Flt ParticleOpacity(Flt particle_life, Flt particle_life_max, Bool particles_smooth_fade); // calculate opacity of a single particle by specifying its current life 'Particle.life', maximum life 'Particle.life_max' and if smooth fade 'Particles.smooth_fade' is enabled
 /******************************************************************************/
 extern Cache<Particles> ParticlesCache; // Particles Cache
 
 inline Int Elms(C Particles &particles) {return particles.p.elms();}
+/******************************************************************************/
+#if EE_PRIVATE
+void ShutParticles();
+#endif
 /******************************************************************************/

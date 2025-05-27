@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 const_mem_addr struct CheckBox : GuiObj // Gui CheckBox !! must be stored in constant memory address !!
 {
@@ -32,10 +29,17 @@ const_mem_addr struct CheckBox : GuiObj // Gui CheckBox !! must be stored in con
    virtual void update(C GuiPC &gpc)override; // update object
    virtual void draw  (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   void zero();
+   void call(Bool sound);
+#endif
+
   ~CheckBox() {del();}
    CheckBox();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool   _on, _multi, _func_immediate, _focusable;
    Flt    _lit;
    Ptr    _func_user;

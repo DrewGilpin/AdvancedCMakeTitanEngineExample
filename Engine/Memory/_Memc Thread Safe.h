@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct _MemcThreadSafe // Thread-Safe Continuous Memory Based Container Base - Do not use this class, use 'MemcThreadSafe' instead
 {

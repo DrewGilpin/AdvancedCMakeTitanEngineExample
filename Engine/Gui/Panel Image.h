@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct PanelImageParams
 {
@@ -19,6 +16,11 @@ struct PanelImageParams
       Vec2 angle                 ; //      light angle              , -1..1  , default=(0, 0.4)
 
       Light();
+
+   #if EE_PRIVATE
+      Bool save(File &f)C;
+      Bool load(File &f) ;
+   #endif
    };
 
    struct ImageParams
@@ -38,6 +40,13 @@ struct PanelImageParams
            uv_warp   , // image uv warp by depth,    0..1  , default=0
            intensity ; // intensity             ,    0..1  , default=0
       Vec2 uv_offset ; // image uv offset       , -Inf..Inf, default=(0, 0)
+
+   #if EE_PRIVATE
+      Bool is()C {return !Equal(intensity, 0);}
+
+      Bool save(File &f)C;
+      Bool load(File &f) ;
+   #endif
 
       ImageParams();
    };
@@ -61,6 +70,11 @@ struct PanelImageParams
       ImageParams depth_overlay_params, color_overlay_params, depth_noise, color_noise; // image parameters
 
       Section();
+
+   #if EE_PRIVATE
+      Bool save(File &f)C;
+      Bool load(File &f) ;
+   #endif
    };
 
    Bool    cut_left, cut_right, cut_bottom, cut_top, // if cut-off the sides, default=false
@@ -122,6 +136,8 @@ struct PanelImage
  C Rect& defaultInnerPadding    (                            )C {return _inner_padding;} // get default inner padding
    Vec2  defaultInnerPaddingSize(                            )C;                         // get default inner padding size
 
+   UInt memUsage()C {return image.memUsage();} // get memory usage
+
    // draw
    void draw(                                    C Rect &rect)C; // draw at specified 'rect' screen rectangle
    void draw(C Color &color, C Color &color_add, C Rect &rect)C; // draw at specified 'rect' screen rectangle with custom colors
@@ -145,10 +161,18 @@ struct PanelImage
 
    void del(); // delete manually, this can be called optionally to release panel image memory
    PanelImage();
+#if EE_PRIVATE
+   void drawBorders         (C Color &color, C Color &color_add, C Rect &rect)C; // draw only borders
+   Bool getSideScale        (C Rect &rect, Flt &scale)C;
+   Bool getSideScaleH       (  Flt   h   , Flt &scale)C;
+   Bool getSideScaleVertical(C Rect &rect, Flt &scale)C;
+   void zero();
+#else
 private:
+#endif
    Bool _same_x, _padd_any, _force_uniform_stretch[2];
-   Flt  _size_x[3][2], _size_y[2], _tex_x[3][2], _tex_y[2]; // [y][x]
-   Vec2 _min_size, _padd, _tex_left_top, _tex_right_bottom;
+   Flt  _size_x[3][2], _size_y[2], _uv_x[3][2], _uv_y[2]; // [y][x]
+   Vec2 _min_size, _padd, _uv_left_top, _uv_right_bottom;
    Rect _inner_padding;
 };
 /******************************************************************************/

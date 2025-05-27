@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'AdMob' or 'Chartboost' to display ads in your application (for Android and iOS).
@@ -15,6 +12,9 @@
 /******************************************************************************/
 struct AdMobClass
 {
+#if EE_PRIVATE
+   // !! THESE ENUMS MUST BE EQUAL TO "EsenthelActivity.java" !!
+#endif
    enum BANNER_TYPE : Byte
    {                    // Size   | Description         | Availability
       BANNER          , // 320x50 , Standard Banner     , Phones and Tablets
@@ -22,6 +22,9 @@ struct AdMobClass
       FULL_BANNER     , // 468x60 , IAB Full-Size Banner, Tablets
       LEADERBOARD     , // 728x90 , IAB Leaderboard     , Tablets
       SMART_BANNER    , // Varies , Smart Banner        , Phones and Tablets, https://firebase.google.com/docs/admob/android/banner#smart_banners
+   #if EE_PRIVATE
+      INTERSTITIAL    , // Fullscreen, Interstitial     , Phones and Tablets, https://firebase.google.com/docs/admob/android/interstitial
+   #endif
    };
    enum STATE : Byte
    {
@@ -49,8 +52,14 @@ struct AdMobClass
    AdMobClass& fsDel   (               ); // delete a fullscreen ad
    AdMobClass& fsCreate(C Str8 &unit_id); // create a fullscreen ad, 'unit_id'=ID of the ad (obtained when creating a new ad on the AdMob https://apps.admob.com/ website)
    AdMobClass& fsShow  (               ); // show the fullscreen ad, if the ad is not yet loaded, then it will be automatically shown once it gets loaded
+#if EE_PRIVATE
+   AdMobClass& fsHide   (            ); // hide the fullscreen ad
+   AdMobClass& fsVisible(Bool visible); // set      fullscreen ad visibility
+#endif
 
+#if !EE_PRIVATE
 private:
+#endif
    STATE _banner_state, _fs_state;
    VecI2 _banner_pos, _banner_size;
   ~AdMobClass();
@@ -60,7 +69,10 @@ private:
 /******************************************************************************/
 struct ChartboostClass
 {
-   enum RESULT
+#if EE_PRIVATE
+   // !! THESE ENUMS MUST BE EQUAL TO "EsenthelActivity.java" !!
+#endif
+   enum RESULT : Byte
    {
       INTERSTITIAL_LOADED   , // called when an interstitial has been loaded from the Chartboost API servers and cached locally
       INTERSTITIAL_LOAD_FAIL, // called when an interstitial has attempted to load from the Chartboost API servers but failed
@@ -88,7 +100,9 @@ struct ChartboostClass
    ChartboostClass& rewardedVideoShow     ();
    Bool             rewardedVideoAvailable()C;
 
+#if !EE_PRIVATE
 private:
+#endif
   ~ChartboostClass();
    ChartboostClass();
 }extern

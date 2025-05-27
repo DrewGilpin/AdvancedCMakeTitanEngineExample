@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum WIN_IO_MODE : Byte // WindowIO mode
 {
@@ -28,8 +25,13 @@ const_mem_addr struct QuickPathSelector : ComboBox
 
    virtual Str  getPath(           ) {return S;} // get current path, extend this function to return current path in your custom file browser
    virtual void setPath(C Str &path) {         } // set current path, extend this function to set    current path in your custom file browser
+#if EE_PRIVATE
+   void setData(); // call this to update path selector paths from the global variables
+#endif
 
+#if !EE_PRIVATE
 private:
+#endif
    void (*_func)(Ptr user);
 };
 /******************************************************************************/
@@ -87,6 +89,30 @@ const_mem_addr struct WindowIO : ClosableWindow // Gui Window Input Output !! mu
    virtual WindowIO& save    ();         // activate to save
    virtual WindowIO& load    ();         // activate to load
 
+#if EE_PRIVATE
+   void zero           (           );
+   void setBar         (           );
+   void setRect        (           );
+   void getList        (           );
+   void setFile        (C Str &name);
+   void back           (           );
+   void enter          (C Str &dir );
+   void Ok             (           );
+   void createDir      (           );
+   void renameDo       (           );
+   void removeAsk      (           );
+   void removeDo       (           );
+   void removeCancel   (           );
+   Bool overwriteAsk   (C Str &name);
+   void overwriteDo    (           );
+   void overwriteCancel(           );
+   void exploreDo      (           );
+   Bool goodExt        (C Str &name)C;
+   WindowIO& fullScreen(           ); // set full screen mode
+   Mems<FileParams> final(C Str &name)C;
+   Mems<FileParams> final(           )C;
+#endif
+
    virtual Rect      sizeLimit(             )C override;                                           // set     allowed size limits for the Window rectangle, you can override this method and return custom values, they will be used by 'rect' method
    virtual WindowIO& rect     (C Rect  &rect)  override;   C Rect& rect()C {return super::rect();} // set/get rectangle
    virtual void      update   (C GuiPC &gpc )  override;
@@ -94,12 +120,18 @@ const_mem_addr struct WindowIO : ClosableWindow // Gui Window Input Output !! mu
   ~WindowIO() {del();}
    WindowIO();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct File // WindowIO File
    {
       UInt type; // file type (this is FSTD_TYPE but keep as UInt so 'List.setElmType' which operates on UInt can be used)
       Long size; // file size
       Str  name; // file name
+
+   #if EE_PRIVATE
+      void set(FSTD_TYPE type, Long size, C Str &name) {T.type=type; T.size=size; T.name=name;}
+   #endif
    };
    const_mem_addr struct QPS : QuickPathSelector
    {

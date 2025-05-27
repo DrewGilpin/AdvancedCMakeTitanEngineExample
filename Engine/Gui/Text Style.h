@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'TextStyle'       to specify custom text style which can be used when drawing texts, use it      as a global/class variable for storage.
@@ -99,6 +96,7 @@ struct StrEx : Mems<StrData> // Extended String, which can hold: Text, Images, C
    Int    length()C; // get              length (where each image element has length=1)
    Int strLength()C; // get       string length (ignoring   image elements)
    Str str      ()C; // return as string        (ignoring   image, color, shadow, panel, font elements)
+   Char lastChar()C; // get last char
 
    StrEx& clear() {super::clear(); return T;}
    StrEx& del  () {super::del  (); return T;}
@@ -111,6 +109,7 @@ struct StrEx : Mems<StrData> // Extended String, which can hold: Text, Images, C
    StrEx& text  (C CChar         *text  );
    StrEx& text  (C CChar8        *text  );
    StrEx& text  (C Str           &text  );
+   StrEx& text  (C Str8          &text  );
    StrEx& image (C ImagePtr      &image );
    StrEx& color (C Color         &color );
    StrEx& color (C Color         *color ); // null disables custom color  and reverts to default
@@ -125,12 +124,14 @@ struct StrEx : Mems<StrData> // Extended String, which can hold: Text, Images, C
    void   operator+=(C CChar         *text  ) {T.text  (text );}
    void   operator+=(C CChar8        *text  ) {T.text  (text );}
    void   operator+=(C Str           &text  ) {T.text  (text );}
+   void   operator+=(C Str8          &text  ) {T.text  (text );}
    void   operator+=(C ImagePtr      &image ) {T.image (image);}
    StrEx& shadow    (  Int            shadow) {T.shadow(Byte(shadow)); return T;}
    StrEx& panelText (C PanelImagePtr &panel, C Str      &text ); // add text  inside a panel, same as "T.panel(panel); T+=text ; T.panel(null);"
    StrEx& panelImage(C PanelImagePtr &panel, C ImagePtr &image); // add image inside a panel, same as "T.panel(panel); T+=image; T.panel(null);"
 
    StrEx& space(); // add a space if string isn't empty and does not end with a new line or space
+   StrEx& nbsp (); // add a nbsp  if string isn't empty and does not end with a new line or space
    StrEx& line (); // add a line  if string isn't empty and does not end with a new line
 
    // io
@@ -144,7 +145,8 @@ struct TextStyleParams // Text Style Params
    Bool         pixel_align; // pixel alignment           , default=true (if enabled then every character will be aligned per pixel, you can disable this if you'd like to have smooth movement on the screen at the cost of slightly more blurriness of the text)
    Byte         shadow     , // shadow              0..255, default=255
                 shade      ; // shade               0..255, default=230
-   Color        color      , // color                     , default=WHITE
+   Color        color      , //       color               , default=WHITE
+                image_color, // image color               , default=WHITE
                 selection  ; // selection background color, default=(51, 153, 255, 64)
    Vec2         align      , // aligning                  , default=(0   , 0   )
                 size       , // size                      , default=(0.08, 0.08)
@@ -154,6 +156,13 @@ struct TextStyleParams // Text Style Params
    Font* font()C {return _font;}   void font(Font *font) {T._font=font;} // get/set font, default=null (if set to null then current value of 'Gui.skin.font' is used)
 
    // get
+#if EE_PRIVATE
+   Font* getFont()C;
+
+   Flt  posY (Flt y             )C; // get actual position which will be used for drawing (including padding)
+   void posY (Flt y, Vec2 &range)C; // get actual position which will be used for drawing (including padding)
+   void posYI(Flt y, Vec2 &range)C; // get actual position which will be used for drawing (including padding)
+#endif
    Bool spacingConst()C {return spacing==SPACING_CONST;}
 
    Flt  colWidth ()C {return size.x*space.x;} // get column width  (this is valid if "spacing==SPACING_CONST")
@@ -165,10 +174,12 @@ struct TextStyleParams // Text Style Params
    Flt textWidth(CChar8 *text, Int max_length=-1         )C; // get width of one line 'text' text
    Flt textWidth(CChar  *text, C StrData *data, Int datas)C; // get width of one line 'text' text
 
-   Int textIndex(CChar  *text,                             Flt x,        TEXT_INDEX_MODE index_mode                                      )C; // get index of character at 'x'   position, returns "0 .. Length(text)"
-   Int textIndex(CChar8 *text,                             Flt x,        TEXT_INDEX_MODE index_mode                                      )C; // get index of character at 'x'   position, returns "0 .. Length(text)"
-   Int textIndex(CChar  *text,                             Flt x, Flt y, TEXT_INDEX_MODE index_mode, Flt width, Bool auto_line, Bool &eol)C; // get index of character at 'x,y' position, returns "0 .. Length(text)"
-   Int textIndex(CChar  *text, C StrData *data, Int datas, Flt x, Flt y, TEXT_INDEX_MODE index_mode, Flt width, Bool auto_line, Bool &eol)C; // get index of character at 'x,y' position, returns "0 .. Length(text)"
+   Int textIndex(CChar  *text,                             Flt x,        TEXT_INDEX_MODE index_mode                                       )C; // get index of character at 'x'   position, returns "0 .. Length(text)"
+   Int textIndex(CChar8 *text,                             Flt x,        TEXT_INDEX_MODE index_mode                                       )C; // get index of character at 'x'   position, returns "0 .. Length(text)"
+   Int textIndex(CChar  *text,                             Flt x, Flt y, TEXT_INDEX_MODE index_mode, Flt  width, Bool auto_line, Bool &eol)C; // get index of character at 'x,y' position, returns "0 .. Length(text)"
+   Int textIndex(CChar  *text, C StrData *data, Int datas, Flt x, Flt y, TEXT_INDEX_MODE index_mode, Flt  width, Bool auto_line, Bool &eol)C; // get index of character at 'x,y' position, returns "0 .. Length(text)"
+
+   Int textIndexAlign(CChar *text, C StrData *data, Int datas, Flt x, Flt y, TEXT_INDEX_MODE index_mode, C Vec2 &size, Bool auto_line, Bool clamp, Bool &eol)C; // get index of character at 'x,y' position, returns "-1 .. Length(text)", 'clamp'=if position is outside of text then clamp to nearest character (if this is false then -1 is returned), this function uses 'align'
 
    Vec2 textPos(CChar *text,                             Int index, Flt width, Bool auto_line)C; // get position of character at 'index' location
    Vec2 textPos(CChar *text, C StrData *data, Int datas, Int index, Flt width, Bool auto_line)C; // get position of character at 'index' location
@@ -176,6 +187,10 @@ struct TextStyleParams // Text Style Params
    Int textLines(CChar  *text,                             Flt width, Bool auto_line, Flt *actual_width=null)C; // get number of lines needed to draw 'text' in space as wide as 'width', 'actual_width'=actual width of the text (this is the Max of all line widths)
    Int textLines(CChar  *text, C StrData *data, Int datas, Flt width, Bool auto_line, Flt *actual_width=null)C; // get number of lines needed to draw 'text' in space as wide as 'width', 'actual_width'=actual width of the text (this is the Max of all line widths)
    Int textLines(CChar8 *text, C StrData *data, Int datas, Flt width, Bool auto_line, Flt *actual_width=null)C; // get number of lines needed to draw 'text' in space as wide as 'width', 'actual_width'=actual width of the text (this is the Max of all line widths)
+
+   Flt textHeight(CChar  *text,                             Flt width, Bool auto_line, Flt *actual_width=null)C; // get height needed to draw 'text' in space as wide as 'width', 'actual_width'=actual width of the text (this is the Max of all line widths)
+   Flt textHeight(CChar  *text, C StrData *data, Int datas, Flt width, Bool auto_line, Flt *actual_width=null)C; // get height needed to draw 'text' in space as wide as 'width', 'actual_width'=actual width of the text (this is the Max of all line widths)
+   Flt textHeight(CChar8 *text, C StrData *data, Int datas, Flt width, Bool auto_line, Flt *actual_width=null)C; // get height needed to draw 'text' in space as wide as 'width', 'actual_width'=actual width of the text (this is the Max of all line widths)
 
    // operations
    TextStyleParams& reset          (Bool gui=false); // reset all   parameters to default settings, this copies settings from 'Gui.skin.text_style' when 'gui' is false, and 'Gui.skin.text.text_style' when 'gui' is true

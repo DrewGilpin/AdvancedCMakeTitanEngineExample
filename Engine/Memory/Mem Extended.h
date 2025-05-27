@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Memx' for extended block based dynamic array container.
@@ -39,6 +36,10 @@ T1(TYPE) struct Memx : _Memx // Block Based Extended Container
  C TYPE& validElm  (Int i)C; // get i-th  valid    element
    TYPE* addr      (Int i) ; // get i-th  valid    element address, null is returned if index is out of range
  C TYPE* addr      (Int i)C; // get i-th  valid    element address, null is returned if index is out of range
+   TYPE* addrFirst (     ) ; // get first valid    element address, null is returned there are no elements
+ C TYPE* addrFirst (     )C; // get first valid    element address, null is returned there are no elements
+   TYPE* addrLast  (     ) ; // get last  valid    element address, null is returned there are no elements
+ C TYPE* addrLast  (     )C; // get last  valid    element address, null is returned there are no elements
    TYPE& operator[](Int i) ; // get i-th  valid    element
  C TYPE& operator[](Int i)C; // get i-th  valid    element
    TYPE& first     (     ) ; // get first valid    element
@@ -89,6 +90,8 @@ T1(TYPE) struct Memx : _Memx // Block Based Extended Container
                       Memx& operator=(C  Meml  <TYPE      >  &src); // copy elements using assignment operator
    template<Int size> Memx& operator=(C CMemPtr<TYPE, size>  &src); // copy elements using assignment operator
                       Memx& operator=(   Memx  <TYPE      > &&src); // copy elements using assignment operator
+
+   Memx& cleanup(); // release unused memory, this method does not change the memory address of any of the elements, valid indexes are also preserved, however absolute indexes might change
 
    T1(EXTENDED) Memx& replaceClass(); // replace the type of class stored in the container, all elements are automatically removed before changing the type of the class, the new type must be extended from the base 'TYPE' (if you're receiving a compilation error pointing to this method this means that the new class isn't extended from the base class)
 

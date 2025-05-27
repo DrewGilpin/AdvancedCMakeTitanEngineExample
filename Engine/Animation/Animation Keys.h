@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'AnimationKeys' to store animation keys:
@@ -10,6 +7,11 @@
       -scale
 
 /******************************************************************************/
+#if EE_PRIVATE
+   #define HAS_ANIM_TANGENT 0
+   #define HAS_ANIM_ROT     0
+   #define HAS_ANIM_COLOR   0
+#endif
 struct AnimParams
 {
    Bool loop  ,
@@ -41,14 +43,26 @@ struct  AnimationKeys // Animation Keys - set of animation keyframes for a singl
    struct Orn : Key // Target Orientation
    {
       Orient orn; // orientation
+
+   #if EE_PRIVATE
+      void save(MemPtr<TextNode> nodes)C; // save text
+   #endif
    };
    struct Pos : Key // Offset Position
    {
       Vec pos; // position offset
+
+   #if EE_PRIVATE
+      void save(MemPtr<TextNode> nodes)C; // save text
+   #endif
    };
    struct Scale : Key // Scale
    {
       Vec scale; // scale factor
+
+   #if EE_PRIVATE
+      void save(MemPtr<TextNode> nodes)C; // save text
+   #endif
    };
 
    Mems<Orn  > orns;
@@ -76,6 +90,37 @@ struct  AnimationKeys // Animation Keys - set of animation keyframes for a singl
    AnimKeys& clip       (Bool anim_loop, Bool anim_linear, Flt anim_length, Flt start_time, Flt end_time                                                                                                         ); // clip animation to 'start_time' .. 'end_time', this will remove all keyframes which aren't located in selected range, 'anim_loop'=if animation is looped, 'anim_linear'=if animation is linear, 'anim_length'=animation length
 
    void includeTimes(MemPtr<Flt, 16384> orn_times, MemPtr<Flt, 16384> pos_times, MemPtr<Flt, 16384> scale_times)C;
+#if EE_PRIVATE
+   void includeTimes(MemPtr<Flt, 16384> orn_times, MemPtr<Flt, 16384> pos_times, MemPtr<Flt, 16384> scale_times, Flt start, Flt end)C;
+
+   // get
+   Bool timeRange(Flt &min, Flt &max)C; // get min/max time value out of all keyframes, false on fail (if there are no keyframes)
+
+   void matrixNoScale(Matrix  &matrix, C AnimParams &params)C;
+   void matrix       (Matrix  &matrix, C AnimParams &params)C;
+   void matrix       (Matrix3 &matrix, C AnimParams &params, C Matrix3 &default_orn)C; // 'default_orn'=default orientation used when animation has no orientation keys
+   void matrix       (Matrix  &matrix, C AnimParams &params, C Matrix3 &default_orn)C; // 'default_orn'=default orientation used when animation has no orientation keys
+
+   Bool rot  (AxisRoll &rot  , C AnimParams &params)C; // get rotation at specified time, false on fail (if there are no keyframes)
+   Bool color(Vec4     &color, C AnimParams &params)C; // get    color at specified time, false on fail (if there are no keyframes)
+
+   // transform
+   AnimKeys& transform(C Matrix3 &matrix); // transform keyframes by 'matrix', 'matrix' must be normalized
+
+   // convert
+   AnimKeys& convertRotToOrn(C Skeleton &skeleton, Int skel_bone_index, Bool looped, Flt anim_length); // convert relative  rotations to target orientations according to given 'skeleton', 'skel_bone_index'=index of skeleton bone to which this keys belong to (-1=root bone), 'looped'=if animation is looped
+   AnimKeys& convertOrnToRot(C Skeleton &skeleton, Int skel_bone_index, Bool looped, Flt anim_length); // convert target orientations to relative  rotations according to given 'skeleton', 'skel_bone_index'=index of skeleton bone to which this keys belong to (-1=root bone), 'looped'=if animation is looped
+
+   // io
+   Bool saveData (File &f)C;
+   Bool loadData (File &f) ;
+   void loadData3(File &f) ;
+   void loadData2(File &f) ;
+   void loadData1(File &f) ;
+   void loadData0(File &f) ;
+
+   void save(MemPtr<TextNode> nodes)C; // save text
+#endif
 
    AnimKeys& del(); // delete manually
 };

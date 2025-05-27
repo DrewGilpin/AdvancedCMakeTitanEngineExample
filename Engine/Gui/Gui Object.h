@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 enum GUI_OBJ_TYPE : Byte // Gui Object Type
 {
@@ -55,10 +52,39 @@ struct GuiPC // Gui Parent->Child Relation
    GuiPC(              Desktop &desktop);
    GuiPC(C GuiPC &old, Region  &region );
    GuiPC(C GuiPC &old, Window  &window );
+#if EE_PRIVATE
+   GuiPC(C GuiPC &old,  Bool    visible, Bool enabled);
+   GuiPC(C GuiPC &old,  Menu   &menu   );
+   GuiPC(C GuiPC &old, _List   &list   );
+#endif
 };
 /******************************************************************************/
 struct GuiObjNearest
 {
+#if EE_PRIVATE
+   struct Obj
+   {
+      Bool    recalc;
+      Flt     area_min,
+              dist, dist_rect;
+      Rect    rect;
+      GuiObj *obj;
+
+      Bool recalcDo(GuiObjNearest &gon);
+   };
+
+   Byte      state; // 0=haven't yet encountered the starting 'obj' during processing, 1=encountered 'obj', 2='rect' becamed covered
+   Flt       min_dist;
+   Plane2    plane;
+   Rect      rect;
+   GuiObj   *obj;
+   Memt<Obj> nearest;
+
+   Bool test (C Rect &rect)C;
+   void cover(C Rect &rect);
+   void add  (C Rect &rect, Flt area, GuiObj &obj); // 'rect'=rect after clipping, 'area'=rect area before clipping
+   Obj* findNearest();
+#endif
 };
 /******************************************************************************/
 const_mem_addr struct GuiObj // Gui Object interface inherited by all Gui Object classes (Button, CheckBox, Window, ..) !! must be stored in constant memory address !!
@@ -84,6 +110,13 @@ const_mem_addr struct GuiObj // Gui Object interface inherited by all Gui Object
    GuiObj& moveToBottom(             ) ; // move object to bottom   in parent's children hierarchy
    GuiObj& moveAbove   (C GuiObj &obj) ; // move object above 'obj' in parent's children hierarchy, this call will be ignored if objects have different parents
    GuiObj& moveBelow   (C GuiObj &obj) ; // move object below 'obj' in parent's children hierarchy, this call will be ignored if objects have different parents
+#if EE_PRIVATE
+   GuiObj&              windowsToTop() ; // move all parent windows to top (including self)
+   GuiObj&             validateLevel() ; // place    object in correct order in the parents child list
+   Bool partiallyOccludedInSameLevel()C; // if       object is at least partially occluded by any other object in the same hierarchy level
+   Bool                  enabledFull()C; // if       object and all of its parents are  enabled
+   Bool                 disabledFull()C; // if       object or  any of its parents are disabled
+#endif
 
            GuiObj& kbSet                (       ); //   set   keyborard focus
            GuiObj& kbClear              (       ); //   clear keyborard focus
@@ -155,6 +188,7 @@ const_mem_addr struct GuiObj // Gui Object interface inherited by all Gui Object
    Bool isTextLine()C {return is(GO_TEXTLINE);}
    Bool isViewport()C {return is(GO_VIEWPORT);}
    Bool isWindow  ()C {return is(GO_WINDOW  );}
+   Bool isTextEdit()C {return isTextLine() || isTextBox();}
 
    // convert
    Button   & asButton  () {return ( Button   &)T;}   C Button   & asButton  ()C {return ( Button   &)T;} // return as Button   (you may use this only if type()==GO_BUTTON  )
@@ -188,10 +222,39 @@ const_mem_addr struct GuiObj // Gui Object interface inherited by all Gui Object
    virtual Bool save(File &f, CChar *path=null)C; // save to   file, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    virtual Bool load(File &f, CChar *path=null) ; // load from file, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
 
+#if EE_PRIVATE
+   void zero();
+
+   void copyParams(C GuiObj &src); // copy common parameters
+
+   GuiObj* last                 (GUI_OBJ_TYPE type) ; // get last  parent of     'type'
+   GuiObj* first                (GUI_OBJ_TYPE type) ; // get first parent of     'type'
+   GuiObj* firstNon             (GUI_OBJ_TYPE type) ; // get first parent of non 'type'
+   GuiObj* firstContainer       (                 ) ; // get first parent which is a container
+   GuiObj* firstKbParent        (                 ) ; // get first parent which is a Keyboard storage
+   Int     parents              (                 )C; // get how many parents this object belongs to
+
+   Vec2       clientOffset()C; // get client offset (from position to client position)
+   Vec2       clientSize  ()C; // get client size
+   Rect  localClientRect  ()C; // get client rectangle in local  space - this is with having Vec2(0, 0) as top left corner, except Desktop which has D.rect  ().lu()
+   Rect  localClientRectUI()C; // get client rectangle in local  space - this is with having Vec2(0, 0) as top left corner, except Desktop which has D.rectUI().lu()
+   Vec2 screenClientPos   ()C; // get client position  in screen space
+   Rect screenClientRect  ()C; // get client rectangle in screen space
+
+   Bool kbCatch()C; // if object can catch keyboard focus
+
+   GuiObjChildren* children(); // get children container (null if none)
+   void      notifyChildrenOfClientRectChange(C Rect *old_client, C Rect *new_client);
+   void      notifyParentOfRectChange        (C Rect &old_rect  ,   Bool  old_visible);
+   void      notifyParentOfRectChange        ();
+#endif
+
    virtual ~GuiObj(); // set virtual destructor so 'Delete' can be used together with extended classes
             GuiObj();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool         _visible, _disabled, _updated;
    SByte        _base_level;
    Byte         _used;
@@ -220,6 +283,31 @@ struct GuiObjChildren
 
    void del();
 
+#if EE_PRIVATE
+   GuiObj* operator[](Int i)  {return children[i].go;}
+ C GuiObj* operator[](Int i)C {return children[i].go;}
+
+   Bool                 find        (C GuiObj &child, Int &index)C;
+   Bool                 find        (C GuiObj &child_a, C GuiObj &child_b, Int &index_a, Int &index_b)C;
+   Bool                 remove      (  GuiObj &child);
+   Child*               add         (  GuiObj &child, GuiObj &parent);
+   void                validateLevel(C GuiObj &child);
+   Int                  compareLevel(C GuiObj &child_a, C GuiObj &child_b)C;
+   Bool partiallyOccludedInSameLevel(C GuiObj &child);
+   Bool                 moveUp      (C GuiObj &child);
+   Bool                 moveDown    (C GuiObj &child);
+   void                 moveToTop   (C GuiObj &child);
+   void                 moveToBottom(C GuiObj &child);
+   void                 moveAbove   (C GuiObj &child_a, C GuiObj &child_b);
+   void                 moveBelow   (C GuiObj &child_a, C GuiObj &child_b);
+   Bool                 Switch      (C GuiObj &go     , Bool next=true);
+
+   GuiObj* test   (C GuiPC &gpc, C Vec2 &pos, GuiObj* &mouse_wheel);
+   void    nearest(C GuiPC &gpc, GuiObjNearest &gon);
+   void    update (C GuiPC &gpc);
+   void    draw   (C GuiPC &gpc);
+#endif
+
   ~GuiObjChildren() {del();}
    GuiObjChildren() {changed=false; kb=null;}
 
@@ -228,4 +316,23 @@ struct GuiObjChildren
 inline Int Elms(C GuiObjChildren &children) {return children.children.elms();}
 /******************************************************************************/
 CChar* GuiObjTypeName(GUI_OBJ_TYPE type); // get Gui Object Type Name from 'type' GUI_OBJ_TYPE
+#if EE_PRIVATE
+inline Flt GuiMaxX(C Rect &rect) {return  rect.max.x;} // max horizontal extents
+inline Flt GuiMaxY(C Rect &rect) {return -rect.min.y;} // max vertical   extents
+
+struct ByteLocker
+{
+   explicit ByteLocker(Byte &count) : count(count) {count++;}
+           ~ByteLocker(           )                {count--;}
+
+private:
+   Byte &count;
+   NO_COPY_CONSTRUCTOR(ByteLocker);
+};
+#if DEBUG
+   #define DEBUG_BYTE_LOCK(x) ByteLocker locker(x)
+#else
+   #define DEBUG_BYTE_LOCK(x)
+#endif
+#endif
 /******************************************************************************/

@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Controller' to simplify management of character 'Actor' (a physical object).
@@ -42,11 +39,17 @@ struct Controller // Character Controller
 
    Controller();
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool  _on_ground, _crouched, _jumping, _flying;
    Flt   _radius, _height, _height_cur, _time_in_air, _time_jump;
    Vec   _vel_prev, _step_normal, _shape_offset;
    Plane _ground_plane;
+#if EE_PRIVATE
+   void capsuleHeight(Flt height);
+   void zero();
+#endif
 };
 /******************************************************************************/
 Bool DefaultController(Capsule &capsule, C Skeleton &skel); // create a default capsule controller from character skeleton, false on fail

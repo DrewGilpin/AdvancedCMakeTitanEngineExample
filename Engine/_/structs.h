@@ -1,11 +1,10 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 // MATH
 /******************************************************************************/
 struct Half;
 struct VecH2;
+struct VecSSN2;
+struct VecUSN2;
 struct Vec2;
 struct VecD2;
 struct VecI2;
@@ -13,6 +12,7 @@ struct VecB2;
 struct VecSB2;
 struct VecUS2;
 struct VecH;
+struct VecSSN;
 struct Vec;
 struct VecD;
 struct VecI;
@@ -20,11 +20,16 @@ struct VecB;
 struct VecSB;
 struct VecUS;
 struct VecH4;
+struct VecSSN4;
 struct Vec4;
 struct VecD4;
 struct VecI4;
 struct VecB4;
 struct VecSB4;
+struct VecUS4;
+struct Vec5;
+struct VecI5;
+struct VecB5;
 
 struct Plane2;
 struct Plane;
@@ -79,6 +84,7 @@ struct MatrixD3;
 struct Matrix2P;
 struct Matrix;
 struct MatrixM;
+struct MatrixO;
 struct MatrixD;
 struct Matrix4;
 struct GpuMatrix;
@@ -100,6 +106,8 @@ struct Randomizer;
 extern Randomizer Random;
 
 struct InterpolatorTemp;
+
+struct SphereAreaUS;
 /******************************************************************************/
 // ANIMATION
 /******************************************************************************/
@@ -191,6 +199,7 @@ struct MeshPart;
 struct MeshLod;
 struct Mesh;
 struct MeshGroup;
+enum VTX_COMPRESS : Byte;
 /******************************************************************************/
 // INPUT
 /******************************************************************************/
@@ -208,13 +217,17 @@ struct Str;
 struct BStr;
 struct File;
 struct FileText;
-struct PakFile;
-struct Pak;
+struct  PakFile;
+struct SPakFile;
+struct  Pak;
+struct SPak;
 struct PakSet;
 struct PakProgress;
 struct PakInPlace;
+struct PakPostHeader;
 struct PakNode;
 struct PakFileData;
+struct TextParam;
 struct TextNode;
 struct TextData;
 struct XmlNode;

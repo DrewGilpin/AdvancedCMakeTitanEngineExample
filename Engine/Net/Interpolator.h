@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'InterpolatorTime' to calculate time step fraction between sequentially received data.
@@ -57,7 +54,9 @@ struct InterpolatorTime
 
    InterpolatorTime() {reset();}
 
+#if !EE_PRIVATE
 private:
+#endif
    Byte _elms, _count;
    Flt  _time, _cur_duration, _next_duration, _left;
 };
@@ -73,7 +72,9 @@ T1(TYPE) struct AngularInterpolator
 
    AngularInterpolator();
 
+#if !EE_PRIVATE
 private:
+#endif
    TYPE _value, _prev, _cur, _next;
 };
 /******************************************************************************/
@@ -88,7 +89,9 @@ T1(TYPE) struct LinearInterpolator
 
    LinearInterpolator();
 
+#if !EE_PRIVATE
 private:
+#endif
    TYPE _value, _prev, _cur, _next;
 };
 /******************************************************************************/
@@ -103,7 +106,9 @@ T1(TYPE) struct SplineInterpolator
 
    SplineInterpolator();
 
+#if !EE_PRIVATE
 private:
+#endif
    TYPE _value, _prev2, _prev, _cur, _next;
 };
 /******************************************************************************/

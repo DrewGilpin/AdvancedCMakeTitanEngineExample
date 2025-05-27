@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Connection' to handle safe client/server TCP based connections.
@@ -59,7 +56,9 @@ struct Connection // reliable TCP based client/server connection with automatic 
    Connection();
   ~Connection() {del();}
 
+#if !EE_PRIVATE
 private:
+#endif
    CONNECT_STATE _state;
    Byte          _msg_size_progress;
    UInt          _msg_size, _birth;
@@ -68,6 +67,13 @@ private:
    Socket        _socket;
    SockAddr      _address;
    Cipher1       _cipher;
+
+#if EE_PRIVATE
+   void            zero   ();
+   Bool            greet  ();
+   Bool            flushEx(Int timeout); // wait 'timeout' until all data has been sent
+   CONNECT_RECEIVE update (Int timeout, Bool read);
+#endif
 };
 /******************************************************************************/
 struct FastConnection // fast but unreliable UDP based connection, data is not guaranteed to reach the target, multiple data packets may not always be received in the same order as they were sent, received data size will always be the same as when it was sent

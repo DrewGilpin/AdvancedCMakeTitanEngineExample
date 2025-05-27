@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Obj' as a base class for creating your own custom game object classes.
@@ -61,7 +58,20 @@ struct Obj // Game Object interface inherited by all Game Object classes (Game.S
   ~Obj();
    Obj();
 
+#if EE_PRIVATE
+   void         init          (Bool _const, Int type, C UID *id=null) {T._const=_const; T._type=type; if(id)T._id=*id;}
+   void         clearUpdate   ();
+   ObjMap<Obj>* worldObjMap   ();
+   void         removeFromArea();
+   void              putToArea(Area &area);
+   Bool             updateArea();
+
+   friend struct WorldManager;
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    Bool  _const       ;
    Byte  _update_count;
    Int   _type        ; // index of world container in which object is stored (equal to OBJ_TYPE)

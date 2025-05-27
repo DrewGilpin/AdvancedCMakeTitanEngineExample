@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Tri2' to handle 2D triangles, Flt type
@@ -17,6 +14,10 @@ Vec  GetNormal (C Vec  &p0, C Vec  &p1, C Vec  &p2);
 VecD GetNormal (C VecD &p0, C VecD &p1, C VecD &p2);
 Vec  GetNormalU(C Vec  &p0, C Vec  &p1, C Vec  &p2); // calculate un-normalized normal vector from 3 triangle points (length of the vector is equal to the area of the triangle * 2)
 VecD GetNormalU(C VecD &p0, C VecD &p1, C VecD &p2); // calculate un-normalized normal vector from 3 triangle points (length of the vector is equal to the area of the triangle * 2)
+#if EE_PRIVATE
+Vec  GetNormalU   (           C Vec &p1, C Vec &p2); // this is 'GetNormalU' with "p0==VecZero"
+Vec  GetNormalEdge(C Vec &p0, C Vec &p1           ); // calculate partial normal vector from 2 edge points, this needs to be called for every edge in a polygon and summed together
+#endif
 
 // calculate triangle area
 Flt TriArea2(C Vec2  &p0, C Vec2  &p1, C Vec2  &p2); // calculate "area of the triangle * 2", this is the same as "Abs(Cross(p1-p0, p2-p0))"
@@ -226,8 +227,8 @@ Flt TriABAngle(Flt a_length, Flt b_length, Flt c_length); // calculate the angle
 // return blending factors 'blend' that (blend.x*tri.p[0] + blend.y*tri.p[1] + blend.z*tri.p[2] == p), these are also known as "barycentric coordinates"
 Vec  TriBlend(C Vec2  &p, C Tri2  &tri);
 VecD TriBlend(C VecD2 &p, C TriD2 &tri);
-Vec  TriBlend(C Vec   &p, C TriN  &tri, Bool pos_on_tri_plane); // 'pos_on_tri_plane'=if 'p' position lies on 'tri' triangle plane (if you're not sure, then set false)
-VecD TriBlend(C VecD  &p, C TriND &tri, Bool pos_on_tri_plane); // 'pos_on_tri_plane'=if 'p' position lies on 'tri' triangle plane (if you're not sure, then set false)
+Vec  TriBlend(C Vec   &p, C Tri   &tri); // 'p' doesn't need to be on 'tri' plane
+VecD TriBlend(C VecD  &p, C TriD  &tri); // 'p' doesn't need to be on 'tri' plane
 
 // return blending factors 'blend' that (blend.x*p0 + blend.y*p1 + blend.z*p2 + blend.w*p3 == p), these are also known as "barycentric coordinates"
 Vec4 TetraBlend(C Vec &p, C Vec &p0, C Vec &p1, C Vec &p2, C Vec &p3);
@@ -261,6 +262,9 @@ Bool Cuts(C Vec   &point, C Tri   &tri);
 Bool Cuts(C Vec   &point, C TriN  &tri);
 Bool Cuts(C VecD  &point, C TriD  &tri);
 Bool Cuts(C VecD  &point, C TriND &tri);
+#if EE_PRIVATE
+Bool Cuts(C Vec &point, C Tri &tri, C Vec (&tri_cross)[3]);
+#endif
 
 // if points cuts triangle assuming they're coplanar (epsilon=EPS)
 Bool CutsEps(C Vec2  &point, C Tri2  &tri);

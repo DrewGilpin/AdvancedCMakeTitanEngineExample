@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'List' to display a list of elements (with custom columns) in a gui object.
@@ -32,6 +29,12 @@ struct ListColumn : Button // List Column
             explicit ListColumn(DATA_TYPE type, Int offset, Int size, Flt width, C Str &name); // create using manual member description , 'type'=data type, 'offset'=member offset in class, 'size'=sizeof member, 'width'=column width (can also be set to LCW_DATA, LCW_PARENT or LCW_MAX_DATA_PARENT), 'name'=column name
                      ListColumn(                                                            ); // create empty
                      ListColumn(ListColumn &&lc                                             );
+
+#if EE_PRIVATE
+   void     create(C ListColumn &src, _List &list);
+   Int  resizeEdge()C {return _resize_edge;}
+   void     pushed();
+#endif
 
    virtual void update(C GuiPC &gpc)override;
 
@@ -70,6 +73,7 @@ enum LIST_FLAG // List Flag
    LIST_TYPE_LINE        =0x040, // if elements of different "types" won't be displayed in the same line in LDM_RECTS mode, this will work only if LIST_TYPE_SORT is enabled
    LIST_MULTI_SEL        =0x080, // if list supports selection of multiple elements at one time (by using Shift, Ctrl, ..)
    LIST_RESIZABLE_COLUMNS=0x100, // if list columns can be resized using mouse
+   LIST_NEAREST_COLUMN   =0x200, // if perform "nearest" operations per column
 };
 /******************************************************************************/
 const_mem_addr struct _List : GuiObj // Gui List !! must be stored in constant memory address !!
@@ -112,28 +116,30 @@ const_mem_addr struct _List : GuiObj // Gui List !! must be stored in constant m
             _List& setData    (_Map        &map ,           C CMemPtr<Bool> &visible=null, Bool keep_cur=false); // set list data from Map                !! after any change in source data, 'setData' must be called again !!
    T1(TYPE) _List& setDataNode( Memx<TYPE> &memx,           C CMemPtr<Bool> &visible=null, Bool keep_cur=false); // set list data from Memx with children !! after any change in source data, 'setData' must be called again !! TYPE must have a "Memx<TYPE> children" member, for example: "struct TYPE { Memx<TYPE> children; }", in that case 'setDataNode' will add all elements including children recursively
 
-  _List& columnsHidden(Bool hidden                                         );   Bool   columnsHidden    ()C {return              _columns_hidden;} // set/get if all columns are hidden
-  _List&  columnHeight(Flt  base, Flt relative=0                           );   Flt     columnHeight    ()C;                                       // set/get columns           height  ,                     default=(0.055, 0.0   ), final height = "zoom * columnHeightRel() + columnHeightBase()"
-                                                                                Flt     columnHeightBase()C {return                 _column_base;} //     get columns  base     height  ,        0..Inf     , default= 0.055         , final height = "zoom * columnHeightRel() + columnHeightBase()"
-                                                                                Flt     columnHeightRel ()C {return                 _column_rel ;} //     get columns  relative height  ,        0..Inf     , default=        0.0    , final height = "zoom * columnHeightRel() + columnHeightBase()"
-                                                                                Flt     columnPadding   ()C;                                       //     get columns           padding
-  _List&     elmHeight(Flt  height                                         );   Flt        elmHeight    ()C {return                  _elm_height;} // set/get elements          height  ,        0..Inf     , default= 0.050
-  _List&      textSize(Flt  base, Flt relative=0                           );   Flt      textSize       ()C;                                       // set/get text              size    ,                   , default=(0.050, 0.0   ), final text  size = "zoom * elmHeight() *  textSizeRel() +  textSizeBase() "
-                                                                                Flt      textSizeBase   ()C {return                   _text_base;} //     get text     base     size    ,        0..Inf     , default= 0.050         , final text  size = "zoom * elmHeight() *  textSizeRel() +  textSizeBase() "
-                                                                                Flt      textSizeRel    ()C {return                   _text_rel ;} //     get text     relative size    ,        0..Inf     , default=        0.0    , final text  size = "zoom * elmHeight() *  textSizeRel() +  textSizeBase() "
-  _List&     imageSize(C Vec2 &base, Flt relative, C Rect &padding=RectZero); C Vec2&   imageSizeBase   ()C {return                  _image_base;} // set/get image    base     size    ,        0..Inf     , default=(0.0  , 0.1/64), final text  size = "zoom * (image.size * imageSizeRel() + imageSizeBase())", 'padding'=padding applied to the whole element rectangle
-                                                                                Flt     imageSizeRel    ()C {return                  _image_rel ;} // set/get image    relative size    ,        0..Inf     , default=(0.0  , 0.1/64), final image size = "zoom * (image.size * imageSizeRel() + imageSizeBase())"
-                                                                              C Rect&   imageSizePadding()C {return                  _image_padd;} // set/get image    padding  size    ,        0..Inf     , default=(0.0  , 0.1/64), final image size = "zoom * (image.size * imageSizeRel() + imageSizeBase())"
-  _List&      zoom    (Flt zoom                                            );   Flt      zoom           ()C {return                  _zoom      ;} // set/get list     zoom             , zoom_min..zoom_max, default= 1.0
-  _List&      zoomStep(Flt step                                            );   Flt      zoomStep       ()C {return                  _zoom_step ;} // set/get list     zoom step        ,     -Inf..Inf     , default= 0.2, this affects the change of zoom when using Ctrl+MouseWheel on a zoomable List
-                                                                                Flt      zoomScaleFactor()C {return      ScaleFactor(_zoom_step);} //     get list     zoom scale factor,        0..Inf     , default= 1.2
-  _List&          skin(C GuiSkinPtr &skin                                  ); C GuiSkinPtr&         skin()C {return                        _skin;} // set/get skin override, default=null (if set to null then current value of 'Gui.skin' is used), changing this value will automatically change the skin of the list columns
-                                                                                GuiSkin   *      getSkin()C {return _skin ? _skin() : Gui.skin();} //     get actual skin
-                                                                                TextStyle * getTextStyle()C;                                       //     get actual text style
-  _List&    horizontal(Bool           horizontal                           );   Bool          horizontal()C {return                  _horizontal;} // set/get if LDM_RECTS mode should be displayed horizontally, default=false
-  _List&      vertical(Bool           vertical                             );   Bool            vertical()C {return                 !_horizontal;} // set/get if LDM_RECTS mode should be displayed   vertically, default=true
-  _List&      drawMode(LIST_DRAW_MODE mode                                 );   LIST_DRAW_MODE  drawMode()C {return                   _draw_mode;} // set/get draw      mode, LIST_DRAW_MODE, default=LDM_LIST
-                                                                                LIST_SEL_MODE    selMode()C;                                       //     get selection mode affected by keyboard modifiers
+  _List& columnsHidden (Bool hidden                                         );   Bool    columnsHidden   ()C {return              _columns_hidden;} // set/get if all columns are hidden
+                                                                                 Bool    columnsVisible  ()C;                                       //     get if all columns are visible and there are any columns
+  _List& columnHeight  (Flt  base, Flt relative=0                           );   Flt     columnHeight    ()C;                                       // set/get columns           height  ,                     default=(0.055, 0.0   ), final height = "zoom * columnHeightRel() + columnHeightBase()"
+                                                                                 Flt     columnHeightBase()C {return                 _column_base;} //     get columns  base     height  ,        0..Inf     , default= 0.055         , final height = "zoom * columnHeightRel() + columnHeightBase()"
+                                                                                 Flt     columnHeightRel ()C {return                 _column_rel ;} //     get columns  relative height  ,        0..Inf     , default=        0.0    , final height = "zoom * columnHeightRel() + columnHeightBase()"
+                                                                                 Flt     columnPadding   ()C;                                       //     get columns           padding
+  _List&     elmHeight (Flt  height                                         );   Flt        elmHeight    ()C {return                  _elm_height;} // set/get elements          height  ,        0..Inf     , default= 0.050
+  _List&      textSize (Flt  base, Flt relative=0                           );   Flt      textSize       ()C;                                       // set/get text              size    ,                   , default=(0.050, 0.0   ), final text  size = "zoom * elmHeight() *  textSizeRel() +  textSizeBase() "
+                                                                                 Flt      textSizeBase   ()C {return                   _text_base;} //     get text     base     size    ,        0..Inf     , default= 0.050         , final text  size = "zoom * elmHeight() *  textSizeRel() +  textSizeBase() "
+                                                                                 Flt      textSizeRel    ()C {return                   _text_rel ;} //     get text     relative size    ,        0..Inf     , default=        0.0    , final text  size = "zoom * elmHeight() *  textSizeRel() +  textSizeBase() "
+  _List&     imageSize (C Vec2 &base, Flt relative, C Rect &padding=RectZero); C Vec2&   imageSizeBase   ()C {return                  _image_base;} // set/get image    base     size    ,        0..Inf     , default=(0.0  , 0.1/64), final text  size = "zoom * (image.size * imageSizeRel() + imageSizeBase())", 'padding'=padding applied to the whole element rectangle
+                                                                                 Flt     imageSizeRel    ()C {return                  _image_rel ;} // set/get image    relative size    ,        0..Inf     , default=(0.0  , 0.1/64), final image size = "zoom * (image.size * imageSizeRel() + imageSizeBase())"
+                                                                               C Rect&   imageSizePadding()C {return                  _image_padd;} // set/get image    padding  size    ,        0..Inf     , default=(0.0  , 0.1/64), final image size = "zoom * (image.size * imageSizeRel() + imageSizeBase())"
+  _List&      zoom     (Flt zoom                                            );   Flt      zoom           ()C {return                  _zoom      ;} // set/get list     zoom             , zoom_min..zoom_max, default= 1.0
+  _List&      zoomStep (Flt step                                            );   Flt      zoomStep       ()C {return                  _zoom_step ;} // set/get list     zoom step        ,     -Inf..Inf     , default= 0.2, this affects the change of zoom when using Ctrl+MouseWheel on a zoomable List
+                                                                                 Flt      zoomScaleFactor()C {return      ScaleFactor(_zoom_step);} //     get list     zoom scale factor,        0..Inf     , default= 1.2
+  _List&          skin (C GuiSkinPtr &skin                                  ); C GuiSkinPtr&         skin()C {return                        _skin;} // set/get skin override, default=null (if set to null then current value of 'Gui.skin' is used), changing this value will automatically change the skin of the list columns
+                                                                                 GuiSkin   *      getSkin()C {return _skin ? _skin() : Gui.skin();} //     get actual skin
+                                                                                 TextStyle * getTextStyle()C;                                       //     get actual text style
+  _List&    horizontal (Bool           horizontal                           );   Bool          horizontal()C {return                  _horizontal;} // set/get if LDM_RECTS mode should be displayed horizontally, default=false
+  _List&      vertical (Bool           vertical                             );   Bool            vertical()C {return                 !_horizontal;} // set/get if LDM_RECTS mode should be displayed   vertically, default=true
+  _List&     focusable (Bool           on                                   );   Bool           focusable()C {return                   _focusable;} // set/get if can catch keyboard focus, default=true
+  _List&      drawMode (LIST_DRAW_MODE mode                                 );   LIST_DRAW_MODE  drawMode()C {return                   _draw_mode;} // set/get draw      mode, LIST_DRAW_MODE, default=LDM_LIST
+                                                                                 LIST_SEL_MODE    selMode()C;                                       //     get selection mode affected by keyboard modifiers
 
    Int   totalElms()C {return   _total_elms;} // get number of total   elements
    Int visibleElms()C {return _visible_elms;} // get number of visible elements
@@ -153,22 +159,25 @@ const_mem_addr struct _List : GuiObj // Gui List !! must be stored in constant m
    Int dataToVis  (CPtr data    )C;                             // convert data           to visible  index
    Int dataToAbs  (CPtr data    )C;                             // convert data           to absolute index
 
-           Int screenToVisX      (  Flt   x      , C GuiPC *gpc=null)C; // convert screen  position X to visible index                                        , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
-           Int screenToVisY      (  Flt   y      , C GuiPC *gpc=null)C; // convert screen  position Y to visible index                                        , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
-   virtual Int screenToVis       (C Vec2 &pos    , C GuiPC *gpc=null)C; // convert screen  position   to visible index                                        , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
-           Ptr screenToData      (  Flt   y      , C GuiPC *gpc=null)C; // convert screen  position Y to data                                                 , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
-           Ptr screenToData      (C Vec2 &pos    , C GuiPC *gpc=null)C; // convert screen  position   to data                                                 , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
-           Int screenToColumnX   (  Flt   x      , C GuiPC *gpc=null)C; // convert screen  position X to column  index                                        , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
-           Vec2   visToScreenPos (  Int   visible, C GuiPC *gpc=null)C; // convert visible index      to top left corner position of the element on the screen, if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
-           Rect   visToScreenRect(  Int   visible, C GuiPC *gpc=null)C; // convert visible index      to rectangle                of the element on the screen, if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
-           Flt    visToLocalY    (  Int   visible                   )C; // convert visible index      to top             position of the element in local space
-           Vec2   visToLocalPos  (  Int   visible                   )C; // convert visible index      to top left corner position of the element in local space
-           Rect   visToLocalRect (  Int   visible                   )C; // convert visible index      to rectangle                of the element in local space
+           Int  screenToVisX      (  Flt    x      , C GuiPC *gpc=null)C; // convert screen  position X       to visible index                                        , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+           Int  screenToVisY      (  Flt    y      , C GuiPC *gpc=null)C; // convert screen  position Y       to visible index                                        , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+   virtual Int  screenToVis       (C Vec2  &pos    , C GuiPC *gpc=null)C; // convert screen  position         to visible index                                        , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+           Ptr  screenToData      (  Flt    y      , C GuiPC *gpc=null)C; // convert screen  position Y       to data                                                 , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+           Ptr  screenToData      (C Vec2  &pos    , C GuiPC *gpc=null)C; // convert screen  position         to data                                                 , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+           Int  screenToColumnX   (  Flt    x      , C GuiPC *gpc=null)C; // convert screen  position X       to column  index                                        , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+           Vec2    visToScreenPos (  Int    visible, C GuiPC *gpc=null)C; // convert            visible index to top left corner position of the element on the screen, if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+           Rect    visToScreenRect(  Int    visible, C GuiPC *gpc=null)C; // convert            visible index to rectangle                of the element on the screen, if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+           Rect    visToScreenRect(C VecI2 &col_vis, C GuiPC *gpc=null)C; // convert column and visible index to rectangle                of the element on the screen, if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null), 'col_vis.x=column', 'col_vis.y=visible index'
+           Flt     visToLocalY    (  Int    visible                   )C; // convert            visible index to top             position of the element in local space
+           Vec2    visToLocalPos  (  Int    visible                   )C; // convert            visible index to top left corner position of the element in local space
+           Rect    visToLocalRect (  Int    visible                   )C; // convert            visible index to rectangle                of the element in local space
 
-   Int nearest(C Vec2 &screen_pos, C Vec2 &dir)C; // get nearest visible index, starting from 'screen_pos' screen position towards 'dir' direction, -1 on fail
+   Int   nearest (C Vec2 &screen_pos, C Vec2 &dir)C; // get nearest visible index, starting from 'screen_pos' screen position towards 'dir' direction, -1 on fail
+   VecI2 nearest2(C Vec2 &screen_pos, C Vec2 &dir)C; // get nearest visible index, starting from 'screen_pos' screen position towards 'dir' direction, -1 on fail, this function includes columns (x=column, y=row)
 
    Int         columns(     )C {return _columns.elms();} // number of columns
    ListColumn& column (Int i)  {return _columns[i]    ;} // get i-th  column
+ C ListColumn& column (Int i)C {return _columns[i]    ;} // get i-th  column
 
                                                  Flt  columnOffset (Int i)C; //     get i-th column horizontal offset
   _List& columnWidth  (Int i,   Flt  width  );   Flt  columnWidth  (Int i)C; // set/get i-th column width, ('width' can also be set to LCW_DATA, LCW_PARENT or LCW_MAX_DATA_PARENT)
@@ -212,9 +221,11 @@ const_mem_addr struct _List : GuiObj // Gui List !! must be stored in constant m
   _List& offsetAllColumns(Bool on); // if apply per element offset to all columns, if set to false then only first column is offsetted, default=false
 
    // operations
+   Bool  scrolling    (                                                 )C; // if list is currently scrolling along any      direction
    Bool  scrollingMain(                                                 )C; // if list is currently scrolling along its main direction
    Vec2  scrollDelta  (                                                 )C; // get amount of scroll that's still left to be done
   _List& scrollTo     (Int i     , Bool immediate=false, Flt center=0.0f) ; // scroll to i-th visible element, 'center'=how much (0..1) to center on the element (0=no centering, 0.5=half centering, 1=full centering)
+  _List& scrollToCol  (Int column, Bool immediate=false, Flt center=0.0f) ; // scroll to column              , 'center'=how much (0..1) to center on the element (0=no centering, 0.5=half centering, 1=full centering)
   _List& scrollY      (Flt delta , Bool immediate=false                 ) ; // vertical scroll by delta
   _List& sort         (Int column, Int  swap     =-1                    ) ; // sort according to 'column' column
   _List& setCur       (Int i                                            ) ; // set     cursor    to specified index, and if list has 'LIST_MULTI_SEL' enabled then set 'sel' accordingly
@@ -230,10 +241,43 @@ const_mem_addr struct _List : GuiObj // Gui List !! must be stored in constant m
    virtual void    update (C GuiPC &gpc)override; // update object
    virtual void    draw   (C GuiPC &gpc)override; // draw   object
 
+#if EE_PRIVATE
+   Int   localToVirtualX      (  Flt   local_x  )C; // this is a visible index without clamping to existing elements (-Inf..Inf)
+   Int   localToVirtualY      (  Flt   local_y  )C; // this is a visible index without clamping to existing elements (-Inf..Inf)
+   Flt   localToVirtualYF     (  Flt   local_y  )C; // this is a visible index without clamping to existing elements (-Inf..Inf)
+   Int   localToVisX          (  Flt   local_x  )C; // this is a visible index with    clamping to existing elements (  -1..elms()-1) -1 on fail
+   Int   localToVisY          (  Flt   local_y  )C; // this is a visible index with    clamping to existing elements (  -1..elms()-1) -1 on fail
+   Int   localToVis           (C Vec2 &local_pos)C; // this is a visible index with    clamping to existing elements (  -1..elms()-1) -1 on fail
+   Int   localToColumnX       (  Flt   local_x  )C; // -1 on fail
+   Int   localToVirtualColumnX(  Flt   local_x  )C; // this is a column  index without clamping (-1 .. columns)
+   Vec2 screenToLocal         (C Vec2 &pos, C GuiPC *gpc=null)C; // convert screen position   to local position, if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+   Int  screenToVirtualX      (  Flt   x  , C GuiPC *gpc=null)C; // convert screen position X to virtual index , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+   Int  screenToVirtualY      (  Flt   y  , C GuiPC *gpc=null)C; // convert screen position Y to virtual index , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+   Flt  screenToVirtualYF     (  Flt   y  , C GuiPC *gpc=null)C; // convert screen position Y to virtual index , if you know the 'GuiPC' then pass it to 'gpc' which will speed up calculations (otherwise leave it to null)
+
+   void zero             ();
+   void init             (Int elms, C CMemPtr<Bool> &visible, Bool keep_cur);
+   void setRects         ();
+   Bool setCurEx         (Int cur, Int dir=0, Bool pushed=false, UInt touch_id=0);
+   Bool setSel           (Int visible);
+   void sort             ();
+   void removeChild      (  GuiObj &child);
+   Vec2 childOffset      (C GuiObj &child)C;
+   void callCurChanged   ();
+   void callSelChanged   ();
+   void callSelChanging  ();
+   Flt  parentWidth      ()C;
+   Flt  columnWidthActual(Int i)C;
+   Flt  columnDataWidth  (Int i, Bool visible=true)C; // get i-th column data width, 'visible'=if check only visible or all elements
+   Flt  columnDataWidthEx(Int i                   )C; // get i-th column data width including column text and padding
+#endif
+
  ~_List() {del();}
   _List();
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Children : GuiObjChildren
    {
       struct Child : GuiObjChildren::Child
@@ -241,6 +285,11 @@ private:
          VecI2 abs_col; // x=abs, y=column
       };
       Children();
+   #if EE_PRIVATE
+      Child* add       (GuiObj &child, GuiObj &parent);
+      Child& operator[](Int i);
+    C Child& operator[](Int i)C;
+   #endif
    };
    Int   _total_elms, _visible_elms, _elm_size;
    Int  *_vis_to_abs , *_abs_to_vis;
@@ -257,7 +306,7 @@ private:
   _Map  *_map ;
   _Memx *_node;
 
-   Bool           _horizontal, _columns_hidden, _offset_first_column, _kb_action;
+   Bool           _horizontal, _columns_hidden, _offset_first_column, _kb_action, _focusable;
    Byte           _search_i;
    LIST_DRAW_MODE _draw_mode;
    Char           _search[32];
@@ -270,6 +319,9 @@ private:
    void         (*_cur_changed)(Ptr user), (*_sel_changed)(Ptr user), (*_sel_changing)(Ptr user);
    GuiSkinPtr     _skin;
 
+#if EE_PRIVATE
+private:
+#endif
   _List& _setData(Ptr data, Int elms, Int elm_size, C CMemPtr<Bool> &visible=null, Bool keep_cur=false);
   _List& _setData(_Memx &node, Int children_offset, C CMemPtr<Bool> &visible=null, Bool keep_cur=false);
 
@@ -278,6 +330,9 @@ protected:
    virtual void        childRectChanged(C Rect *old_rect  , C Rect *new_rect  , GuiObj &child)override;
 
    NO_COPY_CONSTRUCTOR(_List);
+#if EE_PRIVATE
+   friend struct Menu;
+#endif
 };
 /******************************************************************************/
 const_mem_addr T1(TYPE) struct List : _List // Gui List Template !! must be stored in constant memory address !!

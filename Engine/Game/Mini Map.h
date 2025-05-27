@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'MiniMap' to automatically manage world mini maps.
@@ -58,11 +55,17 @@ struct MiniMap
    void del(); // delete manually
    MiniMap();
 
+#if !EE_PRIVATE
 private:
+#endif
    Settings          _settings;
    Str               _name;
    UID               _id;
    Map<VecI2, Image> _map;
+
+#if EE_PRIVATE
+   static Bool Create(Image &image, C VecI2 &key, Ptr user);
+#endif
 };
 /******************************************************************************/
 } // namespace

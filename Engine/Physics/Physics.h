@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Physics' to create and manage physical scene parameters and general manipulation.
@@ -53,10 +50,20 @@ struct ActorInfo // Actor Information
    Int  group    ; // actor collision group (ACTOR_GROUP)
    Ptr  user, obj; // actor user data and object pointer
 
+#if EE_PRIVATE
+   void set(PHYS_API(PxShape, RigidBody) *actor);
+#endif
+
    ActorInfo() {collision=dynamic=false; group=0; user=obj=null; _actor=null;}
 
+#if !EE_PRIVATE
 private:
+#endif
+#if EE_PRIVATE
+   PHYS_API(PxRigidActor, RigidBody) *_actor;
+#else
    Ptr _actor;
+#endif
 };
 /******************************************************************************/
 struct PhysHitBasic // Physics Hit, contains information about physical collision
@@ -66,9 +73,21 @@ struct PhysHitBasic // Physics Hit, contains information about physical collisio
          dist    ; // distance travelled until          collision occurred (0..move.length())
    Vec   face_nrm; // face normal (if face index is known then it's set to face normal in world space, otherwise it's set to 'plane.normal')
    Plane plane   ; // contact plane (position and normal)
+
+#if EE_PRIVATE
+#if PHYSX
+   void set       (C PxLocationHit          &hit ,   Flt      move_length);
+   void updateFace(C PxTriangleMeshGeometry &mesh, C Matrix3 *orn        );
+#endif
+#endif
 };
 struct PhysHit : PhysHitBasic, ActorInfo // Physics Hit, contains information about physical collision
 {
+#if EE_PRIVATE
+#if PHYSX
+   void set(C PxLocationHit &hit, Flt move_length);
+#endif
+#endif
 };
 /******************************************************************************/
 struct PhysContact // Physics contact, contains information about physical contact
@@ -118,6 +137,11 @@ struct PhysicsClass
    PhysicsClass& timestep (PHYS_TIMESTEP_MODE mode    );   PHYS_TIMESTEP_MODE timestep       ()C {return _timestep    ;} // set/get physics time stepping mode                          , default=PHYS_TIMESTEP_ROUND
                                                            PHYS_ENGINE        engine         ()C;                        //     get physics engine which is available in current build
                                                            UInt               collisionGroups(Byte group)C;              //     get bit combination of ACTOR_GROUP that collide with 'group' ACTOR_GROUP
+#if EE_PRIVATE
+   Flt minShapeRadius()C {return _skin*4;}
+   Flt minCapsuleEdge()C {return 0.01f  ;}
+   Int actorShapes   ()C; // get number of actor shapes in world
+#endif
 
    // if shape cuts with any actor on the scene, 'groups'=group flag (ACTOR_GROUP) bit combination specifying which groups should be included in testing, use 'IndexToFlag' function
    static Bool cuts(C Box     &box    , UInt groups=~0);
@@ -177,9 +201,21 @@ struct PhysicsClass
    // draw
    void draw(); // draw all actors, this can be optionally called outside of Render function
 
+#if EE_PRIVATE
+   static Bool ignored        (PHYS_API(PxRigidActor, RigidBody) &a, PHYS_API(PxRigidActor, RigidBody) &b); // if 'a' and 'b' actors are ignoring each other (based on Actor::ignore)
+          Bool collides       (Byte a, Byte b)C {return FlagOn(_collision_array[a], 1<<b);} // if 'a' can     collide  with 'b' ACTOR_GROUP
+          Bool collidesMask   (Byte a, UInt m)C {return FlagOn(                 m , 1<<a);} // if 'a' can     collide  with 'm' ACTOR_GROUP mask
+          Bool reports        (Byte a, Byte b)C {return        _contact_report [a][b]    ;} // if 'a' reports contacts with 'b' ACTOR_GROUP
+          Bool createMaterials();
+          void step           ();
+          void stepCompleted  ();
+#endif
+
    void del(); // manually release physics, normally you don't need to call this as the engine will call this automatically
 
+#if !EE_PRIVATE
 private:
+#endif
    Bool                          _hw, _simulated, _updated, _new_updated, _last_updated, _contact_report[32][32];
    Int                           _precision, _actual_precision, _step_left;
    UInt                          _update_count, _collision_array[32];
@@ -196,4 +232,96 @@ private:
    PhysicsClass();
 }extern
    Physics; // !! Physics needs to be manually created !!
+/******************************************************************************/
+#if EE_PRIVATE
+#if PHYSX
+struct PhysxClass
+{
+   #define MAX_ACTOR_IGNORE_SHIFT 10
+   #define MAX_ACTOR_IGNORE       (1<<MAX_ACTOR_IGNORE_SHIFT)
+
+   struct AllocatorCallback : PxDefaultAllocator
+   {
+	   virtual void*  allocate(size_t size, const char* typeName, const char* filename, int line)override;
+	   virtual void deallocate(void* ptr)override;
+   };
+
+   static Vec         vec   (C PxVec3      &v     ) {return Vec      (v.x, v.y, v.z);}
+   static PxVec3      vec   (C Vec         &v     ) {return PxVec3   (v.x, v.y, v.z);}
+   static Box         box   (C PxBounds3   &box   ) {return Box      (vec(box.minimum), vec(box.maximum));}
+   static PxBounds3   box   (C Box         &box   ) {return PxBounds3(vec(box.min    ), vec(box.max    ));}
+   static Matrix      matrix(C PxTransform &matrix);
+   static PxTransform matrix(C Matrix      &matrix);
+   static Matrix3     orn   (C PxQuat      &quat  );
+   static Matrix3     orn   (C PxMat33     &mat   );
+   static PxQuat      orn   (C Matrix3     &matrix);
+
+   void del   ();
+   Bool create(Bool hardware);
+
+   void updateVehicles();
+
+   INLINE Byte& ignoreMap(UInt a, UInt b) {return ignore_map[a + ((b>>3)<<MAX_ACTOR_IGNORE_SHIFT)];}
+
+   Int                    _mem_leaks;
+   PxFoundation           *foundation;
+   PxPhysics              *physics;
+   PxCooking              *cook[2];
+   PxScene                *world;
+   AllocatorCallback       allocator;
+   Mems<Byte>              ignore_map;
+   IDGenerator             ignore_id_gen;
+#define SUPPORT_PHYSX_VEHICLE 0
+#if     SUPPORT_PHYSX_VEHICLE
+   IDGenerator             vehicle_id_gen;
+   PhysPart                wheel_mesh;
+   PxRaycastQueryResult    raycast_query_result[4];
+   PxRaycastHit            raycast_hit         [4];
+   PxBatchQuery           *batch_query_4;
+   Memc<PxVehicleDrive4W*> vehicles;
+#endif
+
+   PhysxClass()
+   {
+      foundation=null; physics=null; cook[0]=cook[1]=null; world=null; _mem_leaks=0;
+   #if SUPPORT_PHYSX_VEHICLE
+      batch_query_4=null;
+   #endif
+   }
+   NO_COPY_CONSTRUCTOR(PhysxClass);
+}extern
+   Physx;
+
+void DrawConvex(PxConvexMesh   &convex, C Color &color=WHITE, Bool fill=false);
+void DrawMesh  (PxTriangleMesh &mesh  , C Color &color=WHITE, Bool fill=false);
+#else
+struct BulletClass
+{
+   static Vec         vec   (C btVector3   &v) {return Vec      (v.x(), v.y(), v.z());}
+   static btVector3   vec   (C Vec         &v) {return btVector3(v.x  , v.y  , v.z  );}
+   static Matrix3     matrix(C btMatrix3x3 &t);
+   static Matrix      matrix(C btTransform &t);
+   static btMatrix3x3 matrix(C Matrix3     &m);
+   static btTransform matrix(C Matrix      &m);
+
+	void del   ();
+	Bool create();
+
+	btDefaultCollisionConfiguration *collision_config;
+	btCollisionDispatcher           *dispatcher;
+	btBroadphaseInterface           *broadphase;
+	btConstraintSolver              *solver;
+   btDynamicsWorld                 *world;
+   Memc<btTypedConstraint*>         breakables;
+
+   BulletClass() {collision_config=null; dispatcher=null; broadphase=null; solver=null; world=null;}
+   NO_COPY_CONSTRUCTOR(BulletClass);
+}extern
+   Bullet;
+
+void DrawConvex(btConvexHullShape      &convex, C Color &color=WHITE, Bool fill=false);
+void DrawMesh  (btBvhTriangleMeshShape &mesh  , C Color &color=WHITE, Bool fill=false);
+#endif
+void DrawPhys(C MeshBase &base, C Color &color=WHITE, Bool fill=false);
+#endif
 /******************************************************************************/

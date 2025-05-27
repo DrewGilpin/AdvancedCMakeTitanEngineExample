@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Shape' to store custom kind of shape.
@@ -110,6 +107,10 @@ struct Shape // General Shape
 };
 /******************************************************************************/
 // shape type
+#if EE_PRIVATE
+Bool   ShapeType2D   (SHAPE_TYPE type); // if shape type is 2-dimensional
+Bool   ShapeTypeRound(SHAPE_TYPE type); // if shape type has round elements
+#endif
 CChar* ShapeTypeName(SHAPE_TYPE type); // get shape type name from 'type'
 
 // sweep

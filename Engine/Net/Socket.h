@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Socket' to communicate with external devices through the internet.
@@ -48,8 +45,63 @@ struct SockAddr // Socket Address
 
    SockAddr() {clear();}
 
+#if !EE_PRIVATE
 private:
+#endif
    UInt _data[7];
+#if EE_PRIVATE
+   // don't use unions in EE_PRIVATE because of potential alignment issue "struct A {Bool b; SockAddr sa;}" would have different alignments when sockaddr_in is used and when it's not, use UInt to force alignment in case some platforms don't support unaligned reads
+   ASSERT(SIZE(UInt)*7>=SIZE(sockaddr_in) && SIZE(UInt)*7>=SIZE(sockaddr_in6));
+   sockaddr    & sa()  {return *(sockaddr    *)_data;}
+ C sockaddr    & sa()C {return *(sockaddr    *)_data;}
+   sockaddr_in & v4()  {return *(sockaddr_in *)_data;}
+ C sockaddr_in & v4()C {return *(sockaddr_in *)_data;}
+   sockaddr_in6& v6()  {return *(sockaddr_in6*)_data;}
+ C sockaddr_in6& v6()C {return *(sockaddr_in6*)_data;}
+
+#if APPLE || SWITCH
+   INLINE U8& family()  {return (U8&)v4().sin_family;}
+   INLINE U8  family()C {return (U8&)v4().sin_family;}
+   ASSERT(MEMBER_SIZE(sockaddr_in, sin_family)==SIZE(U8) && MEMBER_SIZE(sockaddr_in6, sin6_family)==SIZE(U8) && OFFSET(sockaddr_in, sin_family)==OFFSET(sockaddr_in6, sin6_family));
+#else
+   INLINE U16& family()  {return (U16&)v4().sin_family;}
+   INLINE U16  family()C {return (U16&)v4().sin_family;}
+   ASSERT(MEMBER_SIZE(sockaddr_in, sin_family)==SIZE(U16) && MEMBER_SIZE(sockaddr_in6, sin6_family)==SIZE(U16) && OFFSET(sockaddr_in, sin_family)==OFFSET(sockaddr_in6, sin6_family));
+#endif
+
+#if WINDOWS
+   INLINE Int size()C {return SIZE(_data);}
+#else // must be precise on other platforms
+   INLINE Int size()C {return (family()==AF_INET6) ? SIZE(sockaddr_in6) : SIZE(sockaddr_in);}
+#endif
+
+   INLINE U16& portN()  {return (U16&)v4().sin_port;} // port in Network Byte Order
+   INLINE U16  portN()C {return (U16&)v4().sin_port;} // port in Network Byte Order
+   ASSERT(MEMBER_SIZE(sockaddr_in, sin_port)==SIZE(U16) && MEMBER_SIZE(sockaddr_in6, sin6_port)==SIZE(U16) && OFFSET(sockaddr_in, sin_port)==OFFSET(sockaddr_in6, sin6_port));
+
+   INLINE UInt& v4Ip4()  {return (UInt&)v4().sin_addr;}
+   INLINE UInt  v4Ip4()C {return (UInt&)v4().sin_addr;}
+   ASSERT(MEMBER_SIZE(sockaddr_in, sin_addr)==SIZE(UInt));
+
+   INLINE Byte& v6B(Int i)  {return ((Byte*)&v6().sin6_addr)[i];}
+   INLINE Byte  v6B(Int i)C {return ((Byte*)&v6().sin6_addr)[i];}
+
+   INLINE UShort& v6S(Int i)  {return ((UShort*)&v6().sin6_addr)[i];}
+   INLINE UShort  v6S(Int i)C {return ((UShort*)&v6().sin6_addr)[i];}
+
+   INLINE UInt& v6I(Int i)  {return ((UInt*)&v6().sin6_addr)[i];}
+   INLINE UInt  v6I(Int i)C {return ((UInt*)&v6().sin6_addr)[i];}
+
+   INLINE UInt& v6Ip4()  {return v6I(3);}
+   INLINE UInt  v6Ip4()C {return v6I(3);}
+
+   INLINE void v6setAfterClearAny      () {}
+   INLINE void v6setAfterClearLocalHost() {v6B(15)=1;}
+   INLINE void v6setAfterClearV4Mapped () {v6S( 5)=0xFFFF;}
+
+   Bool needsV6()C; // if this requires an IPv6 socket
+   Bool convert(C SockAddr &src); // this converts between IPv4<->IPv6, false on fail
+#endif
 };
 // compare
        Int  CompareIgnorePort(C SockAddr &a, C SockAddr &b);                           // compare and ignore port
@@ -104,11 +156,19 @@ struct Socket
    Bool any  (Int time); // wait 'time' milliseconds for any 'wait' or 'flush' event   , false on timeout
 
    Int available()C; // get number of bytes available for reading, -1 on fail
+#if EE_PRIVATE
+   Bool select(Bool read, Bool write, Int time);
+   void init  (Bool ipv6);
+
+   static Bool WouldBlock();
+#endif
 
    Socket() {}
   ~Socket() {del();}
 
+#if !EE_PRIVATE
 private:
+#endif
 #if WINDOWS
    UIntPtr _s=NULL_SOCKET;
 #else
@@ -140,8 +200,14 @@ struct SecureSocket : Socket
    SecureSocket() {}
   ~SecureSocket() {unsecure();}
 
+#if !EE_PRIVATE
 private:
+#endif
+#if EE_PRIVATE && SUPPORT_MBED_TLS
+   mbedtls_ssl_context *_secure=null;
+#else
    Ptr _secure=null;
+#endif
    NO_COPY_CONSTRUCTOR(SecureSocket);
 };
 /******************************************************************************/
@@ -161,4 +227,10 @@ Bool SendMail(C Str &from_name, C Str &from_email, C Str &to_name, C Str &to_ema
 
 Bool HandleNetworkError(); // this is needed for Nintendo Switch, if you encounter a network connection error, call this function to display system error message and try to reconnect to the internet. Returns true if message was displayed (on Nintendo Switch), and false if no action was performed (on other platforms).
 Bool NetworkServiceAccountIDToken(CPtr &data, Int &size); // this is needed for Nintendo Switch, this function tries to get "Nintendo Network Service Account ID Token". On success returns true and sets 'data'=token data (doesn't need to be released), 'size'=token size in bytes, on fail returns false and sets 'data'=null, 'size'=0. This function must be called before using any network functions (connecting to any servers/other players). You can proceed with connection only if it returns true, if it returns false then you may not proceed with connections as per Nintendo guidelines. This function will always fail if Nintendo OMAS was not yet configured and approved.
+
+#if EE_PRIVATE
+Bool GetDualStackSocket();
+Bool InitSocket();
+void ShutSocket();
+#endif
 /******************************************************************************/

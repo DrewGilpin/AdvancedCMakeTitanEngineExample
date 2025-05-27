@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'PathFind' for 2D map path finding.
@@ -24,6 +21,28 @@ struct PathFind // 2D Map Path Finder
 
    Bool validPos(Int x, Int y)C {return x<_border.max.x && y<_border.max.y && x>=_border.min.x && y>=_border.min.y;} // if selected position is valid (lies within allowed border)
 
+#if EE_PRIVATE
+   struct Pixel
+   {
+      Byte   flag;
+      Int    added_in_step;
+      UInt   length, iteration;
+      VecI2  xy;
+      Pixel *src;
+
+      void create(Int x, Int y);
+   };
+
+   Pixel& pixel   (Int x, Int y)  {return _map[x + y*_size.x];}
+ C Pixel& pixel   (Int x, Int y)C {return _map[x + y*_size.x];}
+   Pixel& pixel   (C VecI2 &v  )  {return  pixel   (v.x, v.y);}
+ C Pixel& pixel   (C VecI2 &v  )C {return  pixel   (v.x, v.y);}
+   Bool   validPos(C VecI2 &v  )  {return  validPos(v.x, v.y);}
+   Bool   onTarget(C VecI2 &v, C VecI2 *target)C {return target ? v==*target : FlagOn(pixel(v).flag, PFP_TARGET);} // !! 'v' is assumed to be 'validPos' !!
+   void   step    ();
+   void   zero    ();
+#endif
+
    // set
    UInt pixelFlag    (Int x, Int y)C;   PathFind& pixelFlag    (Int x, Int y, Byte flag); // get/set    map pixel flag PATH_FIND_PIXEL_FLAG
    Bool pixelWalkable(Int x, Int y)C;   PathFind& pixelWalkable(Int x, Int y, Bool on  ); // get/set if map pixel is   walkable
@@ -45,8 +64,13 @@ private:
    VecI2     _size;
    RectI     _border;
    UInt      _iteration;
+#if EE_PRIVATE
+   Pixel       *_map;
+   Memc<Pixel*> _active;
+#else
    Ptr       _map;
    Memc<Ptr> _active;
+#endif
 
    NO_COPY_CONSTRUCTOR(PathFind);
 };

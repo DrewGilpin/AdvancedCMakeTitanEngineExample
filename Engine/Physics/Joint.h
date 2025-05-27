@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Joint' to link 2 actors together, or one actor to fixed position in world.
@@ -33,6 +30,10 @@ struct Joint // a Joint between 2 actors, or one actor and fixed position in wor
    Bool   is       (                             )C {return _joint!=null;} // if  created
    Bool   broken   (                             )C;                       // if  joint is broken
    Joint& breakable(Flt max_force, Flt max_torque) ;                       // set breakable parameters, if forces applied to the joint will exceed given parameters the joint will break (use <0 values for non-breakable joint)
+#if EE_PRIVATE
+   Matrix localAnchor(Bool index)C; // get anchor in actor local space (index=which actor), MatrixIdentity on fail
+   void   changed();
+#endif
 
    // hinge joint specific (following methods are supported only on PhysX)
 	Flt  hingeAngle          ()C; // get joint angle in range (-PI, PI]
@@ -50,8 +51,14 @@ struct Joint // a Joint between 2 actors, or one actor and fixed position in wor
   ~Joint() {del();}
    Joint() {_joint=null;}
 
+#if !EE_PRIVATE
 private:
+#endif
+#if EE_PRIVATE
+   PHYS_API(PxJoint, btTypedConstraint) *_joint;
+#else
    Ptr _joint;
+#endif
 
    NO_COPY_CONSTRUCTOR(Joint);
 };

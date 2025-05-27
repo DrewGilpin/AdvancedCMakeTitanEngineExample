@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Cpu' to check your cpu capabilities.
@@ -24,11 +21,18 @@ struct CPU // Central Processing Unit
 {
    // get
    Int   threads()C {return _threads;} // number of hardware threads
+   Int   cores  ()C {return _cores  ;} // number of cores
    UInt  flag   ()C {return _flag   ;} // get CPU_FLAG
  C Str8& name   ()C {return _name   ;} // get CPU name
 
+#if EE_PRIVATE
+   static void set();
+#endif
+
+#if !EE_PRIVATE
 private:
-   Int  _threads;
+#endif
+   Int  _threads, _cores;
    UInt _flag;
    Str8 _name;
 

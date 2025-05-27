@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Matrix2' to represent 2D objects orientation and scale.
@@ -47,8 +44,11 @@ struct Matrix2 // Matrix 2x2 (orientation + scale)
    void     divNormalized(C Matrix2 &matrix, Matrix2 &dest)C;                                     // divide self by 'matrix' and store result in 'dest', this method is faster than 'div' however 'matrix' must be normalized
    Matrix2& divNormalized(C Matrix2 &matrix               ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
 
-   void     inverse(Matrix2 &dest, Bool normalized=false)C;                                   // inverse self to 'dest', if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
-   Matrix2& inverse(               Bool normalized=false) {inverse(T, normalized); return T;} // inverse self          , if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
+   void     inverse(Matrix2 &dest)C;                       // inverse self to 'dest', this method assumes that matrix is orthogonal
+   Matrix2& inverse(             ) {inverse(T); return T;} // inverse self          , this method assumes that matrix is orthogonal
+
+   void     inverseNormalized(Matrix2 &dest)C;                                 // inverse self to 'dest', this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
+   Matrix2& inverseNormalized(             ) {inverseNormalized(T); return T;} // inverse self          , this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
 
    Matrix2& inverseScale(); // inverse scale
 
@@ -85,9 +85,13 @@ struct Matrix2 // Matrix 2x2 (orientation + scale)
 /******************************************************************************/
 struct Matrix3 // Matrix 3x3 (orientation + scale)
 {
-   Vec x, // right   vector
-       y, // up      vector
-       z; // forward vector
+   union
+   {
+      struct{Vec x   ,   // right   vector
+                 y   ,   // up      vector
+                 z   ;}; // forward vector
+      struct{Vec c[3];}; // component
+   };
 
    // transform
    Matrix3& operator*=(     Flt      f);
@@ -122,8 +126,11 @@ struct Matrix3 // Matrix 3x3 (orientation + scale)
    void     divNormalized(C Matrix3 &matrix, Matrix3 &dest)C;                                     // divide self by 'matrix' and store result in 'dest', this method is faster than 'div' however 'matrix' must be normalized
    Matrix3& divNormalized(C Matrix3 &matrix               ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
 
-   void     inverse(Matrix3 &dest, Bool normalized=false)C;                                   // inverse self to 'dest', if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
-   Matrix3& inverse(               Bool normalized=false) {inverse(T, normalized); return T;} // inverse self          , if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
+   void     inverse(Matrix3 &dest)C;                       // inverse self to 'dest', this method assumes that matrix is orthogonal
+   Matrix3& inverse(             ) {inverse(T); return T;} // inverse self          , this method assumes that matrix is orthogonal
+
+   void     inverseNormalized(Matrix3 &dest)C;                                 // inverse self to 'dest', this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
+   Matrix3& inverseNormalized(             ) {inverseNormalized(T); return T;} // inverse self          , this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
 
    void     inverseNonOrthogonal(Matrix3 &dest)C;                                    // inverse self to 'dest', this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
    Matrix3& inverseNonOrthogonal(             ) {inverseNonOrthogonal(T); return T;} // inverse self          , this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
@@ -154,6 +161,12 @@ struct Matrix3 // Matrix 3x3 (orientation + scale)
    Matrix3& rotateZLOrthoNormalized(Flt angle); // rotate matrix by its z vector (z-axis rotation in local space), this method is faster than 'rotateZL' however matrix must be orthogonal and normalized
 
    Matrix3& rotateXLOrthoNormalized(Flt cos, Flt sin); // rotate matrix by its x vector (x-axis rotation in local space), this method works like 'rotateXLOrthoNormalized(Flt angle)' however it accepts 'Cos' and 'Sin' of 'angle'
+   Matrix3& rotateYLOrthoNormalized(Flt cos, Flt sin); // rotate matrix by its y vector (y-axis rotation in local space), this method works like 'rotateYLOrthoNormalized(Flt angle)' however it accepts 'Cos' and 'Sin' of 'angle'
+
+   Matrix3& rotateToYKeepX(C Vec &y); // rotate matrix to Y direction, try to preserve existing X direction, 'y' must be normalized
+   Matrix3& rotateToYKeepZ(C Vec &y); // rotate matrix to Y direction, try to preserve existing Z direction, 'y' must be normalized
+   Matrix3& rotateToZKeepX(C Vec &z); // rotate matrix to Z direction, try to preserve existing X direction, 'z' must be normalized
+   Matrix3& rotateToZKeepY(C Vec &z); // rotate matrix to Z direction, try to preserve existing Y direction, 'z' must be normalized
 
    Matrix3& mirrorX(             ); // mirror matrix in X axis
    Matrix3& mirrorY(             ); // mirror matrix in Y axis
@@ -166,25 +179,40 @@ struct Matrix3 // Matrix 3x3 (orientation + scale)
    Matrix3& identity(         ); // set as identity
    Matrix3& identity(Flt blend); // set as identity, this method is similar to 'identity()' however it does not perform full reset of the matrix. Instead, smooth reset is applied depending on 'blend' value (0=no reset, 1=full reset)
    Matrix3& zero    (         ); // set all vectors to zero
+#if EE_PRIVATE
+   Matrix3& keep01(Flt blend); // same as "identity(1-blend)", assumes 0<=blend<=1
+#endif
 
    Matrix3& setScale(  Flt  scale); // set as scaled identity
    Matrix3& setScale(C Vec &scale); // set as scaled identity
+
+   Matrix3& setScaled(C Matrix3 &src, Flt scale); // set as scaled 'src'
 
    Matrix3& setRotateX (             Flt angle); // set as   x-rotated identity
    Matrix3& setRotateY (             Flt angle); // set as   y-rotated identity
    Matrix3& setRotateZ (             Flt angle); // set as   z-rotated identity
    Matrix3& setRotateXY(  Flt  x   , Flt y    ); // set as x-y-rotated identity, works the same as 'setRotateX(x).rotateY(y)' but faster
    Matrix3& setRotate  (C Vec &axis, Flt angle); // set as     rotated by vector identity, 'axis' must be normalized
+#if EE_PRIVATE
+   Matrix3& setRotateCosSin(C Vec &axis, Flt cos, Flt sin); // set as rotated by vector identity, 'axis' must be normalized
+#endif
 
-   Matrix3& setOrient  (DIR_ENUM dir                       ); // set as identity orientation from DIR_ENUM
-   Matrix3& setRight   (C Vec &right                       ); // set as x='right'       and calculate correct y,z, 'right'        must be normalized
-   Matrix3& setUp      (C Vec &up                          ); // set as y='up'          and calculate correct x,z, 'up'           must be normalized
-   Matrix3& setDir     (C Vec &dir                         ); // set as z='dir'         and calculate correct x,y, 'dir'          must be normalized
-   Matrix3& setDir     (C Vec &dir, C Vec &up              ); // set as z='dir', y='up' and calculate correct x  , 'dir up'       must be normalized
-   Matrix3& setDir     (C Vec &dir, C Vec &up, C Vec &right); // set as z='dir', y='up', x='right'               , 'dir up right' must be normalized
-   Matrix3& setRotation(C Vec &dir_from, C Vec &dir_to                     ); // set as matrix which rotates 'dir_from' to 'dir_to',                                              'dir_from dir_to' must be normalized
-   Matrix3& setRotation(C Vec &dir_from, C Vec &dir_to, Flt blend          ); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value                          , 'dir_from dir_to' must be normalized
-   Matrix3& setRotation(C Vec &dir_from, C Vec &dir_to, Flt blend, Flt roll); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value and additional roll angle, 'dir_from dir_to' must be normalized
+   Matrix3& setOrient          (DIR_ENUM dir                                       ); // set as orientation from DIR_ENUM
+   Matrix3& setRight           (C Vec &right                                       ); // set as x='right'         and calculate correct y,z, 'right'            must be normalized
+   Matrix3& setRight           (C Vec &right, C Vec &up                            ); // set as x='right', y='up' and calculate correct z  , 'right' 'up'       must be normalized
+   Matrix3& setUp              (C Vec &up                                          ); // set as y='up'            and calculate correct x,z, 'up'               must be normalized
+   Matrix3& setDir             (C Vec &dir                                         ); // set as z='dir'           and calculate correct x,y, 'dir'              must be normalized
+   Matrix3& setDir             (C Vec &dir, C Vec &up                              ); // set as z='dir'  , y='up' and calculate correct x  , 'dir' 'up'         must be normalized
+   Matrix3& setDir             (C Vec &dir, C Vec &up, C Vec &right                ); // set as z='dir'  , y='up', x='right'               , 'dir' 'up' 'right' must be normalized
+   Matrix3& setRotation        (C Vec &dir_from, C Vec &dir_to                     ); // set as matrix which rotates 'dir_from' to 'dir_to',                                              'dir_from' 'dir_to' must be normalized
+   Matrix3& setRotation        (C Vec &dir_from, C Vec &dir_to, Flt blend          ); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value                          , 'dir_from' 'dir_to' must be normalized
+   Matrix3& setRotationMaxAngle(C Vec &dir_from, C Vec &dir_to, Flt max_angle      ); // set as matrix which rotates 'dir_from' to 'dir_to', using max angle                            , 'dir_from' 'dir_to' must be normalized
+   Matrix3& setRotation        (C Vec &dir_from, C Vec &dir_to, Flt blend, Flt roll); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value and additional roll angle, 'dir_from' 'dir_to' must be normalized
+   Matrix3& setRotationRight   (                 C Vec &dir_to                     ); // set as matrix which rotates Vec(1,0,0) to 'dir_to',                                                         'dir_to' must be normalized
+   Matrix3& setRotationUp      (                 C Vec &dir_to                     ); // set as matrix which rotates Vec(0,1,0) to 'dir_to',                                                         'dir_to' must be normalized
+   Matrix3& setRotationForward (                 C Vec &dir_to                     ); // set as matrix which rotates Vec(0,0,1) to 'dir_to',                                                         'dir_to' must be normalized
+
+   Matrix3& setGroundOrient(DIR_ENUM dir); // set as orientation from DIR_ENUM to be used for drawing spherical ground heightmaps
 
    // get
    Flt  determinant()C;
@@ -195,7 +223,7 @@ struct Matrix3 // Matrix 3x3 (orientation + scale)
    Flt avgScale ()C; // get average axis scale
    Flt maxScale ()C; // get maximum axis scale
 
-   Vec angles   (                                )C; // get rotation angles, this allows to reconstruct the matrix using "setRotateZ(angle.z).rotateX(angle.x).rotateY(angle.y)" or faster by using "setRotateZ(angle.z).rotateXY(angle.x, angle.y)"
+   Vec angles   (                                )C; // get rotation angles, this allows to reconstruct the matrix using "setRotateZ(angle.z).rotateX(angle.x).rotateY(angle.y)" or faster by using "setRotateZ(angle.z).rotateXY(angle.x, angle.y)", alternative is "identity().rotateYLOrthoNormalized(angle.y).rotateXLOrthoNormalized(angle.x).rotateZLOrthoNormalized(angle.z)"
    Vec axis     (           Bool normalized=false)C; // get rotation axis                , if you know that the matrix is normalized then set 'normalized=true' for more performance
    Flt angle    (           Bool normalized=false)C; // get rotation angle               , if you know that the matrix is normalized then set 'normalized=true' for more performance
    Flt axisAngle(Vec &axis, Bool normalized=false)C; // get rotation axis and       angle, if you know that the matrix is normalized then set 'normalized=true' for more performance
@@ -203,6 +231,14 @@ struct Matrix3 // Matrix 3x3 (orientation + scale)
    Flt angleY   (           Bool normalized=false)C; // get rotation angle along Y axis  , if you know that the matrix is normalized then set 'normalized=true' for more performance, this is the same as "axisAngle(normalized).y" but faster
 
    Str asText(Int precision=INT_MAX)C {return S+"X: "+x.asText(precision)+", Y: "+y.asText(precision)+", Z:"+z.asText(precision);} // get text description
+
+#if EE_PRIVATE
+   // operations
+   Vec2  convert(C Vec   &src, Bool normalized=false)C; // return converted 3D 'src' to 2D vector according to matrix x,y axes
+   Vec   convert(C Vec2  &src                       )C; // return converted 2D 'src' to 3D vector according to matrix x,y axes
+   Edge2 convert(C Edge  &src, Bool normalized=false)C; // return converted 3D 'src' to 2D edge   according to matrix x,y axes
+   Edge  convert(C Edge2 &src                       )C; // return converted 2D 'src' to 3D edge   according to matrix x,y axes
+#endif
 
    // draw
    void draw(C Vec &pos, C Color &x_color=RED, C Color &y_color=GREEN, C Color &z_color=BLUE, Bool arrow=true)C; // draw axes, this can be optionally called outside of Render function, this relies on active object matrix which can be set using 'SetMatrix' function
@@ -221,9 +257,13 @@ struct Matrix3 // Matrix 3x3 (orientation + scale)
 /******************************************************************************/
 struct MatrixD3 // Matrix 3x3 (orientation + scale, double precision)
 {
-   VecD x, // right   vector
-        y, // up      vector
-        z; // forward vector
+   union
+   {
+      struct{VecD x   ,   // right   vector
+                  y   ,   // up      vector
+                  z   ;}; // forward vector
+      struct{VecD c[3];}; // component
+   };
 
    // transform
    MatrixD3& operator*=(  Dbl       f);
@@ -260,8 +300,11 @@ struct MatrixD3 // Matrix 3x3 (orientation + scale, double precision)
    MatrixD3& divNormalized(C Matrix3  &matrix                ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
    MatrixD3& divNormalized(C MatrixD3 &matrix                ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
 
-   void      inverse(MatrixD3 &dest, Bool normalized=false)C;                                   // inverse self to 'dest', if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
-   MatrixD3& inverse(                Bool normalized=false) {inverse(T, normalized); return T;} // inverse self          , if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
+   void      inverse(MatrixD3 &dest)C;                       // inverse self to 'dest', this method assumes that matrix is orthogonal
+   MatrixD3& inverse(              ) {inverse(T); return T;} // inverse self          , this method assumes that matrix is orthogonal
+
+   void      inverseNormalized(MatrixD3 &dest)C;                                 // inverse self to 'dest', this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
+   MatrixD3& inverseNormalized(              ) {inverseNormalized(T); return T;} // inverse self          , this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
 
    void      inverseNonOrthogonal(MatrixD3 &dest)C;                                    // inverse self to 'dest', this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
    MatrixD3& inverseNonOrthogonal(              ) {inverseNonOrthogonal(T); return T;} // inverse self          , this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
@@ -307,16 +350,20 @@ struct MatrixD3 // Matrix 3x3 (orientation + scale, double precision)
    MatrixD3& setRotateZ (              Dbl angle); // set as   z-rotated identity
    MatrixD3& setRotateXY(  Dbl   x   , Dbl y    ); // set as x-y-rotated identity, works the same as 'setRotateX(x).rotateY(y)' but faster
    MatrixD3& setRotate  (C VecD &axis, Dbl angle); // set as     rotated by vector identity, 'axis' must be normalized
+#if EE_PRIVATE
+   MatrixD3& setRotateCosSin(C VecD &axis, Dbl cos, Dbl sin); // set as rotated by vector identity, 'axis' must be normalized
+#endif
 
-   MatrixD3& setOrient  (DIR_ENUM dir                          ); // set as identity orientation from DIR_ENUM
-   MatrixD3& setRight   (C VecD &right                         ); // set as x='right'       and calculate correct y,z, 'right'        must be normalized
-   MatrixD3& setUp      (C VecD &up                            ); // set as y='up'          and calculate correct x,z, 'up'           must be normalized
-   MatrixD3& setDir     (C VecD &dir                           ); // set as z='dir'         and calculate correct x,y, 'dir'          must be normalized
-   MatrixD3& setDir     (C VecD &dir, C VecD &up               ); // set as z='dir', y='up' and calculate correct x  , 'dir up'       must be normalized
-   MatrixD3& setDir     (C VecD &dir, C VecD &up, C VecD &right); // set as z='dir', y='up', x='right'               , 'dir up right' must be normalized
-   MatrixD3& setRotation(C VecD &dir_from, C VecD &dir_to                     ); // set as matrix which rotates 'dir_from' to 'dir_to',                                              'dir_from dir_to' must be normalized
-   MatrixD3& setRotation(C VecD &dir_from, C VecD &dir_to, Dbl blend          ); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value                          , 'dir_from dir_to' must be normalized
-   MatrixD3& setRotation(C VecD &dir_from, C VecD &dir_to, Dbl blend, Dbl roll); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value and additional roll angle, 'dir_from dir_to' must be normalized
+   MatrixD3& setOrient  (DIR_ENUM dir                          ); // set as orientation from DIR_ENUM
+   MatrixD3& setRight   (C VecD &right                         ); // set as x='right'         and calculate correct y,z, 'right'            must be normalized
+   MatrixD3& setRight   (C VecD &right, C VecD &up             ); // set as x='right', y='up' and calculate correct z  , 'right' 'up'       must be normalized
+   MatrixD3& setUp      (C VecD &up                            ); // set as y='up'            and calculate correct x,z, 'up'               must be normalized
+   MatrixD3& setDir     (C VecD &dir                           ); // set as z='dir'           and calculate correct x,y, 'dir'              must be normalized
+   MatrixD3& setDir     (C VecD &dir, C VecD &up               ); // set as z='dir', y='up'   and calculate correct x  , 'dir' 'up'         must be normalized
+   MatrixD3& setDir     (C VecD &dir, C VecD &up, C VecD &right); // set as z='dir', y='up', x='right'                 , 'dir' 'up' 'right' must be normalized
+   MatrixD3& setRotation(C VecD &dir_from, C VecD &dir_to                     ); // set as matrix which rotates 'dir_from' to 'dir_to',                                              'dir_from' 'dir_to' must be normalized
+   MatrixD3& setRotation(C VecD &dir_from, C VecD &dir_to, Dbl blend          ); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value                          , 'dir_from' 'dir_to' must be normalized
+   MatrixD3& setRotation(C VecD &dir_from, C VecD &dir_to, Dbl blend, Dbl roll); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value and additional roll angle, 'dir_from' 'dir_to' must be normalized
 
    // get
    Dbl  determinant()C;
@@ -327,7 +374,7 @@ struct MatrixD3 // Matrix 3x3 (orientation + scale, double precision)
    Dbl avgScale ()C; // get average axis scale
    Dbl maxScale ()C; // get maximum axis scale
 
-   VecD angles   (                                 )C; // get rotation angles, this allows to reconstruct the matrix using "setRotateZ(angle.z).rotateX(angle.x).rotateY(angle.y)" or faster by using "setRotateZ(angle.z).rotateXY(angle.x, angle.y)"
+   VecD angles   (                                 )C; // get rotation angles, this allows to reconstruct the matrix using "setRotateZ(angle.z).rotateX(angle.x).rotateY(angle.y)" or faster by using "setRotateZ(angle.z).rotateXY(angle.x, angle.y)", alternative is "identity().rotateYLOrthoNormalized(angle.y).rotateXLOrthoNormalized(angle.x).rotateZLOrthoNormalized(angle.z)"
    VecD axis     (            Bool normalized=false)C; // get rotation axis                , if you know that the matrix is normalized then set 'normalized=true' for more performance
    Dbl  angle    (            Bool normalized=false)C; // get rotation angle               , if you know that the matrix is normalized then set 'normalized=true' for more performance
    Dbl  axisAngle(VecD &axis, Bool normalized=false)C; // get rotation axis and angle      , if you know that the matrix is normalized then set 'normalized=true' for more performance
@@ -335,6 +382,14 @@ struct MatrixD3 // Matrix 3x3 (orientation + scale, double precision)
    Dbl  angleY   (            Bool normalized=false)C; // get rotation angle along Y axis  , if you know that the matrix is normalized then set 'normalized=true' for more performance, this is the same as "axisAngle(normalized).y" but faster
 
    Str asText(Int precision=INT_MAX)C {return S+"X: "+x.asText(precision)+", Y: "+y.asText(precision)+", Z:"+z.asText(precision);} // get text description
+
+#if EE_PRIVATE
+   // operations
+   VecD2  convert(C VecD   &src, Bool normalized=false)C; // return converted 3D 'src' to 2D vector according to matrix x,y axes
+   VecD   convert(C VecD2  &src                       )C; // retrun converted 2D 'src' to 3D vector according to matrix x,y axes
+   EdgeD2 convert(C EdgeD  &src, Bool normalized=false)C; // return converted 3D 'src' to 2D edge   according to matrix x,y axes
+   EdgeD  convert(C EdgeD2 &src                       )C; // retrun converted 2D 'src' to 3D edge   according to matrix x,y axes
+#endif
 
    // draw
    void draw(C VecD &pos, C Color &x_color=RED, C Color &y_color=GREEN, C Color &z_color=BLUE, Bool arrow=true)C; // draw axes, this can be optionally called outside of Render function, this relies on active object matrix which can be set using 'SetMatrix' function
@@ -396,8 +451,11 @@ struct Matrix2P : Matrix2 // Matrix 3x2 (orientation + scale + position)
    Matrix2P& divNormalized(C Matrix2  &matrix                ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
    Matrix2P& divNormalized(C Matrix2P &matrix                ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
 
-   void      inverse(Matrix2P &dest, Bool normalized=false)C;                                   // inverse self to 'dest', if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
-   Matrix2P& inverse(                Bool normalized=false) {inverse(T, normalized); return T;} // inverse self          , if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
+   void      inverse(Matrix2P &dest)C;                       // inverse self to 'dest', this method assumes that matrix is orthogonal
+   Matrix2P& inverse(              ) {inverse(T); return T;} // inverse self          , this method assumes that matrix is orthogonal
+
+   void      inverseNormalized(Matrix2P &dest)C;                                 // inverse self to 'dest', this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
+   Matrix2P& inverseNormalized(              ) {inverseNormalized(T); return T;} // inverse self          , this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
 
    Matrix2P& normalize(             ) {super::normalize(     ); return T;} // normalize scale           , this sets the length of 'x' 'y' 'z' vectors to 1
    Matrix2P& normalize(  Flt   scale) {super::normalize(scale); return T;} // normalize scale to 'scale', this sets the length of 'x' 'y' 'z' vectors to 'scale'
@@ -514,8 +572,11 @@ struct Matrix : Matrix3 // Matrix 4x3 (orientation + scale + position)
    Matrix& divNormalized(C Matrix  &matrix              ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
    Matrix& divNormalized(C MatrixM &matrix              ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
 
-   void    inverse(Matrix &dest, Bool normalized=false)C;                                   // inverse self to 'dest', if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
-   Matrix& inverse(              Bool normalized=false) {inverse(T, normalized); return T;} // inverse self          , if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
+   void    inverse(Matrix &dest)C;                       // inverse self to 'dest', this method assumes that matrix is orthogonal
+   Matrix& inverse(            ) {inverse(T); return T;} // inverse self          , this method assumes that matrix is orthogonal
+
+   void    inverseNormalized(Matrix &dest)C;                                 // inverse self to 'dest', this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
+   Matrix& inverseNormalized(            ) {inverseNormalized(T); return T;} // inverse self          , this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
 
    void    inverseNonOrthogonal(Matrix &dest)C;                                    // inverse self to 'dest', this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
    Matrix& inverseNonOrthogonal(            ) {inverseNonOrthogonal(T); return T;} // inverse self          , this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
@@ -560,6 +621,9 @@ struct Matrix : Matrix3 // Matrix 4x3 (orientation + scale + position)
    Matrix& identity(         ); // set as identity
    Matrix& identity(Flt blend); // set as identity, this method is similar to 'identity()' however it does not perform full reset of the matrix. Instead, smooth reset is applied depending on 'blend' value (0=no reset, 1=full reset)
    Matrix& zero    (         ); // set all vectors to zero
+#if EE_PRIVATE
+   Matrix& keep01(Flt blend); // same as "identity(1-blend)", assumes 0<=blend<=1
+#endif
 
    Matrix& setPos     (  Flt x, Flt y, Flt z      ); // set as positioned identity
    Matrix& setPos     (C Vec2 &pos                ); // set as positioned identity
@@ -579,11 +643,13 @@ struct Matrix : Matrix3 // Matrix 4x3 (orientation + scale + position)
    Matrix& setRotation(C Vec &pos, C Vec &dir_from, C Vec &dir_to, Flt blend=1); // set as matrix which rotates 'dir_from' to 'dir_to', using blend value, 'dir_from dir_to' must be normalized
 
    Matrix& setPosOrient(C Vec &pos,   DIR_ENUM dir                     ); // set as positioned orientation from DIR_ENUM
-   Matrix& setPosRight (C Vec &pos, C Vec &right                       ); // set as pos='pos', x='right'       and calculate correct y,z, 'right'        must be normalized
-   Matrix& setPosUp    (C Vec &pos, C Vec &up                          ); // set as pos='pos', y='up'          and calculate correct x,z, 'up'           must be normalized
-   Matrix& setPosDir   (C Vec &pos, C Vec &dir                         ); // set as pos='pos', z='dir'         and calculate correct x,y, 'dir'          must be normalized
-   Matrix& setPosDir   (C Vec &pos, C Vec &dir, C Vec &up              ); // set as pos='pos', z='dir', y='up' and calculate correct x  , 'dir up'       must be normalized
-   Matrix& setPosDir   (C Vec &pos, C Vec &dir, C Vec &up, C Vec &right); // set as pos='pos', z='dir', y='up', x='right'               , 'dir up right' must be normalized
+   Matrix& setPosRight (C Vec &pos, C Vec &right                       ); // set as pos='pos', x='right'       and calculate correct y,z, 'right'            must be normalized
+   Matrix& setPosUp    (C Vec &pos, C Vec &up                          ); // set as pos='pos', y='up'          and calculate correct x,z, 'up'               must be normalized
+   Matrix& setPosDir   (C Vec &pos, C Vec &dir                         ); // set as pos='pos', z='dir'         and calculate correct x,y, 'dir'              must be normalized
+   Matrix& setPosDir   (C Vec &pos, C Vec &dir, C Vec &up              ); // set as pos='pos', z='dir', y='up' and calculate correct x  , 'dir' 'up'         must be normalized
+   Matrix& setPosDir   (C Vec &pos, C Vec &dir, C Vec &up, C Vec &right); // set as pos='pos', z='dir', y='up', x='right'               , 'dir' 'up' 'right' must be normalized
+
+   Matrix& setPosGroundOrient(C Vec &pos, DIR_ENUM dir); // set as orientation from DIR_ENUM to be used for drawing spherical ground heightmaps
 
    Matrix& set          (C Box &src, C Box &dest); // set as matrix that transforms 'src' to 'dest' (src*m=dest)
    Matrix& setNormalizeX(C Box &box             ); // set as matrix that (box*m).w()         =1
@@ -597,6 +663,12 @@ struct Matrix : Matrix3 // Matrix 4x3 (orientation + scale + position)
    Str asText(Int precision=INT_MAX)C {return super::asText(precision)+", Pos: "+pos.asText(precision);} // get text description
 
    // operations
+#if EE_PRIVATE
+   Vec2  convert(C Vec   &src, Bool normalized=false)C; // return converted 3D 'src' to 2D vector according to matrix x,y axes and position
+   Vec   convert(C Vec2  &src                       )C; // return converted 2D 'src' to 3D vector according to matrix x,y axes and position
+   Edge2 convert(C Edge  &src, Bool normalized=false)C; // return converted 3D 'src' to 2D edge   according to matrix x,y axes and position
+   Edge  convert(C Edge2 &src                       )C; // return converted 2D 'src' to 3D edge   according to matrix x,y axes and position
+#endif
 
    Matrix& setTransformAtPos(C Vec &pos, C Matrix3 &matrix); // set as transformation at position
    Matrix& setTransformAtPos(C Vec &pos, C Matrix  &matrix); // set as transformation at position
@@ -624,6 +696,27 @@ struct Matrix : Matrix3 // Matrix 4x3 (orientation + scale + position)
    CONVERSION Matrix(C OrientPD &o);
 };extern Matrix
    const MatrixIdentity; // identity
+#if EE_PRIVATE
+
+#define MAX_MATRIX 256 // max available Object Matrixes (256 Matrix * 3 Vec4 = 768 Vec4's)
+
+struct GpuVelocity
+{
+   Vec lin; Flt padd0;
+   Vec ang; Flt padd1;
+
+   void set(C Vec &lin, C Vec &ang) {T.lin=lin; T.ang=ang;}
+};
+
+extern    MatrixM ObjMatrix       , // object matrix
+                  CamMatrix       , // camera, this is always set, even when drawing shadows
+                  CamMatrixPrev   , // camera (from previous frame)
+                  CamMatrixInv    , // camera inversed = ~CamMatrix
+                  CamMatrixInvPrev, // camera inversed = ~CamMatrixPrev (from previous frame)
+                  EyeMatrix    [2], // 'ActiveCam. matrix     ' adjusted for both eyes 0=left, 1=right
+                  EyeMatrixPrev[2]; // 'ActiveCam._matrix_prev' adjusted for both eyes 0=left, 1=right
+extern GpuMatrix *ViewMatrix, *ViewMatrixPrev;
+#endif
 /******************************************************************************/
 struct MatrixM : Matrix3 // Matrix 4x3 (orientation + scale + position, mixed precision, uses Flt for orientation+scale and Dbl for position)
 {
@@ -646,6 +739,8 @@ struct MatrixM : Matrix3 // Matrix 4x3 (orientation + scale + position, mixed pr
    MatrixM& operator*=(C Matrix3 &m) {return mul(m);}
    MatrixM& operator*=(C Matrix  &m) {return mul(m);}
    MatrixM& operator*=(C MatrixM &m) {return mul(m);}
+   MatrixM& operator*=(C MatrixO &m) {return mul(m);}
+   MatrixM& operator*=(C OrientM &o) {return mul(o);}
    MatrixM& operator/=(C Matrix3 &m) {return div(m);}
    MatrixM& operator/=(C Matrix  &m) {return div(m);}
    MatrixM& operator/=(C MatrixM &m) {return div(m);}
@@ -659,6 +754,7 @@ struct MatrixM : Matrix3 // Matrix 4x3 (orientation + scale + position, mixed pr
    friend MatrixM operator* (C MatrixM &a, C Matrix3 &b) {MatrixM temp; a.mul    (b, temp); return temp;} // get a*b
    friend MatrixM operator* (C MatrixM &a, C Matrix  &b) {MatrixM temp; a.mul    (b, temp); return temp;} // get a*b
    friend MatrixM operator* (C MatrixM &a, C MatrixM &b) {MatrixM temp; a.mul    (b, temp); return temp;} // get a*b
+   friend MatrixM operator* (C MatrixM &a, C MatrixO &b) {MatrixM temp; a.mul    (b, temp); return temp;} // get a*b
    friend MatrixM operator/ (C MatrixM &a, C Matrix3 &b) {MatrixM temp; a.div    (b, temp); return temp;} // get a/b
    friend MatrixM operator/ (C MatrixM &a, C Matrix  &b) {MatrixM temp; a.div    (b, temp); return temp;} // get a/b
    friend MatrixM operator/ (C MatrixM &a, C MatrixM &b) {MatrixM temp; a.div    (b, temp); return temp;} // get a/b
@@ -672,9 +768,13 @@ struct MatrixM : Matrix3 // Matrix 4x3 (orientation + scale + position, mixed pr
    void     mul(C Matrix3 &matrix, MatrixM &dest)C; // multiply self by 'matrix' and store result in 'dest'
    void     mul(C Matrix  &matrix, MatrixM &dest)C; // multiply self by 'matrix' and store result in 'dest'
    void     mul(C MatrixM &matrix, MatrixM &dest)C; // multiply self by 'matrix' and store result in 'dest'
+   void     mul(C MatrixO &matrix, MatrixM &dest)C; // multiply self by 'matrix' and store result in 'dest'
+   void     mul(C OrientM &orient, MatrixM &dest)C; // multiply self by 'orient' and store result in 'dest'
    MatrixM& mul(C Matrix3 &matrix               ) {mul(matrix, T); return T;} // multiply self by 'matrix'
    MatrixM& mul(C Matrix  &matrix               ) {mul(matrix, T); return T;} // multiply self by 'matrix'
    MatrixM& mul(C MatrixM &matrix               ) {mul(matrix, T); return T;} // multiply self by 'matrix'
+   MatrixM& mul(C MatrixO &matrix               ) {mul(matrix, T); return T;} // multiply self by 'matrix'
+   MatrixM& mul(C OrientM &orient               ) {mul(orient, T); return T;} // multiply self by 'orient'
 
    void     div(C MatrixM &matrix, Matrix  &dest)C;                           // divide self by 'matrix' and store result in 'dest', this method assumes that matrixes are orthogonal
    void     div(C Matrix3 &matrix, MatrixM &dest)C;                           // divide self by 'matrix' and store result in 'dest', this method assumes that matrixes are orthogonal
@@ -692,8 +792,11 @@ struct MatrixM : Matrix3 // Matrix 4x3 (orientation + scale + position, mixed pr
    MatrixM& divNormalized(C Matrix  &matrix               ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
    MatrixM& divNormalized(C MatrixM &matrix               ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
 
-   void     inverse(MatrixM &dest, Bool normalized=false)C;                                   // inverse self to 'dest', if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
-   MatrixM& inverse(               Bool normalized=false) {inverse(T, normalized); return T;} // inverse self          , if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
+   void     inverse(MatrixM &dest)C;                       // inverse self to 'dest', this method assumes that matrix is orthogonal
+   MatrixM& inverse(             ) {inverse(T); return T;} // inverse self          , this method assumes that matrix is orthogonal
+
+   void     inverseNormalized(MatrixM &dest)C;                                 // inverse self to 'dest', this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
+   MatrixM& inverseNormalized(             ) {inverseNormalized(T); return T;} // inverse self          , this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
 
    void     inverseNonOrthogonal(MatrixM &dest)C;                                    // inverse self to 'dest', this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
    MatrixM& inverseNonOrthogonal(             ) {inverseNonOrthogonal(T); return T;} // inverse self          , this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
@@ -735,6 +838,9 @@ struct MatrixM : Matrix3 // Matrix 4x3 (orientation + scale + position, mixed pr
    MatrixM& identity(         ); // set as identity
    MatrixM& identity(Flt blend); // set as identity, this method is similar to 'identity()' however it does not perform full reset of the matrix. Instead, smooth reset is applied depending on 'blend' value (0=no reset, 1=full reset)
    MatrixM& zero    (         ); // set all vectors to zero
+#if EE_PRIVATE
+   MatrixM& keep01(Flt blend); // same as "identity(1-blend)", assumes 0<=blend<=1
+#endif
 
    MatrixM& setPos     (  Dbl x, Dbl y, Dbl z        ); // set as positioned identity
    MatrixM& setPos     (C VecD2 &pos                 ); // set as positioned identity
@@ -753,13 +859,22 @@ struct MatrixM : Matrix3 // Matrix 4x3 (orientation + scale + position, mixed pr
    MatrixM& setRotate  (C Vec  &axis, Flt angle); // set as     rotated by vector identity, 'axis' must be normalized
 
    MatrixM& setPosOrient(C VecD &pos,   DIR_ENUM dir                     ); // set as positioned orientation from DIR_ENUM
-   MatrixM& setPosRight (C VecD &pos, C Vec &right                       ); // set as pos='pos', x='right'       and calculate correct y,z, 'right'        must be normalized
-   MatrixM& setPosUp    (C VecD &pos, C Vec &up                          ); // set as pos='pos', y='up'          and calculate correct x,z, 'up'           must be normalized
-   MatrixM& setPosDir   (C VecD &pos, C Vec &dir                         ); // set as pos='pos', z='dir'         and calculate correct x,y, 'dir'          must be normalized
-   MatrixM& setPosDir   (C VecD &pos, C Vec &dir, C Vec &up              ); // set as pos='pos', z='dir', y='up' and calculate correct x  , 'dir up'       must be normalized
-   MatrixM& setPosDir   (C VecD &pos, C Vec &dir, C Vec &up, C Vec &right); // set as pos='pos', z='dir', y='up', x='right'               , 'dir up right' must be normalized
+   MatrixM& setPosRight (C VecD &pos, C Vec &right                       ); // set as pos='pos', x='right'       and calculate correct y,z, 'right'            must be normalized
+   MatrixM& setPosUp    (C VecD &pos, C Vec &up                          ); // set as pos='pos', y='up'          and calculate correct x,z, 'up'               must be normalized
+   MatrixM& setPosDir   (C VecD &pos, C Vec &dir                         ); // set as pos='pos', z='dir'         and calculate correct x,y, 'dir'              must be normalized
+   MatrixM& setPosDir   (C VecD &pos, C Vec &dir, C Vec &up              ); // set as pos='pos', z='dir', y='up' and calculate correct x  , 'dir' 'up'         must be normalized
+   MatrixM& setPosDir   (C VecD &pos, C Vec &dir, C Vec &up, C Vec &right); // set as pos='pos', z='dir', y='up', x='right'               , 'dir' 'up' 'right' must be normalized
+
+   MatrixM& setPosGroundOrient(C VecD &pos, DIR_ENUM dir); // set as orientation from DIR_ENUM to be used for drawing spherical ground heightmaps
 
    // operations
+#if EE_PRIVATE
+   Vec2  convert(C VecD  &src, Bool normalized=false)C; // return converted 3D 'src' to 2D vector according to matrix x,y axes and position
+   VecD  convert(C Vec2  &src                       )C; // return converted 2D 'src' to 3D vector according to matrix x,y axes and position
+   Edge2 convert(C EdgeD &src, Bool normalized=false)C; // return converted 3D 'src' to 2D edge   according to matrix x,y axes and position
+   EdgeD convert(C Edge2 &src                       )C; // return converted 2D 'src' to 3D edge   according to matrix x,y axes and position
+#endif
+
    MatrixM& setTransformAtPos(C VecD &pos, C Matrix3 &matrix); // set as transformation at position
    MatrixM& setTransformAtPos(C VecD &pos, C MatrixM &matrix); // set as transformation at position
    MatrixM&    transformAtPos(C VecD &pos, C Matrix3 &matrix); //        transform      at position
@@ -782,6 +897,11 @@ struct MatrixM : Matrix3 // Matrix 4x3 (orientation + scale + position, mixed pr
    CONVERSION MatrixM(C OrientPD &o);
 };extern MatrixM
    const MatrixMIdentity; // identity
+/******************************************************************************/
+struct MatrixO : MatrixM // Matrix with Offset
+{
+   VecD ofs;
+};
 /******************************************************************************/
 struct MatrixD : MatrixD3 // Matrix 4x3 (orientation + scale + position, double precision)
 {
@@ -832,8 +952,11 @@ struct MatrixD : MatrixD3 // Matrix 4x3 (orientation + scale + position, double 
    MatrixD& divNormalized(C MatrixD3 &matrix               ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
    MatrixD& divNormalized(C MatrixD  &matrix               ) {divNormalized(matrix, T); return T;} // divide self by 'matrix'                           , this method is faster than 'div' however 'matrix' must be normalized
 
-   void     inverse(MatrixD &dest, Bool normalized=false)C;                                   // inverse self to 'dest', if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
-   MatrixD& inverse(               Bool normalized=false) {inverse(T, normalized); return T;} // inverse self          , if you know that the matrix is normalized then set 'normalized=true' for more performance, this method assumes that matrix is orthogonal
+   void     inverse(MatrixD &dest)C;                       // inverse self to 'dest', this method assumes that matrix is orthogonal
+   MatrixD& inverse(             ) {inverse(T); return T;} // inverse self          , this method assumes that matrix is orthogonal
+
+   void     inverseNormalized(MatrixD &dest)C;                                 // inverse self to 'dest', this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
+   MatrixD& inverseNormalized(             ) {inverseNormalized(T); return T;} // inverse self          , this method assumes that matrix is orthogonal, this method is faster than 'inverse' however matrix must be normalized
 
    void     inverseNonOrthogonal(MatrixD &dest)C;                                    // inverse self to 'dest', this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
    MatrixD& inverseNonOrthogonal(             ) {inverseNonOrthogonal(T); return T;} // inverse self          , this method is slower than 'inverse' however it properly handles non-orthogonal matrixes
@@ -891,11 +1014,11 @@ struct MatrixD : MatrixD3 // Matrix 4x3 (orientation + scale + position, double 
    MatrixD& setRotate  (C VecD &axis, Dbl angle); // set as     rotated by vector identity, 'axis' must be normalized
 
    MatrixD& setPosOrient(C VecD &pos,   DIR_ENUM dir                        ); // set as positioned orientation from DIR_ENUM
-   MatrixD& setPosRight (C VecD &pos, C VecD &right                         ); // set as pos='pos', x='right'       and calculate correct y,z, 'right'        must be normalized
-   MatrixD& setPosUp    (C VecD &pos, C VecD &up                            ); // set as pos='pos', y='up'          and calculate correct x,z, 'up'           must be normalized
-   MatrixD& setPosDir   (C VecD &pos, C VecD &dir                           ); // set as pos='pos', z='dir'         and calculate correct x,y, 'dir'          must be normalized
-   MatrixD& setPosDir   (C VecD &pos, C VecD &dir, C VecD &up               ); // set as pos='pos', z='dir', y='up' and calculate correct x  , 'dir up'       must be normalized
-   MatrixD& setPosDir   (C VecD &pos, C VecD &dir, C VecD &up, C VecD &right); // set as pos='pos', z='dir', y='up', x='right'               , 'dir up right' must be normalized
+   MatrixD& setPosRight (C VecD &pos, C VecD &right                         ); // set as pos='pos', x='right'       and calculate correct y,z, 'right'            must be normalized
+   MatrixD& setPosUp    (C VecD &pos, C VecD &up                            ); // set as pos='pos', y='up'          and calculate correct x,z, 'up'               must be normalized
+   MatrixD& setPosDir   (C VecD &pos, C VecD &dir                           ); // set as pos='pos', z='dir'         and calculate correct x,y, 'dir'              must be normalized
+   MatrixD& setPosDir   (C VecD &pos, C VecD &dir, C VecD &up               ); // set as pos='pos', z='dir', y='up' and calculate correct x  , 'dir' 'up'         must be normalized
+   MatrixD& setPosDir   (C VecD &pos, C VecD &dir, C VecD &up, C VecD &right); // set as pos='pos', z='dir', y='up', x='right'               , 'dir' 'up' 'right' must be normalized
 
    // get
    VecD scale()C {return super::scale();} // get each axis scale
@@ -903,6 +1026,12 @@ struct MatrixD : MatrixD3 // Matrix 4x3 (orientation + scale + position, double 
    Str asText(Int precision=INT_MAX)C {return super::asText(precision)+", Pos: "+pos.asText(precision);} // get text description
 
    // operations
+#if EE_PRIVATE
+   VecD2  convert(C VecD   &src, Bool normalized=false)C; // return converted 3D 'src' to 2D vector according to matrix x,y axes and position
+   VecD   convert(C VecD2  &src                       )C; // return converted 2D 'src' to 3D vector according to matrix x,y axes and position
+   EdgeD2 convert(C EdgeD  &src, Bool normalized=false)C; // return converted 3D 'src' to 2D edge   according to matrix x,y axes and position
+   EdgeD  convert(C EdgeD2 &src                       )C; // return converted 2D 'src' to 3D edge   according to matrix x,y axes and position
+#endif
 
    MatrixD& setTransformAtPos(C VecD &pos, C MatrixD3 &matrix); // set as transformation at position
    MatrixD& setTransformAtPos(C VecD &pos, C MatrixD  &matrix); // set as transformation at position
@@ -932,6 +1061,10 @@ struct Matrix4 // Matrix 4x4
 {
    Vec4 x, y, z, pos;
 
+#if EE_PRIVATE
+   Flt determinant()C;
+#endif
+
    // transform
    Matrix4& operator*=(C Matrix4 &m) {return mul(m);}
 
@@ -944,6 +1077,11 @@ struct Matrix4 // Matrix 4x4
    void     mul(C Matrix4 &matrix, Matrix4 &dest)C;                           // multiply self by 'matrix' and store result in 'dest' 
    Matrix4& mul(C Matrix4 &matrix               ) {mul(matrix, T); return T;} // multiply self by 'matrix'
 
+#if EE_PRIVATE
+   void offsetX(Flt dx);
+   void offsetY(Flt dy);
+#endif
+
    // set (set methods reset the full matrix)
    Matrix4& identity(); // set as identity
    Matrix4& zero    (); // set all vectors to zero
@@ -952,7 +1090,33 @@ struct Matrix4 // Matrix 4x4
    CONVERSION Matrix4(C Matrix3 &m);
    CONVERSION Matrix4(C Matrix  &m);
 };
+#if EE_PRIVATE
+extern Matrix4 ProjMatrix; // Projection Matrix
+extern Flt     ProjMatrixEyeOffset[2];
+#endif
 /******************************************************************************/
+#if EE_PRIVATE
+struct GpuMatrix // GPU Matrix (transposed Matrix)
+{
+   Flt xx, yx, zx, _x,
+       xy, yy, zy, _y,
+       xz, yz, zz, _z;
+
+   void fromMul(C Matrix  &a, C Matrix  &b)       ; // set from "a*b"
+   void fromMul(C Matrix  &a, C MatrixM &b)       ; // set from "a*b"
+   void fromMul(C MatrixM &a, C Matrix  &b)=delete; // set from "a*b"
+   void fromMul(C MatrixM &a, C MatrixM &b)       ; // set from "a*b"
+
+   void fromDivNormalized(C Matrix  &a, C Matrix  &b)       ; // set from "a/b"
+   void fromDivNormalized(C Matrix  &a, C MatrixM &b)       ; // set from "a/b"
+   void fromDivNormalized(C MatrixM &a, C Matrix  &b)=delete; // set from "a/b"
+   void fromDivNormalized(C MatrixM &a, C MatrixM &b)       ; // set from "a/b"
+
+              GpuMatrix() {}
+   CONVERSION GpuMatrix(C Matrix  &m);
+   CONVERSION GpuMatrix(C MatrixM &m);
+};
+#endif
 struct RevMatrix3 : Matrix3 // Reverse Matrix
 {
 };
@@ -962,6 +1126,10 @@ struct RevMatrix : Matrix // Reverse Matrix
  C RevMatrix3& orn()C {return (RevMatrix3&)T;} // get reference to self as const 'RevMatrix3'
 };
 /******************************************************************************/
+#if EE_PRIVATE
+extern Int Matrixes; // number of active matrixes
+#endif
+/******************************************************************************/
 Bool Equal(C Matrix3  &a, C Matrix3  &b, Flt eps=EPS                   );
 Bool Equal(C MatrixD3 &a, C MatrixD3 &b, Dbl eps=EPSD                  );
 Bool Equal(C Matrix   &a, C Matrix   &b, Flt eps=EPS , Flt pos_eps=EPS );
@@ -969,40 +1137,88 @@ Bool Equal(C MatrixM  &a, C MatrixM  &b, Flt eps=EPS , Dbl pos_eps=EPSD);
 Bool Equal(C MatrixD  &a, C MatrixD  &b, Dbl eps=EPSD, Dbl pos_eps=EPSD);
 Bool Equal(C Matrix4  &a, C Matrix4  &b, Flt eps=EPS                   );
 
-void     GetTransform(Matrix3  &transform, C Orient   &start, C Orient   &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-void     GetTransform(Matrix3  &transform, C Matrix3  &start, C Matrix3  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-void     GetTransform(MatrixD3 &transform, C MatrixD3 &start, C MatrixD3 &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-void     GetTransform(Matrix   &transform, C Matrix   &start, C Matrix   &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-void     GetTransform(MatrixM  &transform, C MatrixM  &start, C MatrixM  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-void     GetTransform(MatrixD  &transform, C MatrixD  &start, C MatrixD  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-Matrix3  GetTransform(                     C Orient   &start, C Orient   &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-Matrix3  GetTransform(                     C Matrix3  &start, C Matrix3  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-MatrixD3 GetTransform(                     C MatrixD3 &start, C MatrixD3 &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-Matrix   GetTransform(                     C Matrix   &start, C Matrix   &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-MatrixM  GetTransform(                     C MatrixM  &start, C MatrixM  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-MatrixD  GetTransform(                     C MatrixD  &start, C MatrixD  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+void     GetTransformNormalized(Matrix3  &transform, C Orient   &start, C Orient   &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result", this function is faster than 'GetTransform' however 'start' and 'result' must be normalized
+void     GetTransform          (Matrix3  &transform, C Matrix3  &start, C Matrix3  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+void     GetTransform          (MatrixD3 &transform, C MatrixD3 &start, C MatrixD3 &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+void     GetTransform          (Matrix   &transform, C Matrix   &start, C Matrix   &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+void     GetTransform          (MatrixM  &transform, C MatrixM  &start, C MatrixM  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+void     GetTransformNormalized(MatrixM  &transform, C MatrixM  &start, C MatrixM  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result", this function is faster than 'GetTransform' however 'start' and 'result' must be normalized
+void     GetTransformNormalized(MatrixO  &transform, C MatrixM  &start, C MatrixM  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result", this function is faster than 'GetTransform' however 'start' and 'result' must be normalized
+void     GetTransform          (MatrixD  &transform, C MatrixD  &start, C MatrixD  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+Matrix3  GetTransformNormalized(                     C Orient   &start, C Orient   &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result", this function is faster than 'GetTransform' however 'start' and 'result' must be normalized
+Matrix3  GetTransform          (                     C Matrix3  &start, C Matrix3  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+MatrixD3 GetTransform          (                     C MatrixD3 &start, C MatrixD3 &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+Matrix   GetTransform          (                     C Matrix   &start, C Matrix   &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+MatrixM  GetTransform          (                     C MatrixM  &start, C MatrixM  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
+MatrixD  GetTransform          (                     C MatrixD  &start, C MatrixD  &result); // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
 
 inline void GetTransform          (RevMatrix &transform, C Matrix &start, C Matrix &result) {result.div          (start, transform);} // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result"
-inline void GetTransformNormalized(RevMatrix &transform, C Matrix &start, C Matrix &result) {result.divNormalized(start, transform);} // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result", this function assumes that 'start' and 'result' are normalized
+inline void GetTransformNormalized(RevMatrix &transform, C Matrix &start, C Matrix &result) {result.divNormalized(start, transform);} // get 'transform' matrix that transforms 'start' to 'result' according to following formula "start*transform=result", this function is faster than 'GetTransform' however 'start' and 'result' must be normalized
 
-void GetDelta(          Vec &angle,                    C Matrix3 &prev, C Matrix3 &cur); // get              angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !!
-void GetDelta(Vec &pos, Vec &angle,                    C Matrix  &prev, C Matrix  &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !!
-void GetDelta(Vec &pos, Vec &angle,                    C MatrixM &prev, C MatrixM &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !!
-void GetDelta(Vec &pos, Vec &angle, C Vec  &prev2_pos, C Matrix  &prev, C Matrix  &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !! 'prev2_pos'=position one step before 'prev', used to calculate more smooth 'pos' delta
-void GetDelta(Vec &pos, Vec &angle, C VecD &prev2_pos, C MatrixM &prev, C MatrixM &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !! 'prev2_pos'=position one step before 'prev', used to calculate more smooth 'pos' delta
+void GetDelta          (          Vec &angle,                    C Matrix3 &prev, C Matrix3 &cur); // get              angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !!
+void GetDeltaNormalized(          Vec &angle,                    C Orient  &prev, C Orient  &cur); // get              angle axis delta from 'prev' and 'cur' matrixes !! matrixes       HAVE TO be normalized !!
+void GetDelta          (Vec &pos, Vec &angle,                    C Matrix  &prev, C Matrix  &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !!
+void GetDelta          (Vec &pos, Vec &angle,                    C MatrixM &prev, C MatrixM &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !!
+void GetDeltaNormalized(Vec &pos, Vec &angle,                    C OrientM &prev, C OrientM &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes       HAVE TO be normalized !!
+void GetDelta          (Vec &pos, Vec &angle, C Vec  &prev2_pos, C Matrix  &prev, C Matrix  &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !! 'prev2_pos'=position one step before 'prev', used to calculate more smooth 'pos' delta
+void GetDelta          (Vec &pos, Vec &angle, C VecD &prev2_pos, C MatrixM &prev, C MatrixM &cur); // get position and angle axis delta from 'prev' and 'cur' matrixes !! matrixes DON'T have to be normalized !! 'prev2_pos'=position one step before 'prev', used to calculate more smooth 'pos' delta
 
 void GetVel(Vec &vel, Vec &ang_vel,                    C Matrix  &prev, C Matrix  &cur, Flt dt=Time.d()); // get linear velocity and angular velocity from 'prev' and 'cur' matrixes using 'dt' time delta !! matrixes DON'T have to be normalized !!
 void GetVel(Vec &vel, Vec &ang_vel,                    C MatrixM &prev, C MatrixM &cur, Flt dt=Time.d()); // get linear velocity and angular velocity from 'prev' and 'cur' matrixes using 'dt' time delta !! matrixes DON'T have to be normalized !!
 void GetVel(Vec &vel, Vec &ang_vel, C Vec  &prev2_pos, C Matrix  &prev, C Matrix  &cur, Flt dt=Time.d()); // get linear velocity and angular velocity from 'prev' and 'cur' matrixes using 'dt' time delta !! matrixes DON'T have to be normalized !! 'prev2_pos'=position one step before 'prev', used to calculate more smooth 'vel' velocity
 void GetVel(Vec &vel, Vec &ang_vel, C VecD &prev2_pos, C MatrixM &prev, C MatrixM &cur, Flt dt=Time.d()); // get linear velocity and angular velocity from 'prev' and 'cur' matrixes using 'dt' time delta !! matrixes DON'T have to be normalized !! 'prev2_pos'=position one step before 'prev', used to calculate more smooth 'vel' velocity
 
-Flt GetLodDist2(C Vec &lod_center                   ); // calculate squared distance from 'lod_center'                         to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
-Flt GetLodDist2(C Vec &lod_center, C Matrix  &matrix); // calculate squared distance from 'lod_center' transformed by 'matrix' to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
-Flt GetLodDist2(C Vec &lod_center, C MatrixM &matrix); // calculate squared distance from 'lod_center' transformed by 'matrix' to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
+Flt GetLodDist2(                                     ); // calculate squared distance                                           to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
+Flt GetLodDist2(C Vec  &lod_center                   ); // calculate squared distance from 'lod_center'                         to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
+Flt GetLodDist2(C VecD &lod_center                   ); // calculate squared distance from 'lod_center'                         to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
+Flt GetLodDist2(C Vec  &lod_center, C Matrix3 &matrix); // calculate squared distance from 'lod_center' transformed by 'matrix' to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
+Flt GetLodDist2(C Vec  &lod_center, C Matrix  &matrix); // calculate squared distance from 'lod_center' transformed by 'matrix' to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
+Flt GetLodDist2(C Vec  &lod_center, C MatrixM &matrix); // calculate squared distance from 'lod_center' transformed by 'matrix' to active camera, returned value can be used as parameter for 'Mesh.getDrawLod' methods
+
+#if EE_PRIVATE
+void InitMatrix();
+
+void SetMatrixCount(Int num=1); // set number of used matrixes and velocities
+void SetFurVelCount(Int num=1); // set number of used fur velocities
+
+void SetFastMatrix(                 ); // set object matrix to 'MatrixIdentity'
+void SetFastMatrix(C Matrix  &matrix); // set object matrix
+void SetFastMatrix(C MatrixM &matrix); // set object matrix
+
+void SetFastMatrixPrev(                 ); // set object matrix to 'MatrixIdentity'
+void SetFastMatrixPrev(C Matrix  &matrix); // set object matrix
+void SetFastMatrixPrev(C MatrixM &matrix); // set object matrix
+
+void SetOneMatrix(                                         ); // set object matrix to 'MatrixIdentity' and number of used matrixes to 1
+void SetOneMatrix(C Matrix  &matrix                        ); // set object matrix                     and number of used matrixes to 1
+void SetOneMatrix(C MatrixM &matrix                        ); // set object matrix                     and number of used matrixes to 1
+void SetOneMatrix(C Matrix  &matrix, C Matrix  &matrix_prev); // set object matrix                     and number of used matrixes to 1
+void SetOneMatrix(C MatrixM &matrix, C MatrixM &matrix_prev); // set object matrix                     and number of used matrixes to 1
+
+void SetOneMatrixAndPrev(); // set object matrix and matrix_prev to 'MatrixIdentity', and number of used matrixes to 1
+
+void SetVelFur(C Matrix3 &view_matrix, C Vec &vel); // set velocity for fur effect
+
+void SetProjMatrix();
+void SetProjMatrix(Flt proj_offset);
+#endif
 
 void SetMatrix(                                         ); // set active object rendering matrix to 'MatrixIdentity'
 void SetMatrix(C Matrix  &matrix                        ); // set active object rendering matrix
 void SetMatrix(C MatrixM &matrix                        ); // set active object rendering matrix
 void SetMatrix(C Matrix  &matrix, C Matrix  &matrix_prev); // set active object rendering matrix for current frame and that was used in previous frame
 void SetMatrix(C MatrixM &matrix, C MatrixM &matrix_prev); // set active object rendering matrix for current frame and that was used in previous frame
+/******************************************************************************/
+// GROUP MATRIX
+void StartGroupMatrix();
+void   SetGroupMatrix   (C MatrixM &obj_matrix                                    ); // supports only non-scaled matrixes
+void   SetGroupMatrixInv(C MatrixM &obj_matrix_inv                                ); // supports only non-scaled matrixes
+void   SetGroupMatrix   (C MatrixM &obj_matrix    , C MatrixM &obj_matrix_prev    ); // supports only non-scaled matrixes
+void   SetGroupMatrixInv(C MatrixM &obj_matrix_inv, C MatrixM &obj_matrix_prev_inv); // supports only non-scaled matrixes
+void   EndGroupMatrix();
+#if EE_PRIVATE
+void FinishGroupMatrix      (); // must be called after RM_PREPARE
+void FinishGroupMatrixShadow();
+void FinishGroupMatrixBlend ();
+#endif
 /******************************************************************************/

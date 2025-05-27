@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'MeshGroup' to store a group of 'Mesh' objects.
@@ -15,8 +12,16 @@ struct MeshGroup // Mesh Group (array of Meshes)
    MeshGroup& del   (                                             ); // delete
    MeshGroup& create(C MeshGroup &src, MESH_FLAG flag_and=MESH_ALL); // create from 'src', 'flag_and'=data to copy
 
-   MeshGroup& create(C Mesh &src, C VecI &cells); // create from 'src' partitioned into "cells.x * cells.y * cells.z" meshes
+   MeshGroup& create(C Mesh &src, C VecI &cells             ); // create from 'src' partitioned into "cells.x * cells.y * cells.z" meshes
+   MeshGroup& create(C Mesh &src, C Plane *plane, Int planes); // create from 'src' separated by planes
 
+#if EE_PRIVATE
+   MeshGroup& create(C Mesh &src, C Boxes &boxes); // create from 'src' and boxes
+
+   void copyParams(C MeshGroup &src); // copy only parameters without meshes
+
+   MeshGroup& include (MESH_FLAG flag); // include   elements specified with 'flag'
+#endif
    MeshGroup& exclude (MESH_FLAG flag); // exclude   elements specified with 'flag'
    MeshGroup& keepOnly(MESH_FLAG flag); // keep only elements specified with 'flag'
 
@@ -24,6 +29,9 @@ struct MeshGroup // Mesh Group (array of Meshes)
    Bool      is       ()C {return meshes.elms()>0;} // if has any meshes
    MESH_FLAG flag     ()C; // get available data
    Int       vtxs     ()C; // get total number of vertexes
+#if EE_PRIVATE
+   Int       baseVtxs ()C; // get total number of vertexes in MeshBase only, without MeshRender
+#endif
    Int       edges    ()C; // get total number of edges
    Int       tris     ()C; // get total number of triangles
    Int       quads    ()C; // get total number of quads
@@ -39,15 +47,24 @@ struct MeshGroup // Mesh Group (array of Meshes)
    MeshGroup& scale    (C Vec &scale             ); // scale          MeshGroup
    MeshGroup& scaleMove(C Vec &scale, C Vec &move); // scale and move MeshGroup
 
-   // texture transform
-   MeshGroup& texMove  (C Vec2 &move , Byte tex_index=0); // move   texture UV's
-   MeshGroup& texScale (C Vec2 &scale, Byte tex_index=0); // scale  texture UV's
-   MeshGroup& texRotate(  Flt   angle, Byte tex_index=0); // rotate texture UV's
+   // UV transform
+   MeshGroup& uvMove  (C Vec2 &move , Byte uv_index=0); // move   UVs
+   MeshGroup& uvScale (C Vec2 &scale, Byte uv_index=0); // scale  UVs
+   MeshGroup& uvRotate(  Flt   angle, Byte uv_index=0); // rotate UVs
+
+#if EE_PRIVATE
+   // texturize
+   MeshGroup& uvMap(  Flt     scale=1, Byte uv_index=0); // map UVs according to vertex XY position and scale
+   MeshGroup& uvMap(C Matrix &matrix , Byte uv_index=0); // map UVs according to matrix
+   MeshGroup& uvMap(C Plane  &plane  , Byte uv_index=0); // map UVs according to plane
+   MeshGroup& uvMap(C Ball   &ball   , Byte uv_index=0); // map UVs according to ball
+   MeshGroup& uvMap(C Tube   &tube   , Byte uv_index=0); // map UVs according to tube
+#endif
 
    // set
    MeshGroup& delBase       (                                                                  ); // delete all software meshes (MeshBase  ) in this mesh
    MeshGroup& delRender     (                                                                  ); // delete all hardware meshes (MeshRender) in this mesh
-   MeshGroup& setRender     (                                                                  ); // set rendering version, convert all MeshBase's to MeshRender's
+   MeshGroup& setRender     (                                                                  ); // set rendering version, convert 'MeshBase' to 'MeshRender'
    MeshGroup& setVtxDup     (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS); // set vertex duplicates (vtx.dup)
    MeshGroup& setNormals    (                                                                  ); // recalculate vertex            3D normals
    MeshGroup& setFaceNormals(                                                                  ); // recalculate triangle and quad 3D normals
@@ -56,6 +73,9 @@ struct MeshGroup // Mesh Group (array of Meshes)
    Bool       setBox        (Bool           set_mesh_boxes                                     ); // recalculate bounding box
 
    // operations
+#if EE_PRIVATE
+   MeshGroup& weldVtx2D    (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld 2D vertexes     , this function will weld vertexes together if they share the same position (ignoring Z), 'flag'=if selected elements aren't equal then don't weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
+#endif
    MeshGroup& weldVtx      (MESH_FLAG flag=MESH_NONE, Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld 3D vertexes     , this function will weld vertexes together if they share the same position             , 'flag'=if selected elements aren't equal then don't weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
    MeshGroup& weldVtxValues(MESH_FLAG flag          , Flt pos_eps=EPS, Flt nrm_cos=EPS_COL_COS, Flt remove_degenerate_faces_eps=EPS); // weld    vertex values, this function will weld values of vertexes which  share the same position             , 'flag'=                                 elements to weld, 'remove_degenerate_faces_eps'=epsilon used for removing degenerate faces which may occur after welding vertexes (use <0 to disable removal)
 
@@ -65,10 +85,21 @@ struct MeshGroup // Mesh Group (array of Meshes)
    MeshGroup& triToQuad(Flt cos=EPS_COL_COS); // triangles to quads    , 'cos'=minimum cosine between 2      triangle normals to weld  them into 1 quad (0..1)
    MeshGroup& quadToTri(Flt cos=2          ); // quads     to triangles, 'cos'=minimum cosine between 2 quad triangle normals to leave them as   1 quad (0..1, value >1 converts all quads into triangles)
 
+#if EE_PRIVATE
+   // fix
+   MeshGroup& fixUVWrapping(Byte uv_index=0); // fix texture wrapping, fixes texture coordinates created by spherical/tube mapping
+   MeshGroup& fixUVOffset  (Byte uv_index=0); // fix texture offset  , tries to reduce big texture coordinates to small ones
+#endif
+
    // add / remove
    MeshGroup& remove(Int i, Bool set_box=true); // remove i-th mesh, 'set_box'=if recalculate bounding box
 
    // optimize
+#if EE_PRIVATE
+   MeshGroup& sortByMaterials(); // sort MeshParts according to their materials
+#endif
+   MeshGroup& optimizeCache(Bool faces=true, Bool vertexes=true); // this method will re-order elements for best rendering performance, 'faces'=if re-order faces, 'vertexes'=if re-order vertexes
+
    MeshGroup& removeDegenerateFaces(Flt eps=EPS);
 
    MeshGroup& simplify(Flt intensity, Flt max_distance=1.0f, Flt max_uv=1.0f, Flt max_color=0.02f, Flt max_material=0.02f, Flt max_skin=1, Flt max_normal=PI, Bool keep_border=false, MESH_SIMPLIFY mode=SIMPLIFY_QUADRIC, Flt pos_eps=EPS, MeshGroup *dest=null, Bool *stop=null); // simplify mesh by removing vertexes/faces, 'intensity'=how much to simplify (0..1, 0=no simplification, 1=full simplification), 'max_distance'=max distance between elements to merge them (0..Inf), 'max_uv'=max allowed vertex texture UV deviations (0..1), 'max_color'=max allowed vertex color deviations (0..1), 'max_material'=max allowed vertex material deviations (0..1), 'max_skin'=max allowed vertex skin deviations (0..1), 'max_normal'=max allowed vertex normal angle deviations (0..PI), 'keep_border'=if always keep border edges (edges that have faces only on one side), 'pos_eps'=vertex position epsilon, 'dest'=destination MeshBase (if set to null then the mesh will simplify itself), 'stop'=set to 'true' on secondary thread to stop this method, returns dest
@@ -76,6 +107,12 @@ struct MeshGroup // Mesh Group (array of Meshes)
    MeshGroup& weldCoplanarFaces(Flt cos_face=EPS_COL8_COS, Flt cos_vtx=EPS_COL8_COS, Bool safe=false, Flt max_face_length=-1); // weld coplanar faces, 'cos_face'=minimum cosine between face normals, 'cos_vtx'=minimum cosine between vertex normals, 'safe'=if process only faces without neighbors, 'max_face_length'=max allowed face length (-1=no limit)
 
    // draw
+   #if EE_PRIVATE
+      // helper drawing
+      void draw2D       (C Color &vtx_color, C Color &edge_color, C Color &face_color, Flt vtx_r=0.04f, Flt side_width=0.01f                                             )C; // draw 2D
+      void drawNormals2D(  Flt    length   , C Color &edge_color, C Color &vtx_color=TRANSPARENT                                                                         )C; // draw 2D normals
+      void drawNormals  (  Flt    length   , C Color &face_color, C Color &vtx_color=TRANSPARENT, C Color &tangent_color=TRANSPARENT, C Color &binormal_color=TRANSPARENT)C; // draw 3D normals
+   #endif
       // default drawing, automatically uses Frustum Culling, this doesn't draw the mesh immediately, instead it adds the mesh to a draw list
       void draw(C MatrixM &matrix)C; // add mesh to draw list using 'matrix' matrix and no velocities, this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
       void draw(                 )C; // add mesh to draw list using identity matrix and no velocities, this should be called only in RM_PREPARE, when used it will automatically draw meshes in following modes when needed: RM_EARLY_Z RM_OPAQUE RM_OPAQUE_M RM_EMISSIVE RM_BLEND
@@ -91,9 +128,23 @@ struct MeshGroup // Mesh Group (array of Meshes)
    Bool save   (File &f, CChar *path=null)C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    Bool load   (File &f, CChar *path=null) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    Bool loadAdd(File &f, CChar *path=null) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail, this method adds the data from file to self (not replaces it)
+#if EE_PRIVATE
+   Bool saveData(File     &f, CChar *path=null)C; // save binary, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadData(File     &f, CChar *path=null) ; // load binary, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool saveTxt (FileText &f, CChar *path=null)C; // save text  , 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadTxt (FileText &f, CChar *path=null) ; // load text  , 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool saveTxt (C Str    &name               )C; // save text  , false on fail
+   Bool loadTxt (C Str    &name               ) ; // load text  , false on fail
+
+   void zero();
+#endif
 
    MeshGroup();
 };
 /******************************************************************************/
 inline Int Elms(C MeshGroup &mshg) {return mshg.meshes.elms();}
+/******************************************************************************/
+#if EE_PRIVATE
+void ShutMesh();
+#endif
 /******************************************************************************/

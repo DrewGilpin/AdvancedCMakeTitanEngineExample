@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Waypoint' to handle helper world positions, paths management.
@@ -49,6 +46,12 @@ struct Waypoint
    Bool load(C Str  &name) ; // load, false on fail
    Bool save(  File &f   )C; // save, false on fail
    Bool load(  File &f   ) ; // load, false on fail
+#if EE_PRIVATE
+   Bool saveData(File &f)C; // save, false on fail
+   Bool loadData(File &f) ; // load, false on fail
+
+   void zero();
+#endif
 
    Waypoint& del(); // delete manually
    Waypoint();

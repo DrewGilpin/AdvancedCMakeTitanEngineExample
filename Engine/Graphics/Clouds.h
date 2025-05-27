@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct LayeredClouds
 {
@@ -14,6 +11,13 @@ struct LayeredClouds
 
     C Vec4& colorL()C {return color_l;}   void colorL(C Vec4 &color_l) {T.color_l=color_l;} // get/set Linear Gamma color
       Vec4  colorS()C;                    void colorS(C Vec4 &color_s);                     // get/set sRGB   Gamma color
+#if EE_PRIVATE
+   #if LINEAR_GAMMA
+      INLINE C Vec4& colorD()C {return colorL();}
+   #else
+      INLINE   Vec4  colorD()C {return colorS();}
+   #endif
+#endif
    };
 
    Bool  merge_with_sky, // if draw clouds together with the sky, this can result in better performance, but supports only up to 1 layer of clouds and Sky.frac() must be set to 1, this also results in drawing astronomical objects on top of clouds, default=false (true for Mobile)
@@ -27,12 +31,21 @@ struct LayeredClouds
 
    void update(); // update layers, this needs to be called once per frame to update the cloud texture animation movement (move the layer texture positions according to velocities)
 
+#if !EE_PRIVATE
 private:
+#endif
    Byte       _layers;
    Flt        _frac, _scale_y;
    MeshRender _mshr;
 
    LayeredClouds();
+#if EE_PRIVATE
+   void del      ();
+   void create   ();
+   void commit   ();
+   void draw     ();
+   void shadowMap();
+#endif
 };
 /******************************************************************************/
 struct VolumetricCloud
@@ -48,6 +61,10 @@ struct VolumetricCloud
            ambient    , // ambient light    sRGB gamma, 0..1
            light_power; // light power      sRGB gamma, 0..1
       Vec  light_pos  ; // light position
+
+   #if EE_PRIVATE
+      void zero() {Zero(T);}
+   #endif
 
       Settings() {detail=3; density=0.75f; noise_min=0.35f; noise_max=1.0f; brightness=0.8f; ambient=0.5f; light_power=0.5f; light_pos=Sun.pos;}
    };
@@ -71,13 +88,25 @@ struct VolumetricCloud
    VolumetricCloud();
   ~VolumetricCloud() {del();}
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Voxel
    {
    #if 0 // Flt - slower (37 fps) but best quality
       Flt density;
+      #if EE_PRIVATE
+         void set(Flt density)  {T.density=density;}
+         Flt  get(           )C {return density;}
+         Flt  positive(      )C {return density*0.5f+0.5f;}
+      #endif
    #else // Byte - faster (48 fps) slightly lower quality (but not noticeable)
       Byte density;
+      #if EE_PRIVATE
+         void set(Flt density)  {T.density=SFltToUByte(density);}
+         Flt  get(           )C {return    UByteToSFlt(density);}
+         Flt  positive(      )C {return     ByteToFlt (density);}
+      #endif
    #endif
    };
    struct Src
@@ -98,6 +127,18 @@ private:
    Byte        *_image_data;
    Threads     *_threads;
    Image        _image;
+#if EE_PRIVATE
+   Voxel& voxel(Int x, Int y, Int z) {return _voxels[y + x*_image.w() + z*_pitch];}
+   void createEx(Int width, Int height, Int depth, Flt frequency, const_mem_addr Threads *threads, UInt seed, Flt noise_gain, Bool object);
+   void zero();
+   void setDensity();
+   void setDensityRow(Int z);
+   void setImageRow  (Int z);
+   void build();
+   void cancelCreate();
+   void cancelBuild ();
+   void  checkBuild ();
+#endif
    NO_COPY_CONSTRUCTOR(VolumetricCloud);
 };
 /******************************************************************************/
@@ -108,15 +149,23 @@ struct VolumetricClouds
    Bool draw_in_mirror; // if draw clouds in mirrors, such as water reflections, default=false
    Int  res_h         ; // max resolution height for the clouds render target, 1..Inf, default=540 (1080/2)
 
-   Flt size     , // cloud dome size in meters     ,                0..Inf          , default=100
-       curve    , // cloud dome curviness          ,                0..1            , default=0.05
-       tex_scale, // texture coordinates scale     ,                0..Inf          , default=0.5
-       shadow   ; // shadow intensity              ,                0..1            , default=0.35
-   Vec color_s  , // cloud color sRGB gamma        ,          (0,0,0)..(1,1,1)      , default=(1,1,1)
-       pos      ; // world space position in meters, (-Inf,-Inf,-Inf)..(Inf,Inf,Inf), default=(0,0,0)
+   Flt size    , // cloud dome size in meters     ,                0..Inf          , default=100
+       curve   , // cloud dome curviness          ,                0..1            , default=0.05
+       uv_scale, // texture coordinates scale     ,                0..Inf          , default=0.5
+       shadow  ; // shadow intensity              ,                0..1            , default=0.35
+   Vec color_s , // cloud color sRGB gamma        ,          (0,0,0)..(1,1,1)      , default=(1,1,1)
+       pos     ; // world space position in meters, (-Inf,-Inf,-Inf)..(Inf,Inf,Inf), default=(0,0,0)
 
+#if !EE_PRIVATE
 private:
+#endif
    VolumetricClouds();
+#if EE_PRIVATE
+   void del      () {cloud.del();}
+   Bool drawable ()C;
+   void draw     ();
+   void shadowMap();
+#endif
 };
 /******************************************************************************/
 struct AllClouds
@@ -124,6 +173,13 @@ struct AllClouds
                Bool draw;
       LayeredClouds layered;
    VolumetricClouds volumetric;
+
+#if EE_PRIVATE
+   void del      () {layered.del(); volumetric.del();}
+   void create   () {draw=true; layered.create();}
+   void drawAll  ();
+   void shadowMap() {layered.shadowMap(); volumetric.shadowMap();} // !! Warning: 'Frustum' is invalid here !!
+#endif
 }extern
    Clouds;
 /******************************************************************************/

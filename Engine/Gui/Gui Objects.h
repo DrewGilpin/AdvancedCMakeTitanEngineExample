@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct GuiObjs // Set of Gui Objects
 {
@@ -159,7 +156,9 @@ struct GuiObjs // Set of Gui Objects
    Bool save(File &f, CChar *path=null)C; // save to   file, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    Bool load(File &f, CChar *path=null) ; // load from file, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
 
+#if !EE_PRIVATE
 private:
+#endif
    struct Obj
    {
       GUI_OBJ_TYPE type , parent_type;
@@ -186,5 +185,9 @@ private:
    MembConst< TextLine > _textline;
    MembConst< Viewport > _viewport;
    MembConst< Window   > _window  ;
+#if EE_PRIVATE
+   MembConst<GuiObj>* objs(GUI_OBJ_TYPE type                       );
+             GuiObj * go  (GUI_OBJ_TYPE type, Int index, Int sub=-1);
+#endif
 };
 /******************************************************************************/

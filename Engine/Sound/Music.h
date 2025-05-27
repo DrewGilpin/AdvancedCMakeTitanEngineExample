@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'MusicManager's 'Music' and 'Ambient' to play different 'Playlist's.
@@ -21,10 +18,18 @@ const_mem_addr struct Playlist // List of Music Tracks !! must be stored in cons
    void operator-=(C Str &name); // remove song from playlist, 'name'=song file name
    void operator-=(C UID &id  ); // remove song from playlist, 'id'  =song file name ID
 
+#if EE_PRIVATE
+   Int globalSong(Int song, Bool shuffle, Randomizer &random); // get global song index, from desired local/playlist song
+   Int   nextSong(          Bool shuffle, Randomizer &random); // get global song index
+   Int   prevSong(          Bool shuffle, Randomizer &random); // get global song index
+#endif
+
   ~Playlist();
    Playlist();
 
+#if !EE_PRIVATE
 private:
+#endif
    Int       _cur;
    Memc<Int> _songs;
 };
@@ -67,7 +72,24 @@ struct MusicManager
    // data callback
    MusicManager& callback(SoundDataCallback *callback);   SoundDataCallback* callback()C {return _callback;} // set/get data callback, it will be called every time a new portion of data is processed by the sound
 
+#if EE_PRIVATE
+   void del     ();
+   void playSong(Int global_song);
+
+   // lock required
+   Flt  lockedTimeLeft()C; // get current song remaining time
+   void lockedUpdate  ();
+   void swap    ();
+   void storePos(Bool i);
+   void fadeIn  (Bool i);
+   void fadeOut (Bool i);
+   void del     (Bool i);
+   void set     (Bool i, Int global_song);
+#endif
+
+#if !EE_PRIVATE
 private:
+#endif
    Int                _song [2], _history_max, _history_pos;
    Sound              _sound[2];
    VOLUME_GROUP       _volume_group;
@@ -80,4 +102,9 @@ private:
 }extern
    Music  , // Music   MusicManager with VOLUME_MUSIC   sound VOLUME_GROUP
    Ambient; // Ambient MusicManager with VOLUME_AMBIENT sound VOLUME_GROUP
+/******************************************************************************/
+#if EE_PRIVATE
+void   ShutMusic();
+void UpdateMusic();
+#endif
 /******************************************************************************/

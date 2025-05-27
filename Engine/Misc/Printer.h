@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct PrinterInfo
 {
@@ -31,11 +28,20 @@ struct RawPrinter
   ~RawPrinter() {disconnect();}
    RawPrinter() {}
 
+#if !EE_PRIVATE
 private:
+#endif
    Str8 data;
    Str  printer_name;
 #if WINDOWS_OLD
+#if EE_PRIVATE
+	HANDLE printer=null;
+#else
    Ptr  printer=null;
+#endif
+#endif
+#if EE_PRIVATE
+   Bool send(C Str8 &data, C Str &document_name=S);
 #endif
    NO_COPY_CONSTRUCTOR(RawPrinter);
 };
@@ -63,8 +69,16 @@ struct ReceiptPrinter : private RawPrinter
    // cash drawer
    Bool openCashDrawer(); // open cash drawer (this does not require 'end'), false on fail
 
+#if !EE_PRIVATE
 private:
+#endif
    Byte code_page;
+#if EE_PRIVATE
+   void init();
+   void codePage(Byte cp);
+   void lineHeight(Byte height); // set custom  line height
+   void lineHeight(           ); // set default line height
+#endif
 };
 struct LabelPrinter : private RawPrinter
 {
@@ -85,7 +99,13 @@ struct LabelPrinter : private RawPrinter
 
    Bool end(C Str &document_name=S); // flush all queued printing commands to printer, false on fail
 
+#if !EE_PRIVATE
 private:
+#endif
+#if EE_PRIVATE
+   void init();
+   void pos(C VecI2 &pos); // set print position
+#endif
    VecI2 res;
 };
 /******************************************************************************/

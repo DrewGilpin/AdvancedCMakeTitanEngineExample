@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    This is a wrapper for "Game Analytics" - https://gameanalytics.com/
@@ -58,6 +55,9 @@ namespace GameAnalytics
    Str getCommandCenterValueAsString(C Str &key);
    Str getCommandCenterValueAsString(C Str &key, C Str &defaultValue);
    Str getCommandCenterConfigurations();
+#if EE_PRIVATE
+ //void setCommandCenterDelegate(id newDelegate);
+#endif
    Bool isCommandCenterReady();
 
    void setEnabledInfoLog(Bool flag);

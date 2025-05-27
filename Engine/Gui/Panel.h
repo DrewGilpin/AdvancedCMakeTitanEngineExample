@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct Panel
 {
@@ -49,8 +46,25 @@ struct Panel
    // get
    void extendedRect           (C Rect &rect, Rect &extended)C; // get rectangle containing panel drawn at 'rect' rectangle
    void innerPadding           (C Rect &rect, Rect &padding )C;
+   void outerMargin            (C Rect &rect, Rect &margin  )C;
    void defaultInnerPadding    (              Rect &padding )C;
    Vec2 defaultInnerPaddingSize(                            )C;
+#if EE_PRIVATE
+   Bool pixelBorder()C; // if this panel draws a 1 pixel border
+   Bool getSideScale(C Rect &rect, Flt &scale)C;
+
+   void getRectTop         (C Rect &rect, Rect &top              , Bool mirror=true)C;
+   void getRectBottom      (C Rect &rect, Rect &bottom           , Bool mirror=true)C;
+   void getRectLeftRight   (C Rect &rect, Rect &left, Rect &right, Bool mirror=true)C;
+   void getRectTopCorner   (C Rect &rect, Rect &left, Rect &right, Bool mirror=true)C;
+   void getRectBottomCorner(C Rect &rect, Rect &left, Rect &right, Bool mirror=true)C;
+
+   void drawShadow(  Byte   shadow, C Rect &rect)C;
+   void drawCenter(C Color &color , C Rect &rect)C;
+   void drawBar   (C Color &color , C Rect &rect)C;
+   void drawBorder(C Color &color , C Rect &rect)C;
+   void drawSide  (C Color &color , C Rect &rect)C;
+#endif
 
    // operations
    void reset      (         ); // reset to default values

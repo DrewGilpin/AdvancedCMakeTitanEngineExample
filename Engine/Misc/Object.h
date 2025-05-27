@@ -1,12 +1,24 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    Use 'Object' to create custom object templates in the Editor.
    They will be used for creation of the actual game objects 'Game.Obj'.
 
 /******************************************************************************/
+#if EE_PRIVATE
+enum OBJ_FLAG // Object Flag
+{
+   OBJ_OVR_SCALE         =1<<0, // override default scale
+   OBJ_OVR_MESH          =1<<1, // override default mesh
+   OBJ_OVR_MESH_VARIATION=1<<2, // override default mesh variation
+   OBJ_OVR_ALIGN         =1<<3, // override default align
+   OBJ_OVR_PHYS          =1<<4, // override default phys
+   OBJ_OVR_TYPE          =1<<5, // override default type
+   OBJ_OVR_ACCESS        =1<<6, // override default access mode
+   OBJ_OVR_PATH          =1<<7, // override default path
+   OBJ_OVR_CONST         =1<<8, // override default const
+   OBJ_CONST             =1<<9, //                  const
+};
+#endif
 enum OBJ_ACCESS : Byte // object access mode
 {
    OBJ_ACCESS_CUSTOM , // object can   be accessed and modified during the game any modifications will be saved in SaveGame, this is suited for all dynamic objects which       require custom class
@@ -85,6 +97,9 @@ struct Object // Object Parameters - they're created in the Editor and are used 
 
    // operations
    Object& updateBase(); // update members according to base (you should call this if base members were changed)
+#if EE_PRIVATE
+   Object& updateBaseSelf(); // update members according to base (of self only, without sub objects)
+#endif
 
    // io
    void operator=(C Str &name) ; // load, Exit  on fail
@@ -93,6 +108,12 @@ struct Object // Object Parameters - they're created in the Editor and are used 
    Bool load     (C Str &name) ; // load, false on fail
    Bool save     (File &f, CChar *path=null)C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
    Bool load     (File &f, CChar *path=null) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+#if EE_PRIVATE
+   Bool saveData(File &f, CChar *path=null)C; // save, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+   Bool loadData(File &f, CChar *path=null) ; // load, 'path'=path at which resource is located (this is needed so that the sub-resources can be accessed with relative path), false on fail
+
+   void zero();
+#endif
 
    // compare
    Bool operator==(C Object &obj)C;                    // if     equal
@@ -100,7 +121,9 @@ struct Object // Object Parameters - they're created in the Editor and are used 
 
    Object();
 
+#if !EE_PRIVATE
 private:
+#endif
    UShort      _flag;
    Byte        _align;
    OBJ_ACCESS  _access;
@@ -113,4 +136,8 @@ private:
 };
 /******************************************************************************/
 extern Enum ObjType; // OBJ_TYPE enum responsible for object type management
+/******************************************************************************/
+#if EE_PRIVATE
+void ShutObj();
+#endif
 /******************************************************************************/

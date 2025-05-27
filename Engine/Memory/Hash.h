@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct CRC32 // Cyclic Redundancy Check
 {
@@ -32,6 +29,9 @@ private:
    ULong _buffer[6];
    Bool  _finalized;
    UInt  _hash;
+#if EE_PRIVATE
+   void finalize();
+#endif
 };
 /******************************************************************************/
 struct xxHash64 // xxHash 64-bit
@@ -51,6 +51,9 @@ private:
    ULong _buffer[11];
    Bool  _finalized;
    ULong _hash;
+#if EE_PRIVATE
+   void finalize();
+#endif
 };
 /******************************************************************************/
 struct SpookyHash // Spooky Hash 32/64/128-bit
@@ -70,6 +73,9 @@ private:
    ULong _data[X64 ? 38 : 37];
    Bool  _finalized;
    UID   _hash;
+#if EE_PRIVATE
+   void finalize();
+#endif
 };
 /******************************************************************************/
 struct MetroHash64 // Metro Hash 64-bit
@@ -122,6 +128,10 @@ private:
    UInt _count [2];
    Bool _finalized;
    UID  _hash;
+#if EE_PRIVATE
+   void finalize ();
+   void transform(const Byte block[64]);
+#endif
 };
 /******************************************************************************/
 struct SHA1 // Secure Hash Algorithm-1, with 160-bits
@@ -143,7 +153,9 @@ struct SHA1 // Secure Hash Algorithm-1, with 160-bits
 
    SHA1() {reset();}
 
+#if !EE_PRIVATE
 private:
+#endif
 #if SWITCH
    UInt _data[112/4]; // use UInt to get memory alignment
 #else
@@ -152,6 +164,10 @@ private:
 #endif
    Bool _finalized;
    Hash _hash;
+#if EE_PRIVATE
+   void finalize ();
+   void transform(const Byte block[64]);
+#endif
 };
 /******************************************************************************/
 struct SHA2 // Secure Hash Algorithm-2, with 256-bits
@@ -174,7 +190,9 @@ struct SHA2 // Secure Hash Algorithm-2, with 256-bits
 
    SHA2() {reset();}
 
+#if !EE_PRIVATE
 private:
+#endif
 #if SWITCH
    UInt _data[120/4]; // use UInt to get memory alignment
 #else
@@ -183,6 +201,10 @@ private:
 #endif
    Bool _finalized;
    Hash _hash;
+#if EE_PRIVATE
+   void finalize ();
+   void transform(const Byte block[64]);
+#endif
 };
 /******************************************************************************/
 UInt          CRC32Mem(CPtr data, Int size); // calculate CRC32         for given memory
@@ -199,4 +221,8 @@ SHA1::Hash     SHA1Mem(CPtr data, Int size); // calculate SHA1          for give
 SHA2::Hash     SHA2Mem(CPtr data, Int size); // calculate SHA2          for given memory
 
 SHA2::Hash HMAC_SHA2(CPtr key, Int key_size, CPtr data, Int data_size); // calculate HMAC-SHA2 for given key and data
+/******************************************************************************/
+#if EE_PRIVATE
+void InitHash();
+#endif
 /******************************************************************************/

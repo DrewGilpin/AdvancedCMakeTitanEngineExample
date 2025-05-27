@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************/
 struct Cipher // Memory De/Encryption Interface
 {
@@ -16,6 +13,10 @@ struct Cipher // Memory De/Encryption Interface
 struct Cipher1 : Cipher
 {
    Cipher1& setKey(C Byte *key, Int key_size); // set key from 'key' array of 'key_size' bytes ('key_size' can be any size, but only up to first 256 bytes will be used)
+#if EE_PRIVATE
+   void setDec();
+   void wrapKey();
+#endif
 
    virtual void encrypt(Ptr dest, CPtr src, IntPtr size, Int offset)override; // encrypt 'src' data into 'dest' of 'size' bytes, 'offset'=offset of source data in the stream
    virtual void decrypt(Ptr dest, CPtr src, IntPtr size, Int offset)override; // decrypt 'src' data into 'dest' of 'size' bytes, 'offset'=offset of source data in the stream
@@ -51,6 +52,9 @@ private:
 struct Cipher2 : Cipher
 {
    Cipher2& setKey(C Byte *key, Int key_size); // set key from 'key' array of 'key_size' bytes ('key_size' can be any size, but only up to first 256 bytes will be used)
+#if EE_PRIVATE
+   void setDec();
+#endif
 
    virtual void encrypt(Ptr dest, CPtr src, IntPtr size, Int offset)override; // encrypt 'src' data into 'dest' of 'size' bytes, 'offset'=offset of source data in the stream
    virtual void decrypt(Ptr dest, CPtr src, IntPtr size, Int offset)override; // decrypt 'src' data into 'dest' of 'size' bytes, 'offset'=offset of source data in the stream
@@ -86,6 +90,9 @@ private:
 struct Cipher3 : Cipher
 {
    Cipher3& setKey(C Byte *key, Int key_size); // set key from 'key' array of 'key_size' bytes ('key_size' can be any size, but only up to first 256 bytes will be used)
+#if EE_PRIVATE
+   void setDec();
+#endif
 
    virtual void encrypt(Ptr dest, CPtr src, IntPtr size, Int offset)override; // encrypt 'src' data into 'dest' of 'size' bytes, 'offset'=offset of source data in the stream
    virtual void decrypt(Ptr dest, CPtr src, IntPtr size, Int offset)override; // decrypt 'src' data into 'dest' of 'size' bytes, 'offset'=offset of source data in the stream

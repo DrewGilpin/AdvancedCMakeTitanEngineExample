@@ -1,6 +1,3 @@
-﻿/******************************************************************************
- * Copyright (c) Grzegorz Slazinski. All Rights Reserved.                     *
- * Titan Engine (https://esenthel.com) header file.                           *
 /******************************************************************************
 
    This is a set of special effects.
@@ -15,6 +12,11 @@ struct Decal // Decal
    // get / set
    Decal& material (C MaterialPtr &material);   C MaterialPtr& material()C {return _material;} // set/get material
    Decal& setMatrix(C Matrix &object_world_matrix, C Matrix &decal_world_matrix);              // set     matrix to be used as animated matrix from current 'object_world_matrix' and desired 'decal_world_matrix' 
+#if EE_PRIVATE
+   void   setShader();
+   void   zero     ();
+   void   del      ();
+#endif
 
    // draw
    void drawStatic  (                             )C; // draw as static decal         , automatically uses Frustum culling, can be called in following render modes : RM_OVERLAY, RM_BLEND, RM_PALETTE, RM_PALETTE1
@@ -54,7 +56,9 @@ private:
 /******************************************************************************/
 struct BlendObject // extendable class for depth-sorted rendering of graphics in RM_BLEND rendering mode
 {
-   void scheduleDrawBlend(C VecD &pos); // call this method inside RM_PREPARE rendering mode to schedule automatic call to 'drawBlend' method, 'pos'=object position (used for correct depth-sorting calculation)
+   void scheduleDrawBlend(C VecD &pos                ); // call this method inside RM_PREPARE rendering mode to schedule automatic call to 'drawBlend' method, 'pos'=object position (used for correct depth-sorting calculation)
+   void scheduleDrawBlend(C VecD &pos, Flt offset    ); // call this method inside RM_PREPARE rendering mode to schedule automatic call to 'drawBlend' method, 'pos'=object position (used for correct depth-sorting calculation), 'offset'=depth offset
+   void scheduleDrawBlend(             Flt view_depth); // call this method inside RM_PREPARE rendering mode to schedule automatic call to 'drawBlend' method, 'view_depth'=view space depth
 
    virtual void drawBlend() {} // extend this method to draw custom graphics for RM_BLEND rendering mode, this method will be automatically called inside RM_BLEND rendering mode if 'scheduleDrawBlend' was called previously
 };
