@@ -39,22 +39,27 @@ else()                                                   # Linux (was original)
 endif()
 
 # ────────────────────────────────────────────────────────────────
-# 1.  Game/utility code shared by exe & tests
+# 1.  Engine and system libraries, picked per-platform
 # ────────────────────────────────────────────────────────────────
 if (WIN32)
-    # create an imported library target whose .lib depends on the build type
+    ## ── Esenthel DX11 engine: choose .lib by configuration ───────────────
+    set(LIB_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Lib")
+
     add_library(EsenthelEngine STATIC IMPORTED GLOBAL)
     set_target_properties(EsenthelEngine PROPERTIES
-            IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/Lib/Engine64DX11.lib"
-            IMPORTED_LOCATION_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/Lib/EngineDebug64DX11.lib"
+            IMPORTED_CONFIGURATIONS "Debug;Release;RelWithDebInfo;MinSizeRel"
+            IMPORTED_LOCATION_DEBUG          "${LIB_DIRECTORY}/EngineDebug64DX11.lib"
+            IMPORTED_LOCATION_RELEASE        "${LIB_DIRECTORY}/Engine64DX11.lib"
+            IMPORTED_LOCATION_RELWITHDEBINFO "${LIB_DIRECTORY}/Engine64DX11.lib"
+            IMPORTED_LOCATION_MINSIZEREL     "${LIB_DIRECTORY}/Engine64DX11.lib"
     )
     set(ESENTHEL_ENGINE_LIB EsenthelEngine)
 
-    # ── FULL Windows-SDK + Direct-X import-library set ────────────────────
+    ## ── Full Windows-SDK + DirectX import-library set (matches old VS cfg) ─
+    ##    x3daudio1_7.lib is created by the stub step in the GH workflow.
     set(SYS_LIBS
             d3d11 d3d12 d3dcompiler
             dinput8 dsound dxgi dxguid xinput9_1_0 xaudio2
-            x3daudio          #  ← use this name, drop  x3daudio1_7
             winmm wininet ws2_32 imm32 psapi rpcrt4 version iphlpapi secur32 setupapi
             dbghelp comsupp concrt mscms advapi32 user32 shell32 ole32 oleaut32 gdi32
             uuid winspool runtimeobject
