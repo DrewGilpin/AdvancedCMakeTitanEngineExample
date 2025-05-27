@@ -44,16 +44,20 @@ endif()
 if (WIN32)
     # create an imported library target whose .lib depends on the build type
     add_library(EsenthelEngine STATIC IMPORTED GLOBAL)
-
     set_target_properties(EsenthelEngine PROPERTIES
-            # Release build → Engine64DX11.lib
             IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/Lib/Engine64DX11.lib"
-            # Debug   build → EngineDebug64DX11.lib
             IMPORTED_LOCATION_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/Lib/EngineDebug64DX11.lib"
     )
-
     set(ESENTHEL_ENGINE_LIB EsenthelEngine)
-    set(SYS_LIBS winmm ws2_32)       # minimal Windows runtime libs
+
+    # ── FULL Windows-SDK + Direct-X import-library set ────────────────────
+    set(SYS_LIBS
+            d3d11 d3d12 d3dcompiler
+            dinput8 dsound dxgi dxguid xinput9_1_0 xaudio2 x3daudio1_7
+            winmm wininet ws2_32 imm32 psapi rpcrt4 version iphlpapi secur32 setupapi
+            dbghelp comsupp concrt mscms advapi32 user32 shell32 ole32 oleaut32 gdi32
+            uuid winspool runtimeobject
+    )
 else()
     set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Lib/EsenthelEngine.a")
     set(SYS_LIBS                                     # original Linux set
