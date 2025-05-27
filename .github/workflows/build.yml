@@ -1,0 +1,80 @@
+name: Build & Test (Linux + Windows)
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          # ── Linux ────────────────────────────────────────────────────────
+          - os: ubuntu-22.04
+            cfg:   linux-release     # configure preset
+            build: linux-build       # build preset
+            test:  linux-test        # test preset
+            isLinux: true
+          # ── Windows ──────────────────────────────────────────────────────
+          - os: windows-2022
+            cfg:   windows-release
+            build: windows-build
+            test:  windows-test
+            isLinux: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # 1) ───── Source checkout ─────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # 2) ───── OS-level dependencies ───────────────────────────────────────
+      - name: Install packages (apt)
+        if: matrix.isLinux
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang ninja-build cmake build-essential \
+            libxmu-dev libxi-dev libxinerama-dev libxrandr-dev \
+            libxcursor-dev libudev-dev libopenal-dev unixodbc-dev \
+            libgl1-mesa-dev libxxf86vm-dev zlib1g-dev
+
+      - name: Set up MSVC env
+        if: matrix.os == 'windows-2022'
+        uses: ilammy/msvc-dev-cmd@v1
+        with: { arch: x64 }
+
+      - name: Verify Ninja is on PATH
+        run: ninja --version
+
+      # 3) ───── Unpack pre-built Esenthel artefacts ─────────────────────────
+      - name: Unzip Engine files (Linux)
+        if: matrix.isLinux
+        shell: bash
+        run: |
+          unzip -q Assets/Engine.zip      -d Assets
+          unzip -q Lib/EsenthelEngine.zip -d Lib
+
+      - name: Unzip Engine files (Windows)
+        if: matrix.os == 'windows-2022'
+        shell: pwsh
+        run: |
+          Expand-Archive -Path Assets/Engine.zip -DestinationPath Assets -Force
+          Get-ChildItem -Path Lib -Filter '*.zip' |
+            ForEach-Object { Expand-Archive -Path $_.FullName -DestinationPath Lib -Force }
+
+      # 4) ───── Configure, build & test via presets ─────────────────────────
+      - name: Configure
+        run: cmake --preset ${{ matrix.cfg }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+
+      - name: Run unit tests
+        run: ctest --preset ${{ matrix.test }} --output-on-failure
+
+      # 5) ───── Upload the resulting executable ─────────────────────────────
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BasicAppCmake-${{ matrix.os }}
+          path: |
+            out/build/${{ matrix.cfg }}/BasicAppCmake${{ runner.os == 'Windows' && '.exe' || '' }}
