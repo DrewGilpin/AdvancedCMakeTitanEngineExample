@@ -5,7 +5,7 @@
 
 // (Including the header is optional but guarantees the exact prototypes.)
 //#include "../Engine/EsenthelEngine.h" //dont use this path, caused warning spam didn't abide by SYSTEM
-#include "EsenthelEngine.h"
+#include "Engine.h"
 
 void  InitPre()                         {}          // prepare options
 bool  Init()                            { return true; }
