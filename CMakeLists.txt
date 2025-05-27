@@ -36,15 +36,26 @@ endif()
 # 1.  Game/utility code shared by exe & tests
 # ────────────────────────────────────────────────────────────────
 if (WIN32)
-    set(ESENTHEL_ENGINE_LIB ${CMAKE_CURRENT_SOURCE_DIR}/Lib/EsenthelEngine.lib)
+    # create an imported library target whose .lib depends on the build type
+    add_library(EsenthelEngine STATIC IMPORTED GLOBAL)
+
+    set_target_properties(EsenthelEngine PROPERTIES
+            # Release build → Engine64DX11.lib
+            IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/Lib/Engine64DX11.lib"
+            # Debug   build → EngineDebug64DX11.lib
+            IMPORTED_LOCATION_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/Lib/EngineDebug64DX11.lib"
+    )
+
+    set(ESENTHEL_ENGINE_LIB EsenthelEngine)
     set(SYS_LIBS winmm ws2_32)       # minimal Windows runtime libs
 else()
-    set(ESENTHEL_ENGINE_LIB ${CMAKE_CURRENT_SOURCE_DIR}/Lib/EsenthelEngine.a)
+    set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Lib/EsenthelEngine.a")
     set(SYS_LIBS                                     # original Linux set
             pthread dl m X11 Xi Xinerama Xrandr Xmu Xcursor Xxf86vm rt
             GL openal z odbc udev
     )
 endif()
+
 
 add_library(GameLib STATIC
         Source/MyClass.cpp
