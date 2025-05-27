@@ -26,7 +26,8 @@ target_include_directories(GameCore SYSTEM INTERFACE
 # ▸ Platform-specific build flags
 if (MSVC)                                               # Windows / MSVC
     target_compile_definitions(GameCore INTERFACE _WIN64 _CRT_SECURE_NO_WARNINGS)
-    target_compile_options   (GameCore INTERFACE /MP /permissive- /EHsc)
+    target_compile_options   (GameCore
+            INTERFACE /MP /permissive- /Zc:twoPhase- /EHsc) # ← added here
     target_link_options      (GameCore INTERFACE /SUBSYSTEM:CONSOLE)
 else()                                                   # Linux (was original)
     target_compile_definitions(GameCore INTERFACE __linux__)
