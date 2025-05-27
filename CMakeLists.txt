@@ -1,6 +1,12 @@
 ﻿cmake_minimum_required(VERSION 3.28)
 project(BasicAppCmake LANGUAGES C CXX)
 
+# ▸ make our objects use /MT or /MTd so they match Engine64DX11.lib
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY
+            "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "" FORCE)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 
 # ────────────────────────────────────────────────────────────────
