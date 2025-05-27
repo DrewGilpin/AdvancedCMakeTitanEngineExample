@@ -53,7 +53,8 @@ if (WIN32)
     # ── FULL Windows-SDK + Direct-X import-library set ────────────────────
     set(SYS_LIBS
             d3d11 d3d12 d3dcompiler
-            dinput8 dsound dxgi dxguid xinput9_1_0 xaudio2 x3daudio1_7
+            dinput8 dsound dxgi dxguid xinput9_1_0 xaudio2
+            x3daudio          #  ← use this name, drop  x3daudio1_7
             winmm wininet ws2_32 imm32 psapi rpcrt4 version iphlpapi secur32 setupapi
             dbghelp comsupp concrt mscms advapi32 user32 shell32 ole32 oleaut32 gdi32
             uuid winspool runtimeobject
