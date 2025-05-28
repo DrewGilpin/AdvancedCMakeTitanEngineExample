@@ -1,6 +1,15 @@
 name: Build & Test (Linux + Windows)
 
-on: [push, pull_request]
+on:
+  # 1) Every PR that targets master – first open, new commits ("synchronize"),
+  #    or being reopened – will fire pull_request by default.
+  pull_request:
+    branches: [ master ]        #  ← change to main if that’s your default
+
+  # 2) Any commit pushed **directly to master** (including the merge-commit
+  #    created when a PR is merged with the GitHub UI).
+  push:
+    branches: [ master ]        #  ← same default branch
 
 jobs:
   build:
