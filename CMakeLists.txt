@@ -95,6 +95,11 @@ add_executable(BasicAppCmake
 )
 
 if (MSVC)
+    target_sources(BasicAppCmake PRIVATE Source/getopt_stub.cpp)
+    # – or – target_sources(GameLib PRIVATE Source/getopt_stub.cpp)
+endif()
+
+if (MSVC)
     target_link_libraries(BasicAppCmake PRIVATE GameCore GameLib)
 else()
     target_link_libraries(BasicAppCmake PRIVATE
