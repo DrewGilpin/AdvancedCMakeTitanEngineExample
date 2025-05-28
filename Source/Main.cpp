@@ -4,6 +4,7 @@
 #include "MyClass.h"
 /******************************************************************************/
 int counter = 0;
+Vec2 dot_pos(0, 0);
 /******************************************************************************/
 void InitPre() // initialize before engine inits
 {
@@ -35,12 +36,16 @@ bool Update() // main updating
    counter = counter + 1;
    LogN(S+"counter: " + counter);
    //if(Kb.bp(KB_ESC))return false; // exit if escape on the keyboard pressed
+
+   Flt speed = 0.5f; // movement speed
+   if(Kb.b(KB_LEFT )) dot_pos.x -= speed * Time.d();
+   if(Kb.b(KB_RIGHT)) dot_pos.x += speed * Time.d();
+   if(Kb.b(KB_UP   )) dot_pos.y += speed * Time.d();
+   if(Kb.b(KB_DOWN )) dot_pos.y -= speed * Time.d();
+
    if(!App.active())Time.wait(1);
-   //if(counter < 11)
-   //{
-      return true;                   // continue
-   //}
-   //return false;
+
+   return true;                   // continue
 }
 /******************************************************************************/
 MyClass myObject("ExampleObject", 42); // Create an instance of MyClass
@@ -52,6 +57,7 @@ void Draw() // main drawing
    D.text (0, -0.1, S+ "FPS: " + Time.fps()); // display FPS below the "Hello to..." text
    D.text (0, -0.2, S+ "Counter: " + counter); // display Counter below the FPS
    myObject.print(); // Display MyClass details
+   D.dot(RED, dot_pos, 0.02f); // draw moving dot
 }
 /******************************************************************************/
 
