@@ -27,8 +27,7 @@ target_include_directories(GameCore SYSTEM INTERFACE
 if (MSVC)                                               # Windows / MSVC
     target_compile_definitions(GameCore INTERFACE _WIN64 _CRT_SECURE_NO_WARNINGS)
     target_compile_options   (GameCore
-            INTERFACE /MP /permissive- /Zc:twoPhase- /EHsc) # ← added here
-    target_link_options      (GameCore INTERFACE /SUBSYSTEM:CONSOLE)
+            INTERFACE /MP /permissive- /Zc:twoPhase- /EHsc)
 else()                                                   # Linux (was original)
     target_compile_definitions(GameCore INTERFACE __linux__)
     target_compile_options   (GameCore INTERFACE
@@ -79,6 +78,9 @@ add_library(GameLib STATIC
         Source/Auto.cpp
         Source/Shared/Commands.cpp
 )
+if (MSVC)
+    target_sources(GameLib PRIVATE Source/getopt_stub.cpp)
+endif()
 
 target_link_libraries(GameLib PUBLIC
         GameCore
@@ -95,17 +97,24 @@ add_executable(BasicAppCmake
 )
 
 if (MSVC)
-    target_sources(BasicAppCmake PRIVATE Source/getopt_stub.cpp)
-    # – or – target_sources(GameLib PRIVATE Source/getopt_stub.cpp)
-endif()
+    # 1)  Link the tiny getopt stub so Engine64DX11.lib resolves getopt/optarg/optind
+    #target_sources(BasicAppCmake PRIVATE Source/getopt_stub.cpp)
 
-if (MSVC)
+    # 2)  Iterator-debugging OFF in Debug so the CRT matches Esenthel’s /MTd build
+    target_compile_definitions(BasicAppCmake PRIVATE
+            "$<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>"
+            "$<$<CONFIG:Debug>:_HAS_ITERATOR_DEBUGGING=0>")
+
+    # 3)  Make it a GUI app and tell the CRT to start at wWinMain
+    target_link_options(BasicAppCmake PRIVATE
+            "/SUBSYSTEM:WINDOWS"
+            "/ENTRY:wWinMainCRTStartup")
+
     target_link_libraries(BasicAppCmake PRIVATE GameCore GameLib)
 else()
     target_link_libraries(BasicAppCmake PRIVATE
             GameCore GameLib
-            -static-libstdc++ -nopie           # keeps the original behaviour
-    )
+            -static-libstdc++ -nopie)
 endif()
 
 # copy *.pak next to the binary (same for all OSes)
