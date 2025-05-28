@@ -1,16 +1,30 @@
-# ExampleVisualStudioCMakeTitanEngine
+# BasicAppCmake
 
-## **You MUST extract the /Assets/Engine.zip and /Lib/EsenthelEngine.zip files into the directories in which they reside before compiling!** ##
+This repository contains a minimal example of building a small application with the **Titan (Esenthel) Engine** using modern CMake.  It accompanies the [blog post](https://medium.com/@drew.gilpin/esenthel-titan-engine-visual-studio-cmake-wsl-project-75da74e3d5b6) and can be built on both Windows and Linux.
 
-This had to be done to get around Github's 100MB file size limit.
+## Preparing the engine files
 
-This repo is a Visual Studio 2022 friendly CMake project that builds a Linux application that uses the Esenthel / Titan Engine
+The large engine assets and libraries are stored in the repository as zip archives.  Extract them **in place** before configuring the build:
 
-It contains the source for a tutorial:
+```
+Assets/Engine.zip            -> Assets/Engine.pak
+Lib/Engine.zip               -> Lib/Engine.a                (Linux library)
+Lib/Engine64DX11.zip         -> Lib/Engine64DX11.lib        (Windows library)
+Lib/EngineDebug64DX11.zip    -> Lib/EngineDebug64DX11.lib   (Windows debug library)
+Lib/EngineDebug64DX11_pdb.zip-> Lib/EngineDebug64DX11.pdb   (optional debug symbols)
+```
 
-https://medium.com/@drew.gilpin/esenthel-titan-engine-visual-studio-cmake-wsl-project-75da74e3d5b6
+## Building
 
-Please see the above link for detailed instructions on how to use this.
+CMake presets are provided for both platforms.  Example commands:
+
+```bash
+cmake --preset linux-release   # or windows-release
+cmake --build out/build/<preset>
+ctest --preset linux-test      # run unit tests
+```
+
+The built application and required *.pak files will appear in `out/build/<preset>/Bin`.
 
 NB The engine headers and binaries here are subject to Esenthel / Titan Engine's license:
 ### License
@@ -36,7 +50,7 @@ You may NOT claim that you wrote the source code.
 You may NOT remove or change any copyright messages or this License text from the source code.
 
 GAME ENGINES
-You may NOT integrate the source code into other game engines, that are not based on Titan Engine. 
+You may NOT integrate the source code into other game engines, that are not based on Titan Engine.
 You can create your own game engines based on Titan, however they must clearly state that they're
 "based on Titan Engine" with the name linking to:
 https://esenthel.com or https://github.com/Esenthel/EsenthelEngine and 15% of income generated from
