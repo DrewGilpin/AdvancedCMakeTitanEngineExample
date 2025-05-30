@@ -15,5 +15,9 @@ typedef U8 enet_uint8;       /**< unsigned 8-bit type  */
 typedef U16 enet_uint16;     /**< unsigned 16-bit type */
 typedef U32 enet_uint32;      /**< unsigned 32-bit type */
 
+/* Ensure ENet headers can be included before engine macros
+   by providing a standard 8-bit character type. */
+typedef char char8;
+
 #endif /* __ENET_TYPES_H__ */
 
