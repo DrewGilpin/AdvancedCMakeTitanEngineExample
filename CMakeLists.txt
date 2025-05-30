@@ -17,6 +17,7 @@ add_library(GameCore INTERFACE)
 target_include_directories(GameCore INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/Source          # your own headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/Include         # third-party headers
 )
 
 target_include_directories(GameCore SYSTEM INTERFACE
@@ -55,6 +56,9 @@ if (WIN32)
     )
     set(ESENTHEL_ENGINE_LIB EsenthelEngine)
 
+    # ENet library for Windows
+    set(ENET_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Lib/enet64.lib")
+
     ## ── Full Windows-SDK + DirectX import-library set (matches old VS cfg) ─
     ##    x3daudio1_7.lib is created by the stub step in the GH workflow.
     set(SYS_LIBS
@@ -66,6 +70,8 @@ if (WIN32)
     )
 else()
     set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Lib/Engine.a")
+    # ENet library for Linux
+    set(ENET_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Lib/libenet.a")
     set(SYS_LIBS                                     # original Linux set
             pthread dl m X11 Xi Xinerama Xrandr Xmu Xcursor Xxf86vm rt
             GL openal z odbc udev
@@ -110,10 +116,10 @@ if (MSVC)
             "/SUBSYSTEM:WINDOWS"
             "/ENTRY:wWinMainCRTStartup")
 
-    target_link_libraries(BasicAppCmake PRIVATE GameCore GameLib)
+    target_link_libraries(BasicAppCmake PRIVATE GameCore GameLib ${ENET_LIB})
 else()
     target_link_libraries(BasicAppCmake PRIVATE
-            GameCore GameLib
+            GameCore GameLib ${ENET_LIB}
             -static-libstdc++ -nopie)
 endif()
 
