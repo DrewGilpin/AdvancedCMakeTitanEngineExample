@@ -16,6 +16,7 @@ add_library(GameCore INTERFACE)
 
 target_include_directories(GameCore INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/Include
         ${CMAKE_CURRENT_SOURCE_DIR}/Source          # your own headers
 )
 
