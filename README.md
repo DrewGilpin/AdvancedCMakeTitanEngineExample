@@ -7,11 +7,11 @@ This repository contains a minimal example of building a small application with 
 The large engine assets and libraries are stored in the repository as zip archives.  Extract them **in place** before configuring the build:
 
 ```
-Assets/Engine.zip            -> Assets/Engine.pak
-Lib/Engine.zip               -> Lib/Engine.a                (Linux library)
-Lib/Engine64DX11.zip         -> Lib/Engine64DX11.lib        (Windows library)
-Lib/EngineDebug64DX11.zip    -> Lib/EngineDebug64DX11.lib   (Windows debug library)
-Lib/EngineDebug64DX11_pdb.zip-> Lib/EngineDebug64DX11.pdb   (optional debug symbols)
+assets/Engine.zip            -> assets/Engine.pak
+third_party/Engine.zip               -> third_party/Engine.a                (Linux library)
+third_party/Engine64DX11.zip         -> third_party/Engine64DX11.lib        (Windows library)
+third_party/EngineDebug64DX11.zip    -> third_party/EngineDebug64DX11.lib   (Windows debug library)
+third_party/EngineDebug64DX11_pdb.zip-> third_party/EngineDebug64DX11.pdb   (optional debug symbols)
 ```
 
 ## Building
