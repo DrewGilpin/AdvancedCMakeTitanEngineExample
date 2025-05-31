@@ -44,7 +44,11 @@ static void SetupEnet()
 
     // ── create server host (32 peers, 2 channels) ──
     ENetAddress addr; addr.port = 12345;
-    addr.host   = ENET_HOST_ANY;          // bind 0.0.0.0
+    //
+    // Binding to the IPv6 "any" address (ENET_HOST_ANY) can fail on some
+    // Windows setups where IPv6 is disabled.  Use an explicit IPv4 address
+    // instead so both release and debug builds behave the same.
+    enet_address_set_host(&addr, "0.0.0.0");    // bind 0.0.0.0
     gServer = enet_host_create(&addr, 32, 2, 0, 0);
     if(!gServer){ LogN("ENet server create failed"); return; }
 
@@ -55,7 +59,8 @@ static void SetupEnet()
     // ── connect client to server on loopback ──
     enet_address_set_host(&addr, "127.0.0.1");
     gClientPeer = enet_host_connect(gClient, &addr, 2, 0);
-    LogN("ENet setup complete, waiting for connect…");
+    enet_host_flush(gClient);                        // push connection packet
+    LogN("ENet setup complete, waiting for connect...");
 }
 
 static void ServiceHost(ENetHost *host)
