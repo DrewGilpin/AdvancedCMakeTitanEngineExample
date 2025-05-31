@@ -6,10 +6,25 @@
 #include "enet.h"          // ← Header-only ENet (Include/enet.h)
 /******************************************************************************/
 
+#if defined(__linux__)
+  /* Keep a copy for later code that might really need the macros… */
+  #pragma push_macro("LOCK_READ")
+  #pragma push_macro("LOCK_WRITE")
+  #undef  LOCK_READ
+  #undef  LOCK_WRITE
+#endif
+
 /******************************************************************************/
 #include "stdafx.h"
 #include "@@headers.h"
 #include "MyClass.h"
+
+#if defined(__linux__)
+  /* …and restore them so any <fcntl.h>-style users still compile. */
+  #pragma pop_macro("LOCK_WRITE")
+  #pragma pop_macro("LOCK_READ")
+#endif
+
 /******************************************************************************/
 int counter = 0;
 Vec2 dot_pos(0, 0);
