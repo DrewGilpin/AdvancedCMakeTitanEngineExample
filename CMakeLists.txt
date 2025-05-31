@@ -1,10 +1,10 @@
 ﻿cmake_minimum_required(VERSION 3.28)
 project(BasicAppCmake LANGUAGES C CXX)
 
-# ▸ make our objects use /MT or /MTd so they match Engine64DX11.lib
+# ▸ the Engine static libs are built with the non-debug CRT (/MT)
+#   so force that for all of our targets too
 if (MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY
-            "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "" FORCE)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -81,6 +81,9 @@ add_library(GameLib STATIC
 )
 if (MSVC)
     target_sources(GameLib PRIVATE Source/getopt_stub.cpp)
+    target_compile_definitions(GameLib PRIVATE
+            "$<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>"
+            "$<$<CONFIG:Debug>:_HAS_ITERATOR_DEBUGGING=0>")
 endif()
 
 target_link_libraries(GameLib PUBLIC
@@ -101,7 +104,7 @@ if (MSVC)
     # 1)  Link the tiny getopt stub so Engine64DX11.lib resolves getopt/optarg/optind
     #target_sources(BasicAppCmake PRIVATE Source/getopt_stub.cpp)
 
-    # 2)  Iterator-debugging OFF in Debug so the CRT matches Esenthel’s /MTd build
+    # 2)  Iterator-debugging OFF in Debug so the CRT matches Esenthel’s /MT build
     target_compile_definitions(BasicAppCmake PRIVATE
             "$<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>"
             "$<$<CONFIG:Debug>:_HAS_ITERATOR_DEBUGGING=0>")
