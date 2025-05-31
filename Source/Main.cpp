@@ -42,12 +42,17 @@ static void SetupEnet()
 {
     if(enet_initialize() != 0){ LogN("ENet init failed"); return; }
 
-    // ── create server host (32 peers, 2 channels) ──
-    ENetAddress addr; addr.port = 12345;
-    addr.host   = ENET_HOST_ANY;          // bind 0.0.0.0, doesn't work on windows-debug see comment below if needed on that platform
-    //enet_address_set_host(&addr, "0.0.0.0");    // bind 0.0.0.0, works on windows-debug
+    ENetAddress addr{};             // zero-initialise **all** fields
+    addr.port = 12345;
+    addr.host = ENET_HOST_ANY;      // or enet_address_set_host_ip(&addr, "::")
+
     gServer = enet_host_create(&addr, 32, 2, 0, 0);
-    if(!gServer){ LogN("ENet server create failed"); return; }
+
+    if(!gServer){
+        LogN(S+"ENet server create failed.");
+        LogN(S+"ENet server create failed error: " + strerror(errno));
+        return;
+    }
 
     // ── create client host (no binding → will use ephemeral port) ──
     gClient = enet_host_create(nullptr, 1, 2, 0, 0);
@@ -56,7 +61,7 @@ static void SetupEnet()
     // ── connect client to server on loopback ──
     enet_address_set_host(&addr, "127.0.0.1");
     gClientPeer = enet_host_connect(gClient, &addr, 2, 0);
-    LogN("ENet setup complete, waiting for connect…"); // windows-debug currently hangs here even using enet_address_set_host(&addr, "0.0.0.0");
+    LogN("ENet setup complete, waiting for connect…");
 }
 
 static void ServiceHost(ENetHost *host)
