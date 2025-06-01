@@ -78,7 +78,7 @@ jobs:
         run: cmake --build --preset ${{ matrix.build }}
 
       - name: Run unit tests
-        run: ctest --preset ${{ matrix.test }} --output-on-failure
+        run: ctest --test-dir out/build/${{ matrix.cfg }} --output-on-failure
 
       # 5) ───── Upload the resulting executable ─────────────────────────────
       - name: Upload artefact
@@ -86,4 +86,4 @@ jobs:
         with:
           name: BasicAppCmake-${{ matrix.os }}
           path: |
-            out/build/${{ matrix.cfg }}/BasicAppCmake${{ runner.os == 'Windows' && '.exe' || '' }}
+            out/build/${{ matrix.cfg }}/apps/client/client${{ runner.os == 'Windows' && '.exe' || '' }}
