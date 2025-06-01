@@ -16,7 +16,7 @@ add_library(GameCore INTERFACE)
 
 target_include_directories(GameCore INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/enet
         ${CMAKE_CURRENT_SOURCE_DIR}/src          # your own headers
 )
 

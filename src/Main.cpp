@@ -3,7 +3,7 @@
 // ⚠️  ONE translation unit must *both* `#define ENET_IMPLEMENTATION` *and*
 //     `#include "enet.h"` – put it right above the rest of your includes.
 #define ENET_IMPLEMENTATION
-#include "enet.h"          // ← Header-only ENet (Include/enet.h)
+#include "enet.h"          // ← Header-only ENet (third_party/enet/enet.h)
 /******************************************************************************/
 
 #if defined(__linux__)
