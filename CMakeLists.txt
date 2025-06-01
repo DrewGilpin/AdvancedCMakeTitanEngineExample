@@ -21,7 +21,7 @@ target_include_directories(GameCore INTERFACE
 )
 
 target_include_directories(GameCore SYSTEM INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/Engine          # Esenthel headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/EE  # Esenthel headers
 )
 
 # ▸ Platform-specific build flags
