@@ -1,4 +1,4 @@
-﻿
+
 /******************************************************************************/
 // ⚠️  ONE translation unit must *both* `#define ENET_IMPLEMENTATION` *and*
 //     `#include "enet.h"` – put it right above the rest of your includes.
