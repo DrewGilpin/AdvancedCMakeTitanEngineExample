@@ -16,8 +16,8 @@ add_library(GameCore INTERFACE)
 
 target_include_directories(GameCore INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/Include
-        ${CMAKE_CURRENT_SOURCE_DIR}/Source          # your own headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src          # your own headers
 )
 
 target_include_directories(GameCore SYSTEM INTERFACE
@@ -44,7 +44,7 @@ endif()
 # ────────────────────────────────────────────────────────────────
 if (WIN32)
     ## ── Esenthel DX11 engine: choose .lib by configuration ───────────────
-    set(LIB_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Lib")
+    set(LIB_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 
     add_library(EsenthelEngine STATIC IMPORTED GLOBAL)
     set_target_properties(EsenthelEngine PROPERTIES
@@ -66,7 +66,7 @@ if (WIN32)
             uuid winspool runtimeobject
     )
 else()
-    set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Lib/Engine.a")
+    set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/third_party/Engine.a")
     set(SYS_LIBS                                     # original Linux set
             pthread dl m X11 Xi Xinerama Xrandr Xmu Xcursor Xxf86vm rt
             GL openal z odbc udev
@@ -75,12 +75,12 @@ endif()
 
 
 add_library(GameLib STATIC
-        Source/MyClass.cpp
-        Source/Auto.cpp
-        Source/Shared/Commands.cpp
+        src/MyClass.cpp
+        src/Auto.cpp
+        src/Shared/Commands.cpp
 )
 if (MSVC)
-    target_sources(GameLib PRIVATE Source/getopt_stub.cpp)
+    target_sources(GameLib PRIVATE src/getopt_stub.cpp)
     target_compile_definitions(GameLib PRIVATE
             "$<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>"
             "$<$<CONFIG:Debug>:_HAS_ITERATOR_DEBUGGING=0>")
@@ -97,12 +97,12 @@ target_link_libraries(GameLib PUBLIC
 # ────────────────────────────────────────────────────────────────
 add_executable(BasicAppCmake
         stdafx.cpp
-        Source/Main.cpp
+        src/Main.cpp
 )
 
 if (MSVC)
     # 1)  Link the tiny getopt stub so Engine64DX11.lib resolves getopt/optarg/optind
-    #target_sources(BasicAppCmake PRIVATE Source/getopt_stub.cpp)
+    #target_sources(BasicAppCmake PRIVATE src/getopt_stub.cpp)
 
     # 2)  Iterator-debugging OFF in Debug so the CRT matches Esenthel’s /MT build
     target_compile_definitions(BasicAppCmake PRIVATE
@@ -122,9 +122,9 @@ else()
 endif()
 
 # copy *.pak next to the binary (same for all OSes)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Assets/Project.pak
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets/Project.pak
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Bin)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Assets/Engine.pak
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets/Engine.pak
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Bin)
 
 # ────────────────────────────────────────────────────────────────

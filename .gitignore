@@ -4,8 +4,8 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 #Engine Binaries
-Assets/Engine.pak
-Lib/EsenthelEngine.a
+assets/Engine.pak
+third_party/EsenthelEngine.a
 
 # User-specific files
 *.rsuser
@@ -368,4 +368,4 @@ FodyWeavers.xsd
 
 # JetBrains IDE project files
 .idea/
-/Lib/Engine.a
+/third_party/Engine.a
