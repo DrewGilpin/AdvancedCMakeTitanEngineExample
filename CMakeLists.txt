@@ -96,7 +96,7 @@ target_link_libraries(GameLib PUBLIC
 # 2.  The actual game executable
 # ────────────────────────────────────────────────────────────────
 add_executable(BasicAppCmake
-        stdafx.cpp
+        src/stdafx.cpp
         src/Main.cpp
 )
 
@@ -156,7 +156,7 @@ add_executable(UnitTests
         tests/MyClassTests.cpp
         tests/SpdlogTest.cpp
         tests/EE_boot_stubs.cpp
-        stdafx.cpp
+        src/stdafx.cpp
 )
 
 target_compile_definitions(UnitTests PRIVATE FMT_USE_FCNTL=0 SPDLOG_FORCE_COLOR=1)
