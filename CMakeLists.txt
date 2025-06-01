@@ -77,7 +77,6 @@ endif()
 add_library(GameLib STATIC
         src/MyClass.cpp
         src/Auto.cpp
-        src/Shared/Commands.cpp
 )
 if (MSVC)
     target_sources(GameLib PRIVATE src/getopt_stub.cpp)
