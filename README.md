@@ -8,10 +8,10 @@ The large engine assets and libraries are stored in the repository as zip archiv
 
 ```
 assets/Engine.zip            -> assets/Engine.pak
-third_party/Engine.zip               -> third_party/Engine.a                (Linux library)
-third_party/Engine64DX11.zip         -> third_party/Engine64DX11.lib        (Windows library)
-third_party/EngineDebug64DX11.zip    -> third_party/EngineDebug64DX11.lib   (Windows debug library)
-third_party/EngineDebug64DX11_pdb.zip-> third_party/EngineDebug64DX11.pdb   (optional debug symbols)
+third_party/EE/Engine.zip               -> third_party/EE/Engine.a                (Linux library)
+third_party/EE/Engine64DX11.zip         -> third_party/EE/Engine64DX11.lib        (Windows library)
+third_party/EE/EngineDebug64DX11.zip    -> third_party/EE/EngineDebug64DX11.lib   (Windows debug library)
+third_party/EE/EngineDebug64DX11_pdb.zip-> third_party/EE/EngineDebug64DX11.pdb   (optional debug symbols)
 ```
 
 ## Building

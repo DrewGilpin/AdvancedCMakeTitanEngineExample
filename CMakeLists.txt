@@ -44,7 +44,7 @@ endif()
 # ────────────────────────────────────────────────────────────────
 if (WIN32)
     ## ── Esenthel DX11 engine: choose .lib by configuration ───────────────
-    set(LIB_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+    set(LIB_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/EE")
 
     add_library(EsenthelEngine STATIC IMPORTED GLOBAL)
     set_target_properties(EsenthelEngine PROPERTIES
@@ -66,7 +66,7 @@ if (WIN32)
             uuid winspool runtimeobject
     )
 else()
-    set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/third_party/Engine.a")
+    set(ESENTHEL_ENGINE_LIB "${CMAKE_CURRENT_SOURCE_DIR}/third_party/EE/Engine.a")
     set(SYS_LIBS                                     # original Linux set
             pthread dl m X11 Xi Xinerama Xrandr Xmu Xcursor Xxf86vm rt
             GL openal z odbc udev

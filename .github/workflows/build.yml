@@ -60,15 +60,15 @@ jobs:
         shell: bash
         run: |
           unzip -q assets/Engine.zip      -d assets
-          unzip -q third_party/Engine.zip -d third_party
+          unzip -q third_party/EE/Engine.zip -d third_party/EE
 
       - name: Unzip Engine files (Windows)
         if: matrix.os == 'windows-2022'
         shell: pwsh
         run: |
           Expand-Archive -Path assets/Engine.zip -DestinationPath assets -Force
-          Get-ChildItem -Path third_party -Filter '*.zip' |
-            ForEach-Object { Expand-Archive -Path $_.FullName -DestinationPath third_party -Force }
+          Get-ChildItem -Path third_party/EE -Filter '*.zip' |
+            ForEach-Object { Expand-Archive -Path $_.FullName -DestinationPath third_party/EE -Force }
 
       # 4) ───── Configure, build & test via presets ─────────────────────────
       - name: Configure
