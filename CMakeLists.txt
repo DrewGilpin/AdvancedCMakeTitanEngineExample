@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.28)
 project(BasicAppCmake LANGUAGES C CXX)
 
 # ▸ the Engine static libs are built with the non-debug CRT (/MT)
