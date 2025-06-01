@@ -81,9 +81,14 @@ jobs:
         run: ctest --preset ${{ matrix.test }} --output-on-failure
 
       # 5) ───── Upload the resulting executable ─────────────────────────────
-      - name: Upload artefact
+      - name: Upload artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: BasicAppCmake-${{ matrix.os }}
+          name: titan-bin-${{ matrix.os }}
           path: |
-            out/build/${{ matrix.cfg }}/BasicAppCmake${{ runner.os == 'Windows' && '.exe' || '' }}
+            out/build/${{ matrix.cfg }}/client${{ runner.os == 'Windows' && '.exe' || '' }}
+            out/build/${{ matrix.cfg }}/connection_server${{ runner.os == 'Windows' && '.exe' || '' }}
+            out/build/${{ matrix.cfg }}/database_server${{ runner.os == 'Windows' && '.exe' || '' }}
+            out/build/${{ matrix.cfg }}/physics_server${{ runner.os == 'Windows' && '.exe' || '' }}
+            out/build/${{ matrix.cfg }}/world_server${{ runner.os == 'Windows' && '.exe' || '' }}
+            out/build/${{ matrix.cfg }}/remote_control${{ runner.os == 'Windows' && '.exe' || '' }}
