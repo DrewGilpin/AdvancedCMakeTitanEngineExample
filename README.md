@@ -24,7 +24,13 @@ cmake --build out/build/<preset>
 ctest --preset linux-test      # run unit tests
 ```
 
-The built application and required *.pak files will appear in `out/build/<preset>/Bin`.
+The built applications and required *.pak files will appear in
+`out/build/<preset>/Bin`.  Two executables are produced:
+
+- `client` – the interactive sample which draws a window and sends a test
+  message using ENet
+- `server` – a small console program which accepts the client's connection and
+  prints any received packets.
 
 NB The engine headers and binaries here are subject to Esenthel / Titan Engine's license:
 ### License
