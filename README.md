@@ -1,6 +1,7 @@
 # BasicAppCmake
 
 This repository contains a minimal example of building a small application with the **Titan (Esenthel) Engine** using modern CMake.  It accompanies the [blog post](https://medium.com/@drew.gilpin/esenthel-titan-engine-visual-studio-cmake-wsl-project-75da74e3d5b6) and can be built on both Windows and Linux.
+The project now builds two executables: a **client** sample and a **server** that hosts the ENet network.
 
 ## Preparing the engine files
 
@@ -24,7 +25,14 @@ cmake --build out/build/<preset>
 ctest --preset linux-test      # run unit tests
 ```
 
-The built application and required *.pak files will appear in `out/build/<preset>/Bin`.
+Both a client and server executable are produced.  Their binaries and the required *.pak files will appear in
+`out/build/<preset>/apps/client/Bin` and `out/build/<preset>/apps/server/Bin`.
+
+## Running
+
+1. Launch the server executable from its `Bin` directory.
+2. Then run the client executable which connects to the server on `127.0.0.1:12345`.
+   The client will send a single test packet and both apps will display simple metrics.
 
 NB The engine headers and binaries here are subject to Esenthel / Titan Engine's license:
 ### License

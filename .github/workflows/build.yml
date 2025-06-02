@@ -87,3 +87,5 @@ jobs:
           name: BasicAppCmake-${{ matrix.os }}
           path: |
             out/build/${{ matrix.cfg }}/apps/client/client${{ runner.os == 'Windows' && '.exe' || '' }}
+            out/build/${{ matrix.cfg }}/apps/server/server${{ runner.os == 'Windows' && '.exe' || '' }}
+
