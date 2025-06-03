@@ -102,6 +102,8 @@ void InitPre() // initialize before engine inits
 #ifdef DEBUG
    App.flag|=APP_MEM_LEAKS|APP_BREAKPOINT_ON_ERROR;
 #endif
+   App.flag|=APP_WORK_IN_BACKGROUND; // keep running when unfocused
+   App.background_wait=0;            // no delay when in background
 
    INIT(); // call auto-generated function that will set up application name, load engine and project data
    LogConsole(true);
@@ -138,8 +140,6 @@ bool Update() // main updating
 
     /* ── ENet pump ───────────────────────── */
     ServiceHost(gServer);
-
-   if(!App.active())Time.wait(1);
 
    return true;                   // continue
 }
