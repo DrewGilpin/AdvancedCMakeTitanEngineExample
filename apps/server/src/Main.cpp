@@ -18,6 +18,7 @@
 #include "stdafx.h"
 #include "@@headers.h"
 #include "MyClass.h"
+#include <unordered_map>
 
 #if defined(__linux__)
   /* …and restore them so any <fcntl.h>-style users still compile. */
@@ -35,6 +36,16 @@ Vec2 dot_pos(0, 0);
 static ENetHost *gServer      = nullptr;   // listens on 127.0.0.1:12345
 static Int       clientCount  = 0;
 static Int       packetsRecv  = 0;
+
+enum PacketType : U8
+{
+    PK_WELCOME = 1,
+    PK_CHAT,
+    PK_POS
+};
+
+struct ClientInfo { Vec2 pos; };
+static std::unordered_map<U16, ClientInfo> gClients;
 /******************************************************************************/
 // Local helpers
 static void SetupEnet()
@@ -65,9 +76,16 @@ static void ServiceHost(ENetHost *host)
         switch(e.type)
         {
             case ENET_EVENT_TYPE_CONNECT:
+            {
                 LogN(S+"[ENet] Peer connected, ch:" + int(e.channelID));
                 ++clientCount;
-            break;
+                U16 id = e.peer->incomingPeerID;
+                gClients[id] = ClientInfo{Vec2(0,0)};
+                struct { U8 type; U16 id; } pkt{PK_WELCOME, id};
+                ENetPacket *p = enet_packet_create(&pkt, sizeof(pkt), ENET_PACKET_FLAG_RELIABLE);
+                enet_peer_send(e.peer, 0, p);
+                enet_host_flush(host);
+            } break;
 
                 /*
             case ENET_EVENT_TYPE_RECEIVE:
@@ -77,16 +95,36 @@ static void ServiceHost(ENetHost *host)
 
             case ENET_EVENT_TYPE_RECEIVE:
             {
-                Str8 txt((char8*)e.packet->data);          // UTF-8 payload
-                LogN(S + "[ENet] Got pkt (\"" + txt + "\")");
-                enet_packet_destroy(e.packet);
                 ++packetsRecv;
+                if(e.packet->dataLength<=0){ enet_packet_destroy(e.packet); break; }
+                U8 type = ((U8*)e.packet->data)[0];
+                if(type==PK_CHAT || type==PK_POS)
+                {
+                    if(type==PK_POS && e.packet->dataLength>=sizeof(U8)+sizeof(U16)+sizeof(Flt)*2)
+                    {
+                        struct PosPkt{U8 t; U16 id; Flt x; Flt y;};
+                        const PosPkt *pp = (PosPkt*)e.packet->data;
+                        gClients[pp->id].pos.set(pp->x, pp->y);
+                    }
+                    ENetPacket *p = enet_packet_create(e.packet->data, e.packet->dataLength,
+                                                     (type==PK_CHAT)?ENET_PACKET_FLAG_RELIABLE:0);
+                    for(int i=0;i<host->peerCount;++i)
+                    {
+                        ENetPeer *peer=&host->peers[i];
+                        if(peer->state==ENET_PEER_STATE_CONNECTED)
+                            enet_peer_send(peer, 0, p);
+                    }
+                    enet_host_flush(host);
+                }
+                enet_packet_destroy(e.packet);
                 break;
             }
 
             case ENET_EVENT_TYPE_DISCONNECT:
+            case ENET_EVENT_TYPE_DISCONNECT:
                 LogN("[ENet] Peer disconnected");
                 --clientCount;
+                gClients.erase(e.peer->incomingPeerID);
             break;
 
             default: break;

@@ -18,6 +18,8 @@
 #include "stdafx.h"
 #include "@@headers.h"
 #include "MyClass.h"
+#include <unordered_map>
+#include <vector>
 
 #if defined(__linux__)
   /* …and restore them so any <fcntl.h>-style users still compile. */
@@ -35,6 +37,18 @@ Vec2 dot_pos(0, 0);
 static ENetHost *gClient      = nullptr;   // connects to the server
 static ENetPeer *gClientPeer  = nullptr;   // client-side handle
 static bool      gEnetReady   = false;     // set true once connected
+
+enum PacketType : U8
+{
+    PK_WELCOME = 1,
+    PK_CHAT,
+    PK_POS
+};
+
+static U16 gClientID = 0xFFFF;
+static std::unordered_map<U16, Vec2> gPlayers; // other players
+static std::vector<Str8> gChatLines;
+static Str8 gChatInput;
 /******************************************************************************/
 // Local helpers
 static void SetupEnet()
@@ -75,14 +89,34 @@ static void ServiceHost(ENetHost *host)
 
             case ENET_EVENT_TYPE_RECEIVE:
             {
-                Str8 txt((char8*)e.packet->data);          // UTF-8 payload
-                LogN(S + "[ENet] Got pkt (\"" + txt + "\")");
+                if(e.packet->dataLength>0)
+                {
+                    U8 type=((U8*)e.packet->data)[0];
+                    if(type==PK_WELCOME && e.packet->dataLength>=3)
+                    {
+                        gClientID = *(U16*)((U8*)e.packet->data+1);
+                    }
+                    else if(type==PK_CHAT)
+                    {
+                        U16 id=*(U16*)((U8*)e.packet->data+1);
+                        const char8* txt=(char8*)e.packet->data+3;
+                        Str8 line; line+=S+"["+id+"] "; line+=txt;
+                        gChatLines.push_back(line);
+                    }
+                    else if(type==PK_POS && e.packet->dataLength>=3+sizeof(Flt)*2)
+                    {
+                        struct PosPkt{U8 t; U16 id; Flt x; Flt y;};
+                        const PosPkt* pp=(PosPkt*)e.packet->data;
+                        gPlayers[pp->id].set(pp->x, pp->y);
+                    }
+                }
                 enet_packet_destroy(e.packet);
                 break;
             }
 
             case ENET_EVENT_TYPE_DISCONNECT:
                 LogN("[ENet] Peer disconnected");
+                gPlayers.erase(e.peer->incomingPeerID);
             break;
 
             default: break;
@@ -137,15 +171,34 @@ bool Update() // main updating
     /* ── ENet pump ───────────────────────── */
     ServiceHost(gClient);
 
-    // send one test packet right after connection succeeds
-    if(gEnetReady)
+    while(Kb.k.any())
     {
-        gEnetReady = false;                // only once
-        static const char8 msg[] = "Hello ENet!";           // was: const char
-        ENetPacket *p = enet_packet_create(msg, sizeof(msg),
-                                           ENET_PACKET_FLAG_RELIABLE);
-        enet_peer_send(gClientPeer, 0, p);
-        enet_host_flush(gClient);          // push immediately
+        if(Kb.k.k==KB_ENTER)
+        {
+            if(gChatInput.is() && gClientID!=0xFFFF)
+            {
+                int len=gChatInput.length()+4;
+                std::vector<Byte> buf(len);
+                buf[0]=PK_CHAT; *(U16*)(&buf[1])=gClientID;
+                memcpy(buf.data()+3, gChatInput(), gChatInput.length()+1);
+                ENetPacket *p=enet_packet_create(buf.data(), len, ENET_PACKET_FLAG_RELIABLE);
+                enet_peer_send(gClientPeer,0,p); enet_host_flush(gClient);
+                Str8 line; line+=S+"["+gClientID+"] "; line+=gChatInput; gChatLines.push_back(line);
+                gChatInput.clear();
+            }
+        }else if(Kb.k.k==KB_BACK){
+            gChatInput.removeLast();
+        }else if(Kb.k.c){
+            gChatInput+=Kb.k.c;
+        }
+        Kb.nextKey();
+    }
+
+    if(gClientID!=0xFFFF)
+    {
+        struct PosPkt{U8 t; U16 id; Flt x; Flt y;} pkt{PK_POS,gClientID,dot_pos.x,dot_pos.y};
+        ENetPacket *p=enet_packet_create(&pkt,sizeof(pkt),0);
+        enet_peer_send(gClientPeer,0,p);
     }
 
    return true;                   // continue
@@ -161,6 +214,16 @@ void Draw() // main drawing
    D.text (0, -0.2, S+ "Counter: " + counter); // display Counter below the FPS
    myObject.print(); // Display MyClass details
    D.dot(RED, dot_pos, 0.02f); // draw moving dot
+   for(auto &kv : gPlayers) if(kv.first!=gClientID) D.dot(RED, kv.second, 0.02f);
+
+   Flt y=-0.4; // start below other text
+   int shown=0;
+   for(int i=(int)gChatLines.size()-1; i>=0 && shown<8; --i,++shown)
+   {
+       D.text(-0.7, y, gChatLines[i]);
+       y-=0.05;
+   }
+   D.text(-0.7, -0.75, S+">"+gChatInput);
 }
 /******************************************************************************/
 
