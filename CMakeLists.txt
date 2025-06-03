@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_subdirectory(libs/core)
 add_subdirectory(libs/game)
 add_subdirectory(apps/client)
+add_subdirectory(apps/server)
 
 # allow tests defined in subdirectories
 enable_testing()
