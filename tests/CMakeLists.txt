@@ -24,6 +24,7 @@ enable_testing()
 add_executable(UnitTests
     MyClassTests.cpp
     SpdlogTest.cpp
+    EnetTest.cpp
     EE_boot_stubs.cpp
     ${PROJECT_SOURCE_DIR}/libs/game/src/stdafx.cpp
 )
