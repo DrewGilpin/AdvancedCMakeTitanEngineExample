@@ -50,6 +50,7 @@ static void SetupEnet()
     if(!gServer){
         LogN(S+"ENet server create failed.");
         LogN(S+"ENet server create failed error: " + strerror(errno));
+        enet_deinitialize();
         return;
     }
 
