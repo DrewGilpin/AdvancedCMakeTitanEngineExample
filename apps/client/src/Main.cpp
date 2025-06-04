@@ -46,7 +46,11 @@ static void SetupEnet()
 
     // ── create client host (no binding → will use ephemeral port) ──
     gClient = enet_host_create(nullptr, 1, 2, 0, 0);
-    if(!gClient){ LogN("ENet client create failed"); return; }
+    if(!gClient){
+        LogN("ENet client create failed");
+        enet_deinitialize();
+        return;
+    }
 
     // ── connect client to server on loopback ──
     enet_address_set_host(&addr, "127.0.0.1");
