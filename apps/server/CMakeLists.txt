@@ -13,7 +13,7 @@ if(MSVC)
         "/ENTRY:wWinMainCRTStartup"
     )
 else()
-    target_link_libraries(server PRIVATE -static-libstdc++ -nopie)
+    target_link_libraries(server PRIVATE -static-libstdc++ -no-pie)
 endif()
 
 target_link_libraries(server PRIVATE GameCore GameLib)
