@@ -30,6 +30,11 @@ add_executable(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE FMT_USE_FCNTL=0 SPDLOG_FORCE_COLOR=1)
 
+# Suppress spdlog warnings triggered by -ffast-math when using clang
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(UnitTests PRIVATE -Wno-nan-infinity-disabled)
+endif()
+
 target_link_libraries(UnitTests PRIVATE gtest_main spdlog::spdlog_header_only GameCore GameLib)
 
 if(NOT MSVC)
