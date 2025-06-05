@@ -38,6 +38,7 @@ Vec2 dot_pos(0, 0);
 static ENetHost *gServer      = nullptr;   // listens on 127.0.0.1:12345
 static Int       clientCount  = 0;
 static Int       packetsRecv  = 0;
+static const int SERVER_ID    = 0;         // ID used when sending server state
 
 struct DotPacket
 {
@@ -106,6 +107,13 @@ static void ServiceHost(ENetHost *host)
                     DotPacket p2{c.id,c.pos.x,c.pos.y};
                     ENetPacket *pkt2=enet_packet_create(&p2,sizeof(p2),ENET_PACKET_FLAG_RELIABLE);
                     enet_peer_send(ci.peer,0,pkt2);
+                }
+                // also send server position
+                {
+                    DotPacket srv{SERVER_ID, dot_pos.x, dot_pos.y};
+                    ENetPacket *pkt2=enet_packet_create(&srv,sizeof(srv),ENET_PACKET_FLAG_RELIABLE);
+                    enet_peer_send(ci.peer,0,pkt2);
+                    enet_host_flush(host);
                 }
                 enet_host_flush(host);
             }break;
@@ -203,6 +211,18 @@ bool Update() // main updating
     /* ── ENet pump ───────────────────────── */
     ServiceHost(gServer);
 
+    // broadcast server dot position to all clients
+    if(gServer && !gClients.empty())
+    {
+        DotPacket pkt{SERVER_ID, dot_pos.x, dot_pos.y};
+        for(auto &c : gClients)
+        {
+            ENetPacket *p = enet_packet_create(&pkt, sizeof(pkt), ENET_PACKET_FLAG_UNSEQUENCED);
+            enet_peer_send(c.peer, 0, p);
+        }
+        enet_host_flush(gServer);
+    }
+
    return true;                   // continue
 }
 /******************************************************************************/
@@ -218,6 +238,8 @@ void Draw() // main drawing
     D.text (0, -0.4, S+ "Packets: " + packetsRecv);
     myObject.print(); // Display MyClass details
     D.dot(RED, dot_pos, 0.02f); // draw moving dot
+    for(const auto &c : gClients)
+        D.dot(RED, c.pos, 0.02f); // draw client dots
 }
 /******************************************************************************/
 
