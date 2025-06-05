@@ -4,6 +4,9 @@
 //     `#include "enet.h"` – put it right above the rest of your includes.
 #define ENET_IMPLEMENTATION
 #include "enet.h"          // ← Header-only ENet (third_party/enet/enet.h)
+
+#include <unordered_map>
+#include <cfloat>
 /******************************************************************************/
 
 #if defined(__linux__)
@@ -35,6 +38,16 @@ Vec2 dot_pos(0, 0);
 static ENetHost *gClient      = nullptr;   // connects to the server
 static ENetPeer *gClientPeer  = nullptr;   // client-side handle
 static bool      gEnetReady   = false;     // set true once connected
+static int       gMyId        = -1;        // assigned by server
+
+static std::unordered_map<int, Vec2> gOtherDots; // positions of other clients
+
+struct DotPacket
+{
+    int id;
+    Flt x;
+    Flt y;
+};
 /******************************************************************************/
 // Local helpers
 static void SetupEnet()
@@ -79,8 +92,18 @@ static void ServiceHost(ENetHost *host)
 
             case ENET_EVENT_TYPE_RECEIVE:
             {
-                Str8 txt((char8*)e.packet->data);          // UTF-8 payload
-                LogN(S + "[ENet] Got pkt (\"" + txt + "\")");
+                if(e.packet->dataLength==sizeof(DotPacket))
+                {
+                    DotPacket pkt; CopyFast(pkt, *(DotPacket*)e.packet->data);
+                    if(gMyId<0) gMyId=pkt.id; // first packet assigns ID
+                    if(pkt.x==FLT_MAX && pkt.y==FLT_MAX)
+                        gOtherDots.erase(pkt.id);
+                    else
+                        gOtherDots[pkt.id]=Vec2(pkt.x, pkt.y);
+                }else{
+                    Str8 txt((char8*)e.packet->data);          // UTF-8 payload
+                    LogN(S + "[ENet] Got pkt (\"" + txt + "\")");
+                }
                 enet_packet_destroy(e.packet);
                 break;
             }
@@ -141,6 +164,14 @@ bool Update() // main updating
     /* ── ENet pump ───────────────────────── */
     ServiceHost(gClient);
 
+    if(gMyId>=0)
+    {
+        DotPacket pkt{gMyId, dot_pos.x, dot_pos.y};
+        ENetPacket *p = enet_packet_create(&pkt, sizeof(pkt), ENET_PACKET_FLAG_UNSEQUENCED);
+        enet_peer_send(gClientPeer, 0, p);
+        enet_host_flush(gClient);
+    }
+
     // send one test packet right after connection succeeds
     if(gEnetReady)
     {
@@ -165,6 +196,8 @@ void Draw() // main drawing
    D.text (0, -0.2, S+ "Counter: " + counter); // display Counter below the FPS
    myObject.print(); // Display MyClass details
    D.dot(RED, dot_pos, 0.02f); // draw moving dot
+   for(const auto &p : gOtherDots)
+       if(p.first!=gMyId) D.dot(RED, p.second, 0.02f);
 }
 /******************************************************************************/
 
