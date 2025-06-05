@@ -91,6 +91,8 @@ static void ServiceHost(ENetHost *host)
                 ClientInfo ci; ci.peer=e.peer; ci.id=gNextId++; ci.pos=Vec2(0,0);
                 gClients.push_back(ci);
                 e.peer->data=(Ptr)(intptr_t)ci.id;
+                // shorten timeouts so dropped clients are detected quickly
+                enet_peer_timeout(e.peer, 2, 1000, 2000);
                 ++clientCount;
 
                 // notify existing clients about new one

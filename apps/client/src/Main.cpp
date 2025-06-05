@@ -144,6 +144,22 @@ bool Init() // initialize after engine is ready
 void Shut() // shut down at exit
 {
    LogN(S+"Shut()1111");
+    if(gClientPeer && gClientPeer->state == ENET_PEER_STATE_CONNECTED)
+    {
+        enet_peer_disconnect(gClientPeer, 0);
+
+        ENetEvent e;
+        // Pump until disconnect confirmation or timeout
+        for(int i=0; i<10 && enet_host_service(gClient, &e, 100) > 0; )
+        {
+            if(e.type == ENET_EVENT_TYPE_DISCONNECT)
+                break;
+            if(e.type == ENET_EVENT_TYPE_RECEIVE)
+                enet_packet_destroy(e.packet);
+            // continue servicing until timeout occurs or disconnect event handled
+        }
+        enet_host_flush(gClient);
+    }
     if(gClient) enet_host_destroy(gClient);
     enet_deinitialize();
 }
