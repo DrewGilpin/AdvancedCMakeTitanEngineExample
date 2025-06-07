@@ -1,5 +1,6 @@
 add_executable(server
     src/Main.cpp
+    src/ConnectionsToClients.cpp
     ${PROJECT_SOURCE_DIR}/libs/game/src/stdafx.cpp
 )
 
