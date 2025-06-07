@@ -13,7 +13,8 @@ permissions:
 jobs:
   # ───────────────────────────────────────────────────────── build ──
   build:
-    env: { SHORT_SHA: ${{ github.sha }} }
+    env:                     # ←─ use block style, no braces
+      SHORT_SHA: ${{ github.sha }}
     strategy:
       matrix:
         include:
@@ -29,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      # 1) checkout & deps (same as before) ────────────────────────────
+      # 1) checkout & deps ─────────────────────────────────────────────
       - uses: actions/checkout@v4
 
       - name: Install packages (apt)
@@ -50,7 +51,7 @@ jobs:
       - name: Verify Ninja on PATH
         run: ninja --version
 
-      # 2) unzip engine files (unchanged) ────────────────────────────
+      # 2) unzip engine files ──────────────────────────────────────────
       - name: Unzip Engine files (Linux)
         if: matrix.isLinux
         run: |
@@ -65,7 +66,7 @@ jobs:
           Get-ChildItem third_party/EE -Filter '*.zip' |
             ForEach-Object { Expand-Archive $_.FullName -DestinationPath third_party/EE -Force }
 
-      # 3) configure → build → test (unchanged) ──────────────────────
+      # 3) configure → build → test ───────────────────────────────────
       - name: Configure
         run: cmake --preset ${{ matrix.cfg }}
 
@@ -75,7 +76,7 @@ jobs:
       - name: Run unit tests
         run: ctest --test-dir out/build/${{ matrix.cfg }} --output-on-failure
 
-      # 4) package + produce ONE archive per platform ────────────────
+      # 4) package + archive ──────────────────────────────────────────
       - name: Package & archive (Linux)
         if: matrix.isLinux
         run: |
@@ -90,7 +91,7 @@ jobs:
 
           ARCHIVE=linux_binaries_${SHORT_SHA:0:8}.tar.gz
           tar -czf "$ARCHIVE" -C "$STAGE" .
-          echo "ARCHIVE_PATH=$ARCHIVE" >> $GITHUB_ENV          #  ←─ NEW
+          echo "ARCHIVE_PATH=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Package & archive (Windows)
         if: matrix.os == 'windows-2022'
@@ -104,17 +105,17 @@ jobs:
           Copy-Item "assets/Engine.pak"                                   "$Stage/Bin/Engine.pak"
           Copy-Item "assets/Project.pak"                                  "$Stage/Bin/Project.pak"
 
-          $sha    = $env:SHORT_SHA.Substring(0,8)
-          $archive= "windows_binaries_${sha}.zip"
+          $sha     = $env:SHORT_SHA.Substring(0,8)
+          $archive = "windows_binaries_${sha}.zip"
           Compress-Archive -Path "$Stage/*" -DestinationPath $archive
-          echo "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV      #  ←─ NEW
+          echo "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV
 
-      # 5) upload exactly that archive (no wildcards) ────────────────
+      # 5) upload exactly that one file ────────────────────────────────
       - name: Upload platform archive
         uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.os }}
-          path: ${{ env.ARCHIVE_PATH }}        #  ←─ CHANGED
+          path: ${{ env.ARCHIVE_PATH }}
           retention-days: 2
 
   # ───────────────────────────────────────────────────── release ──
@@ -139,7 +140,6 @@ jobs:
           echo "timestamp=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
           echo "short_sha=${GITHUB_SHA::8}"                 >> $GITHUB_OUTPUT
 
-      # upload ONLY .zip and .tar.gz (nothing else)
       - name: Publish Latest release
         uses: softprops/action-gh-release@v2
         with:
@@ -152,4 +152,4 @@ jobs:
             (${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}).
           files: |
             release/*.zip
-            release/*.tar.gz        #  ←─ CHANGED
+            release/*.tar.gz
