@@ -27,6 +27,7 @@ void InitPre() // initialize before engine inits
    App.background_wait=0;            // no delay when in background
 
     App.name("Client");
+    LogName("log_client.txt");
 
    INIT(); // call auto-generated function that will set up application name, load engine and project data
    LogConsole(true);
