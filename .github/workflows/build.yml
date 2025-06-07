@@ -1,45 +1,52 @@
-name: Build & Test (Linux + Windows)
+name: Build & Latest Release (Linux + Windows)
 
+#######################################################################
+# 1) Triggers
+#######################################################################
 on:
-  # 1) Every PR that targets master – first open, new commits ("synchronize"),
-  #    or being reopened – will fire pull_request by default.
   pull_request:
-    branches: [ master ]        #  ← change to main if that’s your default
-
-  # 2) Any commit pushed **directly to master** (including the merge-commit
-  #    created when a PR is merged with the GitHub UI).
+    branches: [ master ]    # CI feedback on PRs
   push:
-    branches: [ master ]        #  ← same default branch
+    branches: [ master ]    # each commit to master → new “Latest”
+  workflow_dispatch:        # manual button
 
+#######################################################################
+# 2) Permissions – required for creating / overwriting a release
+#######################################################################
+permissions:
+  contents: write
+
+#######################################################################
+# 3) Build & test matrix  (runs for PRs *and* pushes)
+#######################################################################
 jobs:
+  # ───────────────────────────────────────────────────────── build ──
   build:
     strategy:
       matrix:
         include:
-          # ── Linux ────────────────────────────────────────────────────────
+          # Linux leg
           - os: ubuntu-22.04
-            cfg:   linux-release     # configure preset
-            build: linux-build       # build preset
-            test:  linux-test        # test preset
+            cfg:   linux-release
+            build: linux-build
             isLinux: true
-          # ── Windows ──────────────────────────────────────────────────────
+          # Windows leg
           - os: windows-2022
             cfg:   windows-release
             build: windows-build
-            test:  windows-test
             isLinux: false
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      # 1) ───── Source checkout ─────────────────────────────────────────────
+      # 3-1) Checkout sources
       - uses: actions/checkout@v4
 
-      # 2) ───── OS-level dependencies ───────────────────────────────────────
+      # 3-2) OS-specific dependencies
       - name: Install packages (apt)
         if: matrix.isLinux
         run: |
-          sudo apt-get update
+          sudo apt-get update -y
           sudo apt-get install -y --no-install-recommends \
             clang ninja-build cmake build-essential \
             libxmu-dev libxi-dev libxinerama-dev libxrandr-dev \
@@ -54,23 +61,22 @@ jobs:
       - name: Verify Ninja is on PATH
         run: ninja --version
 
-      # 3) ───── Unpack pre-built Esenthel artefacts ─────────────────────────
+      # 3-3) Unpack engine artifacts (if needed)
       - name: Unzip Engine files (Linux)
         if: matrix.isLinux
-        shell: bash
         run: |
-          unzip -q assets/Engine.zip      -d assets
-          unzip -q third_party/EE/Engine.zip -d third_party/EE
+          unzip -q assets/Engine.zip               -d assets
+          unzip -q third_party/EE/Engine.zip       -d third_party/EE
 
       - name: Unzip Engine files (Windows)
         if: matrix.os == 'windows-2022'
         shell: pwsh
         run: |
           Expand-Archive -Path assets/Engine.zip -DestinationPath assets -Force
-          Get-ChildItem -Path third_party/EE -Filter '*.zip' |
+          Get-ChildItem third_party/EE -Filter '*.zip' |
             ForEach-Object { Expand-Archive -Path $_.FullName -DestinationPath third_party/EE -Force }
 
-      # 4) ───── Configure, build & test via presets ─────────────────────────
+      # 3-4) Configure → build → unit-test
       - name: Configure
         run: cmake --preset ${{ matrix.cfg }}
 
@@ -80,31 +86,72 @@ jobs:
       - name: Run unit tests
         run: ctest --test-dir out/build/${{ matrix.cfg }} --output-on-failure
 
-      # 5) ───── Prepare distributable files ─────────────────────────────────
-      - name: Package files (Linux)
+      # 3-5) Package runtime payload into out/dist
+      - name: Package artifact (Linux)
         if: matrix.isLinux
-        shell: bash
         run: |
-          mkdir -p package/Bin
-          cp out/build/${{ matrix.cfg }}/apps/client/client package/client
-          cp out/build/${{ matrix.cfg }}/apps/server/server package/server
-          cp out/build/${{ matrix.cfg }}/apps/client/Bin/Project.pak package/Bin/Project.pak
-          cp out/build/${{ matrix.cfg }}/apps/client/Bin/Engine.pak package/Bin/Engine.pak
+          STAGE=out/dist
+          mkdir -p "$STAGE/Bin"
+          cp "out/build/${{ matrix.cfg }}/apps/client/client"  "$STAGE/client"
+          cp "out/build/${{ matrix.cfg }}/apps/server/server"  "$STAGE/server"
+          cp assets/Bin/Engine.pak                             "$STAGE/Bin/Engine.pak"
+          cp "out/build/${{ matrix.cfg }}/Bin/Project.pak"     "$STAGE/Bin/Project.pak"
 
-      - name: Package files (Windows)
+      - name: Package artifact (Windows)
         if: matrix.os == 'windows-2022'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path package/Bin -Force | Out-Null
-          Copy-Item "out/build/${{ matrix.cfg }}/apps/client/client.exe" "package/client.exe"
-          Copy-Item "out/build/${{ matrix.cfg }}/apps/server/server.exe" "package/server.exe"
-          Copy-Item "out/build/${{ matrix.cfg }}/apps/client/Bin/Project.pak" "package/Bin/Project.pak"
-          Copy-Item "out/build/${{ matrix.cfg }}/apps/client/Bin/Engine.pak" "package/Bin/Engine.pak"
+          $Stage = "out/dist"
+          New-Item -ItemType Directory -Force -Path "$Stage/Bin" | Out-Null
+          Copy-Item "out/build/${{ matrix.cfg }}/apps/client/client.exe"  "$Stage/client.exe"
+          Copy-Item "out/build/${{ matrix.cfg }}/apps/server/server.exe"  "$Stage/server.exe"
+          Copy-Item "assets/Bin/Engine.pak"                               "$Stage/Bin/Engine.pak"
+          Copy-Item "out/build/${{ matrix.cfg }}/Bin/Project.pak"         "$Stage/Bin/Project.pak"
 
-      # 6) ───── Upload the resulting archive ────────────────────────────────
-      - name: Upload artefact
+      # 3-6) Upload artifact (GitHub auto-zips out/dist)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BasicAppCmake-${{ matrix.os }}
-          path: package
+          name: BasicAppCmake-${{ matrix.os }}   # one zip per platform
+          path: out/dist
+          retention-days: 2
 
+  #######################################################################
+  # 4) Rolling “Latest” release  (only on pushes to master)
+  #######################################################################
+  release:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    steps:
+      # 4-1) Checkout (required by the release action)
+      - uses: actions/checkout@v4
+
+      # 4-2) Download all build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: BasicAppCmake-*     # both OS zips
+          merge-multiple: true
+          path: release                # → release/*.zip
+
+      # 4-3) Prepare metadata
+      - name: Prepare metadata
+        id: vars
+        run: |
+          echo "timestamp=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+          echo "short_sha=${GITHUB_SHA::8}"                 >> $GITHUB_OUTPUT
+
+      # 4-4) Overwrite the single “Latest” release
+      - name: Publish rolling Latest
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          make_latest: true
+          name: Latest build – ${{ steps.vars.outputs.timestamp }}
+          body: |
+            Automatic build from commit \
+            [`${{ steps.vars.outputs.short_sha }}`]\
+            (${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}).
+          files: release/**
