@@ -17,7 +17,9 @@ third_party/EE/EngineDebug64DX11_pdb.zip-> third_party/EE/EngineDebug64DX11.pdb 
 
 ## Building
 
-CMake presets are provided for both platforms.  Example commands:
+CMake presets are provided for both platforms.  **The Linux presets use Clang,**
+as the third-party Titan Engine headers rely on MSVC extensions not supported
+by GCC.  Example commands:
 
 ```bash
 cmake --preset linux-release   # or windows-release
