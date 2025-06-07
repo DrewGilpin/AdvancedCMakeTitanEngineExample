@@ -33,5 +33,10 @@ void INIT_OBJ_TYPE() // this function will set up 'ObjType' enum used for object
       {"OBJ_LIGHT_POINT" , UID(3609005105, 1118058365, 577565335, 3982143695)},
       {"OBJ_PARTICLES"   , UID(2721776529, 1227196451, 2852647815, 3333460217)},
    };
-   ObjType.create("OBJ_TYPE", elms); // create 'ObjType' enum
+  ObjType.create("OBJ_TYPE", elms); // create 'ObjType' enum
 }
+
+/******************************************************************************/
+// Project Pak Assets
+/******************************************************************************/
+const UID ASSET_LOGO = UID(1119600675, 1212460399, 80010661, 526665178);
