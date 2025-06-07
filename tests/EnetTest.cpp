@@ -1,4 +1,3 @@
-#define ENET_IMPLEMENTATION
 #include "enet.h"
 #include "gtest/gtest.h"
 

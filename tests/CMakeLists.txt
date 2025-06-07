@@ -25,8 +25,14 @@ add_executable(UnitTests
     MyClassTests.cpp
     SpdlogTest.cpp
     EnetTest.cpp
+    ServiceHostTest.cpp
+    ${PROJECT_SOURCE_DIR}/apps/client/src/ConnectionToServer.cpp
     EE_boot_stubs.cpp
     ${PROJECT_SOURCE_DIR}/libs/game/src/stdafx.cpp
+)
+
+target_include_directories(UnitTests PRIVATE
+    ${PROJECT_SOURCE_DIR}/apps/client/src
 )
 
 target_compile_definitions(UnitTests PRIVATE FMT_USE_FCNTL=0 SPDLOG_FORCE_COLOR=1)
