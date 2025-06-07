@@ -80,12 +80,31 @@ jobs:
       - name: Run unit tests
         run: ctest --test-dir out/build/${{ matrix.cfg }} --output-on-failure
 
-      # 5) ───── Upload the resulting executable ─────────────────────────────
+      # 5) ───── Prepare distributable files ─────────────────────────────────
+      - name: Package files (Linux)
+        if: matrix.isLinux
+        shell: bash
+        run: |
+          mkdir -p package/Bin
+          cp out/build/${{ matrix.cfg }}/apps/client/client package/client
+          cp out/build/${{ matrix.cfg }}/apps/server/server package/server
+          cp out/build/${{ matrix.cfg }}/apps/client/Bin/Project.pak package/Bin/Project.pak
+          cp out/build/${{ matrix.cfg }}/apps/client/Bin/Engine.pak package/Bin/Engine.pak
+
+      - name: Package files (Windows)
+        if: matrix.os == 'windows-2022'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path package/Bin -Force | Out-Null
+          Copy-Item "out/build/${{ matrix.cfg }}/apps/client/client.exe" "package/client.exe"
+          Copy-Item "out/build/${{ matrix.cfg }}/apps/server/server.exe" "package/server.exe"
+          Copy-Item "out/build/${{ matrix.cfg }}/apps/client/Bin/Project.pak" "package/Bin/Project.pak"
+          Copy-Item "out/build/${{ matrix.cfg }}/apps/client/Bin/Engine.pak" "package/Bin/Engine.pak"
+
+      # 6) ───── Upload the resulting archive ────────────────────────────────
       - name: Upload artefact
         uses: actions/upload-artifact@v4
         with:
           name: BasicAppCmake-${{ matrix.os }}
-          path: |
-            out/build/${{ matrix.cfg }}/apps/client/client${{ runner.os == 'Windows' && '.exe' || '' }}
-            out/build/${{ matrix.cfg }}/apps/server/server${{ runner.os == 'Windows' && '.exe' || '' }}
+          path: package
 
