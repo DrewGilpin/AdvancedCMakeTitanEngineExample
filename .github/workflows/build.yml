@@ -94,7 +94,7 @@ jobs:
           mkdir -p "$STAGE/Bin"
           cp "out/build/${{ matrix.cfg }}/apps/client/client"  "$STAGE/client"
           cp "out/build/${{ matrix.cfg }}/apps/server/server"  "$STAGE/server"
-          cp assets/Bin/Engine.pak                             "$STAGE/Bin/Engine.pak"
+          cp assets/Engine.pak                             "$STAGE/Bin/Engine.pak"
           cp "out/build/${{ matrix.cfg }}/Bin/Project.pak"     "$STAGE/Bin/Project.pak"
 
       - name: Package artifact (Windows)
@@ -105,7 +105,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$Stage/Bin" | Out-Null
           Copy-Item "out/build/${{ matrix.cfg }}/apps/client/client.exe"  "$Stage/client.exe"
           Copy-Item "out/build/${{ matrix.cfg }}/apps/server/server.exe"  "$Stage/server.exe"
-          Copy-Item "assets/Bin/Engine.pak"                               "$Stage/Bin/Engine.pak"
+          Copy-Item "assets/Engine.pak"                               "$Stage/Bin/Engine.pak"
           Copy-Item "out/build/${{ matrix.cfg }}/Bin/Project.pak"         "$Stage/Bin/Project.pak"
 
       # 3-6) Upload artifact (GitHub auto-zips out/dist)
