@@ -141,7 +141,7 @@ bool Init() // initialize after engine is ready
     SetupEnet();    // <<< NEW
 
     // ── grab the texture from the asset cache ──
-    gLogo = UID(1119600675, 1212460399,  80010661,  526665178);
+    gLogo = ASSET_LOGO;
     if(!gLogo) LogN("Logo image failed to load!");
 
     return true;
