@@ -29,9 +29,14 @@
 #endif
 
 /******************************************************************************/
-int counter = 0;
 Vec2 dot_pos(0, 0);
 /******************************************************************************/
+
+/******************************************************************************/
+// ─────────────── Images ───────────────
+static ImagePtr gLogo;           // smart-pointer managed by Esenthel
+/******************************************************************************/
+
 
 /******************************************************************************/
 // ─────────────── ENet globals ───────────────
@@ -84,12 +89,6 @@ static void ServiceHost(ENetHost *host)
                 if(host == gClient) gEnetReady = true;
             break;
 
-                /*
-            case ENET_EVENT_TYPE_RECEIVE:
-                LogN(S+"[ENet] Got pkt (“" + (char*)e.packet->data + "”)");
-                enet_packet_destroy(e.packet);
-            break;*/
-
             case ENET_EVENT_TYPE_RECEIVE:
             {
                 if(e.packet->dataLength==sizeof(DotPacket))
@@ -128,6 +127,8 @@ void InitPre() // initialize before engine inits
    App.flag|=APP_WORK_IN_BACKGROUND; // keep running when unfocused
    App.background_wait=0;            // no delay when in background
 
+    App.name("Client");
+
    INIT(); // call auto-generated function that will set up application name, load engine and project data
    LogConsole(true);
    LogN(S+"InitPre()");
@@ -136,9 +137,14 @@ void InitPre() // initialize before engine inits
 /******************************************************************************/
 bool Init() // initialize after engine is ready
 {
-   LogN(S+"Init()");
+    LogN(S+"Init()");
     SetupEnet();    // <<< NEW
-   return true;
+
+    // ── grab the texture from the asset cache ──
+    gLogo = UID(1119600675, 1212460399,  80010661,  526665178);
+    if(!gLogo) LogN("Logo image failed to load!");
+
+    return true;
 }
 /******************************************************************************/
 void Shut() // shut down at exit
@@ -167,9 +173,7 @@ void Shut() // shut down at exit
 bool Update() // main updating
 {
    // here you have to process each frame update
-   counter = counter + 1;
-   //LogN(S+"counter: " + counter);
-   //if(Kb.bp(KB_ESC))return false; // exit if escape on the keyboard pressed
+   if(Kb.bp(KB_ESC))return false; // exit if escape on the keyboard pressed
 
    Flt speed = 0.5f; // movement speed
    if(Kb.b(KB_LEFT )) dot_pos.x -= speed * Time.d();
@@ -206,15 +210,20 @@ MyClass myObject("ExampleObject", 42); // Create an instance of MyClass
 
 void Draw() // main drawing
 {
-   D.clear(AZURE); // clear screen to azure color
-   D.text (0, 0, "Hello to " ENGINE_NAME " Engine !"); // display text at (0, 0) screen coordinates
-   D.text (0, -0.1, S+ "FPS: " + Time.fps()); // display FPS below the "Hello to..." text
-   D.text (0, -0.2, S+ "Counter: " + counter); // display Counter below the FPS
-   myObject.print(); // Display MyClass details
-   D.dot(RED, dot_pos, 0.02f); // draw moving dot
+    D.clear(AZURE); // clear screen to azure color
+
+    // ── draw the logo ───────────────────────────────
+    if(gLogo) {
+        gLogo->draw(Rect_C(0.0f, 0.5f, 0.3f, 0.3f));
+    }
+
+    D.text (0, 0, "Hello to " ENGINE_NAME " Engine !");
+    D.text (0, -0.1, S+ "FPS: " + Time.fps());
+    D.text (0, -0.2, S+ " Arrow keys to move dot, Esc to Exit");
+    myObject.print(); // Display MyClass details
+    D.dot(BLUE, dot_pos, 0.02f); // draw moving dot
+
    for(const auto &p : gOtherDots)
        if(p.first!=gMyId) D.dot(RED, p.second, 0.02f);
 }
-/******************************************************************************/
-
 /******************************************************************************/

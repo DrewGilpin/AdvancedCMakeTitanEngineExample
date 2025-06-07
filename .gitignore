@@ -369,3 +369,5 @@ FodyWeavers.xsd
 # JetBrains IDE project files
 .idea/
 /third_party/EE/Engine.a
+/third_party/EE/EngineDebug64DX11.lib
+/third_party/EE/Engine64DX11.lib
