@@ -29,7 +29,7 @@ endif()
 
 add_library(GameLib STATIC
     src/MyClass.cpp
-    src/Auto.cpp
+    src/LoadAssets.cpp
 )
 
 if(MSVC)
