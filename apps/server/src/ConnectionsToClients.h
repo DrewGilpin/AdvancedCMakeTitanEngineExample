@@ -12,8 +12,6 @@
   #pragma pop_macro("LOCK_WRITE")
   #pragma pop_macro("LOCK_READ")
 #endif
-#include "stdafx.h"
-#include "@@headers.h"
 
 struct _ENetHost; typedef _ENetHost ENetHost;
 struct _ENetPeer; typedef _ENetPeer ENetPeer;
