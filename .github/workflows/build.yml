@@ -1,5 +1,8 @@
 name: Build & Latest Release (Linux + Windows)
 
+#######################################################################
+# 1) Triggers
+#######################################################################
 on:
   pull_request:
     branches: [ master ]
@@ -7,21 +10,29 @@ on:
     branches: [ master ]
   workflow_dispatch:
 
+#######################################################################
+# 2) Permission – allow the workflow to create / overwrite a release
+#######################################################################
 permissions:
   contents: write
 
+#######################################################################
+# 3) Build & test matrix
+#######################################################################
 jobs:
   # ───────────────────────────────────────────────────────── build ──
   build:
-    env:                       # make the short SHA available to all steps
-      SHORT_SHA: ${{ github.sha }}
+    env:
+      SHORT_SHA: ${{ github.sha }}          # for easy naming later
     strategy:
       matrix:
         include:
+          # Linux
           - os: ubuntu-22.04
             cfg:   linux-release
             build: linux-build
             isLinux: true
+          # Windows
           - os: windows-2022
             cfg:   windows-release
             build: windows-build
@@ -30,19 +41,55 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      # 1) checkout & dependencies (unchanged) ──────────────────────────
+      # 3-1) Checkout sources
       - uses: actions/checkout@v4
-      # … your Install-packages / MSVC / unzip steps unchanged …
 
-      # 2) configure → build → ctest  (unchanged) ───────────────────────
+      # 3-2) Linux-only packages
+      - name: Install packages (apt)
+        if: matrix.isLinux
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+            clang ninja-build cmake build-essential \
+            libxmu-dev libxi-dev libxinerama-dev libxrandr-dev \
+            libxcursor-dev libudev-dev libopenal-dev unixodbc-dev \
+            libgl1-mesa-dev libxxf86vm-dev zlib1g-dev
+
+      # 3-3) MSVC environment (Windows)
+      - name: Set up MSVC env
+        if: matrix.os == 'windows-2022'
+        uses: ilammy/msvc-dev-cmd@v1
+        with: { arch: x64 }
+
+      - name: Verify Ninja on PATH
+        run: ninja --version
+
+      # 3-4) ── UNZIP ENGINE FILES *before* CMake ──────────────────────
+      - name: Unzip Engine files (Linux)
+        if: matrix.isLinux
+        run: |
+          unzip -q assets/Engine.zip           -d assets
+          unzip -q third_party/EE/Engine.zip   -d third_party/EE
+
+      - name: Unzip Engine files (Windows)
+        if: matrix.os == 'windows-2022'
+        shell: pwsh
+        run: |
+          Expand-Archive assets/Engine.zip -DestinationPath assets -Force
+          Get-ChildItem third_party/EE -Filter '*.zip' |
+            ForEach-Object { Expand-Archive $_.FullName -DestinationPath third_party/EE -Force }
+
+      # 3-5) Configure → Build → Test
       - name: Configure
         run: cmake --preset ${{ matrix.cfg }}
+
       - name: Build
         run: cmake --build --preset ${{ matrix.build }}
+
       - name: Run unit tests
         run: ctest --test-dir out/build/${{ matrix.cfg }} --output-on-failure
 
-      # 3) package files, then create platform-specific archive ─────────
+      # 3-6) Package runtime files and create per-platform archive
       - name: Package & archive (Linux)
         if: matrix.isLinux
         run: |
@@ -55,7 +102,8 @@ jobs:
           cp assets/Engine.pak                                 "$STAGE/Bin/Engine.pak"
           cp assets/Project.pak                                "$STAGE/Bin/Project.pak"
 
-          tar -czf "linux_binaries_${SHORT_SHA::8}.tar.gz" -C "$STAGE" .
+          tar -czf "linux_binaries_${SHORT_SHA:0:8}.tar.gz" -C "$STAGE" .
+
       - name: Package & archive (Windows)
         if: matrix.os == 'windows-2022'
         shell: pwsh
@@ -68,9 +116,10 @@ jobs:
           Copy-Item "assets/Engine.pak"                                   "$Stage/Bin/Engine.pak"
           Copy-Item "assets/Project.pak"                                  "$Stage/Bin/Project.pak"
 
-          Compress-Archive -Path "$Stage/*" -DestinationPath "windows_binaries_${env:SHORT_SHA:0:8}.zip"
+          $sha = $env:SHORT_SHA.Substring(0,8)
+          Compress-Archive -Path "$Stage/*" -DestinationPath "windows_binaries_${sha}.zip"
 
-      # 4) upload just the finished archive as the artifact ─────────────
+      # 3-7) Upload the archive as the build artifact
       - name: Upload platform archive
         uses: actions/upload-artifact@v4
         with:
@@ -93,8 +142,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: binaries-*
-          merge-multiple: true      # puts both archives into release/
-          path: release
+          merge-multiple: true
+          path: release           # → release/linux_binaries_*.tar.gz …
 
       - name: Build release metadata
         id: vars
