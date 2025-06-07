@@ -127,19 +127,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 1) Clean slate: delete old “latest” release + tag (if present)
+      - name: Delete previous Latest release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}   # <- use the name gh expects
+        run: |
+          # The CLI exits 1 if the release/tag doesn't exist; ignore that.
+          gh release delete latest --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" 2>&1 | \
+            grep -v "release.*not found" || true
+
+      # 2) Download fresh archives built by the matrix
       - name: Download platform archives
         uses: actions/download-artifact@v4
         with:
           pattern: binaries-*
           merge-multiple: true
-          path: release
+          path: release      # → release/*.zip / *.tar.gz
 
+      # 3) Metadata for title & body
       - name: Build release metadata
         id: vars
         run: |
           echo "timestamp=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
           echo "short_sha=${GITHUB_SHA::8}"                 >> $GITHUB_OUTPUT
 
+      # 4) Publish brand-new Latest release with ONLY the two archives
       - name: Publish Latest release
         uses: softprops/action-gh-release@v2
         with:
