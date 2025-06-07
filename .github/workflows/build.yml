@@ -1,8 +1,5 @@
 name: Build & Latest Release (Linux + Windows)
 
-#######################################################################
-# 1) Triggers
-#######################################################################
 on:
   pull_request:
     branches: [ master ]
@@ -10,29 +7,20 @@ on:
     branches: [ master ]
   workflow_dispatch:
 
-#######################################################################
-# 2) Permission – allow the workflow to create / overwrite a release
-#######################################################################
 permissions:
   contents: write
 
-#######################################################################
-# 3) Build & test matrix
-#######################################################################
 jobs:
   # ───────────────────────────────────────────────────────── build ──
   build:
-    env:
-      SHORT_SHA: ${{ github.sha }}          # for easy naming later
+    env: { SHORT_SHA: ${{ github.sha }} }
     strategy:
       matrix:
         include:
-          # Linux
           - os: ubuntu-22.04
             cfg:   linux-release
             build: linux-build
             isLinux: true
-          # Windows
           - os: windows-2022
             cfg:   windows-release
             build: windows-build
@@ -41,10 +29,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      # 3-1) Checkout sources
+      # 1) checkout & deps (same as before) ────────────────────────────
       - uses: actions/checkout@v4
 
-      # 3-2) Linux-only packages
       - name: Install packages (apt)
         if: matrix.isLinux
         run: |
@@ -55,7 +42,6 @@ jobs:
             libxcursor-dev libudev-dev libopenal-dev unixodbc-dev \
             libgl1-mesa-dev libxxf86vm-dev zlib1g-dev
 
-      # 3-3) MSVC environment (Windows)
       - name: Set up MSVC env
         if: matrix.os == 'windows-2022'
         uses: ilammy/msvc-dev-cmd@v1
@@ -64,7 +50,7 @@ jobs:
       - name: Verify Ninja on PATH
         run: ninja --version
 
-      # 3-4) ── UNZIP ENGINE FILES *before* CMake ──────────────────────
+      # 2) unzip engine files (unchanged) ────────────────────────────
       - name: Unzip Engine files (Linux)
         if: matrix.isLinux
         run: |
@@ -79,7 +65,7 @@ jobs:
           Get-ChildItem third_party/EE -Filter '*.zip' |
             ForEach-Object { Expand-Archive $_.FullName -DestinationPath third_party/EE -Force }
 
-      # 3-5) Configure → Build → Test
+      # 3) configure → build → test (unchanged) ──────────────────────
       - name: Configure
         run: cmake --preset ${{ matrix.cfg }}
 
@@ -89,7 +75,7 @@ jobs:
       - name: Run unit tests
         run: ctest --test-dir out/build/${{ matrix.cfg }} --output-on-failure
 
-      # 3-6) Package runtime files and create per-platform archive
+      # 4) package + produce ONE archive per platform ────────────────
       - name: Package & archive (Linux)
         if: matrix.isLinux
         run: |
@@ -102,7 +88,9 @@ jobs:
           cp assets/Engine.pak                                 "$STAGE/Bin/Engine.pak"
           cp assets/Project.pak                                "$STAGE/Bin/Project.pak"
 
-          tar -czf "linux_binaries_${SHORT_SHA:0:8}.tar.gz" -C "$STAGE" .
+          ARCHIVE=linux_binaries_${SHORT_SHA:0:8}.tar.gz
+          tar -czf "$ARCHIVE" -C "$STAGE" .
+          echo "ARCHIVE_PATH=$ARCHIVE" >> $GITHUB_ENV          #  ←─ NEW
 
       - name: Package & archive (Windows)
         if: matrix.os == 'windows-2022'
@@ -116,17 +104,17 @@ jobs:
           Copy-Item "assets/Engine.pak"                                   "$Stage/Bin/Engine.pak"
           Copy-Item "assets/Project.pak"                                  "$Stage/Bin/Project.pak"
 
-          $sha = $env:SHORT_SHA.Substring(0,8)
-          Compress-Archive -Path "$Stage/*" -DestinationPath "windows_binaries_${sha}.zip"
+          $sha    = $env:SHORT_SHA.Substring(0,8)
+          $archive= "windows_binaries_${sha}.zip"
+          Compress-Archive -Path "$Stage/*" -DestinationPath $archive
+          echo "ARCHIVE_PATH=$archive" >> $env:GITHUB_ENV      #  ←─ NEW
 
-      # 3-7) Upload the archive as the build artifact
+      # 5) upload exactly that archive (no wildcards) ────────────────
       - name: Upload platform archive
         uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.os }}
-          path: |
-            linux_binaries_*.tar.gz
-            windows_binaries_*.zip
+          path: ${{ env.ARCHIVE_PATH }}        #  ←─ CHANGED
           retention-days: 2
 
   # ───────────────────────────────────────────────────── release ──
@@ -143,7 +131,7 @@ jobs:
         with:
           pattern: binaries-*
           merge-multiple: true
-          path: release           # → release/linux_binaries_*.tar.gz …
+          path: release
 
       - name: Build release metadata
         id: vars
@@ -151,6 +139,7 @@ jobs:
           echo "timestamp=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
           echo "short_sha=${GITHUB_SHA::8}"                 >> $GITHUB_OUTPUT
 
+      # upload ONLY .zip and .tar.gz (nothing else)
       - name: Publish Latest release
         uses: softprops/action-gh-release@v2
         with:
@@ -161,4 +150,6 @@ jobs:
             Automatic build from commit \
             [`${{ steps.vars.outputs.short_sha }}`]\
             (${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}).
-          files: release/**
+          files: |
+            release/*.zip
+            release/*.tar.gz        #  ←─ CHANGED
