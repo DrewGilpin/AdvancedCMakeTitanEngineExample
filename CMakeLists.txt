@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.28)
 project(AdvancedCMakeTitanEngineExample LANGUAGES C CXX)
 
+# Extract engine assets/libraries from provided zip archives if needed
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+include(UnpackEngine)
+unpack_engine_files()
+
 # Global compiler settings
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "" FORCE)
