@@ -5,40 +5,29 @@
 #include "@@headers.h"
 #include "MyClass.h"
 
-/******************************************************************************/
 Vec2 dot_pos(0, 0);
+MyClass myObject("ExampleObject", 42);
+static ImagePtr gLogo;
 /******************************************************************************/
-
-/******************************************************************************/
-// ─────────────── Images ───────────────
-static ImagePtr gLogo;           // smart-pointer managed by Esenthel
-/******************************************************************************/
-
-
-
-
 void InitPre() // initialize before engine inits
 {
-   //App.flag=APP_ALLOW_NO_XDISPLAY|APP_ALLOW_NO_GPU;
 #ifdef DEBUG
-   App.flag|=APP_MEM_LEAKS|APP_BREAKPOINT_ON_ERROR;
+    App.flag|=APP_MEM_LEAKS|APP_BREAKPOINT_ON_ERROR;
 #endif
-   App.flag|=APP_WORK_IN_BACKGROUND; // keep running when unfocused
-   App.background_wait=0;            // no delay when in background
+    App.flag|=APP_WORK_IN_BACKGROUND; // keep running when unfocused
+    App.background_wait=0;            // no delay when in background
 
     App.name("Client");
     LogName("log_client.txt");
-
-   INIT(); // call auto-generated function that will set up application name, load engine and project data
-   LogConsole(true);
-   LogN(S+"InitPre()");
+    INIT();
+    LogConsole(true);
+    LogN(S+"InitPre()");
 }
-
 /******************************************************************************/
-bool Init() // initialize after engine is ready
+bool Init()
 {
     LogN(S+"Init()");
-    SetupEnet();    // <<< NEW
+    SetupEnet();
 
     // ── grab the texture from the asset cache ──
     gLogo = ASSET_LOGO;
@@ -47,9 +36,9 @@ bool Init() // initialize after engine is ready
     return true;
 }
 /******************************************************************************/
-void Shut() // shut down at exit
+void Shut()
 {
-   LogN(S+"Shut()");
+    LogN(S+"Shut()");
     if(gClientPeer && gClientPeer->state == ENET_PEER_STATE_CONNECTED)
     {
         enet_peer_disconnect(gClientPeer, 0);
@@ -70,16 +59,15 @@ void Shut() // shut down at exit
     enet_deinitialize();
 }
 /******************************************************************************/
-bool Update() // main updating
+bool Update()
 {
-   // here you have to process each frame update
-   if(Kb.bp(KB_ESC))return false; // exit if escape on the keyboard pressed
+    if(Kb.bp(KB_ESC))return false; // exit if escape on the keyboard pressed
 
-   Flt speed = 0.5f; // movement speed
-   if(Kb.b(KB_LEFT )) dot_pos.x -= speed * Time.d();
-   if(Kb.b(KB_RIGHT)) dot_pos.x += speed * Time.d();
-   if(Kb.b(KB_UP   )) dot_pos.y += speed * Time.d();
-   if(Kb.b(KB_DOWN )) dot_pos.y -= speed * Time.d();
+    Flt speed = 0.5f; // movement speed
+    if(Kb.b(KB_LEFT )) dot_pos.x -= speed * Time.d();
+    if(Kb.b(KB_RIGHT)) dot_pos.x += speed * Time.d();
+    if(Kb.b(KB_UP   )) dot_pos.y += speed * Time.d();
+    if(Kb.b(KB_DOWN )) dot_pos.y -= speed * Time.d();
 
     /* ── ENet pump ───────────────────────── */
     ServiceHost(gClient);
@@ -103,14 +91,12 @@ bool Update() // main updating
         enet_host_flush(gClient);          // push immediately
     }
 
-   return true;                   // continue
+   return true;
 }
 /******************************************************************************/
-MyClass myObject("ExampleObject", 42); // Create an instance of MyClass
-
 void Draw() // main drawing
 {
-    D.clear(AZURE); // clear screen to azure color
+    D.clear(AZURE);
 
     // ── draw the logo ───────────────────────────────
     if(gLogo) {

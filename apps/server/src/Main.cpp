@@ -8,51 +8,49 @@
 #include "MyClass.h"
 
 Vec2 dot_pos(0, 0);
+MyClass myObject("ExampleObject", 42);
 /******************************************************************************/
-
-
-void InitPre() // initialize before engine inits
+void InitPre()
 {
     // on linux the engine has been customized to make APP_ALLOW_NO_XDISPLAY force no x display/be headless
-   //App.flag=APP_ALLOW_NO_XDISPLAY|APP_ALLOW_NO_GPU;
+    //App.flag=APP_ALLOW_NO_XDISPLAY|APP_ALLOW_NO_GPU;
 #ifdef DEBUG
-   App.flag|=APP_MEM_LEAKS|APP_BREAKPOINT_ON_ERROR;
+    App.flag|=APP_MEM_LEAKS|APP_BREAKPOINT_ON_ERROR;
 #endif
-   App.flag|=APP_WORK_IN_BACKGROUND; // keep running when unfocused
-   App.background_wait=0;            // no delay when in background
+    App.flag|=APP_WORK_IN_BACKGROUND; // keep running when unfocused
+    App.background_wait=0;            // no delay when in background
 
     App.name("Server");
     LogName("log_server.txt");
-   INIT(); // call auto-generated function that will set up application name, load engine and project data
-   LogConsole(true);
-   LogN(S+"InitPre()");
-}
-
-/******************************************************************************/
-bool Init() // initialize after engine is ready
-{
-   LogN(S+"Init()");
-    SetupEnet();    // <<< NEW
-   return true;
+    INIT();
+    LogConsole(true);
+    LogN(S+"InitPre()");
 }
 /******************************************************************************/
-void Shut() // shut down at exit
+bool Init()
 {
-   LogN(S+"Shut()");
+    LogN(S+"Init()");
+    SetupEnet();
+    return true;
+}
+/******************************************************************************/
+void Shut()
+{
+    LogN(S+"Shut()");
     if(gServer) enet_host_destroy(gServer);
     enet_deinitialize();
 }
 /******************************************************************************/
-bool Update() // main updating
+bool Update()
 {
-   // here you have to process each frame update
-   if(Kb.bp(KB_ESC))return false; // exit if escape on the keyboard pressed
+    // here you have to process each frame update
+    if(Kb.bp(KB_ESC))return false;
 
-   Flt speed = 0.5f; // movement speed
-   if(Kb.b(KB_LEFT )) dot_pos.x -= speed * Time.d();
-   if(Kb.b(KB_RIGHT)) dot_pos.x += speed * Time.d();
-   if(Kb.b(KB_UP   )) dot_pos.y += speed * Time.d();
-   if(Kb.b(KB_DOWN )) dot_pos.y -= speed * Time.d();
+    Flt speed = 0.5f; // movement speed
+    if(Kb.b(KB_LEFT )) dot_pos.x -= speed * Time.d();
+    if(Kb.b(KB_RIGHT)) dot_pos.x += speed * Time.d();
+    if(Kb.b(KB_UP   )) dot_pos.y += speed * Time.d();
+    if(Kb.b(KB_DOWN )) dot_pos.y -= speed * Time.d();
 
     /* ── ENet pump ───────────────────────── */
     ServiceHost(gServer);
@@ -69,15 +67,13 @@ bool Update() // main updating
         enet_host_flush(gServer);
     }
 
-   return true;                   // continue
+    return true;
 }
 /******************************************************************************/
-MyClass myObject("ExampleObject", 42); // Create an instance of MyClass
-
-void Draw() // main drawing
+void Draw()
 {
-   D.clear(BLACK); // clear screen to azure color
-   D.text (0, 0, "Hello to " ENGINE_NAME " Engine !");
+    D.clear(BLACK); // clear screen to azure color
+    D.text (0, 0, "Hello to " ENGINE_NAME " Engine !");
     D.text (0, -0.1, S+ "FPS: " + Time.fps());
     D.text (0, -0.2, S+ " Arrow keys to move dot, Esc to Exit");
     D.text (0, -0.3, S+ "Clients: " + clientCount);
