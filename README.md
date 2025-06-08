@@ -1,4 +1,4 @@
-# BasicAppCmake
+# AdvancedCMakeTitanEngineExample
 
 This repository contains a minimal example of building a small application with the **Titan (Esenthel) Engine** using modern CMake.  It accompanies the [blog post](https://medium.com/@drew.gilpin/esenthel-titan-engine-visual-studio-cmake-wsl-project-75da74e3d5b6) and can be built on both Windows and Linux.
 The project now builds two executables: a **client** sample and a **server** that hosts the ENet network.

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(BasicAppCmake LANGUAGES C CXX)
+project(AdvancedCMakeTitanEngineExample LANGUAGES C CXX)
 
 # Global compiler settings
 if(MSVC)
