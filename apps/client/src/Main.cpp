@@ -49,7 +49,7 @@ bool Init() // initialize after engine is ready
 /******************************************************************************/
 void Shut() // shut down at exit
 {
-   LogN(S+"Shut()1111");
+   LogN(S+"Shut()");
     if(gClientPeer && gClientPeer->state == ENET_PEER_STATE_CONNECTED)
     {
         enet_peer_disconnect(gClientPeer, 0);

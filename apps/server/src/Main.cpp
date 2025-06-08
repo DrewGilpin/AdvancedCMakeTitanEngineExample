@@ -38,7 +38,7 @@ bool Init() // initialize after engine is ready
 /******************************************************************************/
 void Shut() // shut down at exit
 {
-   LogN(S+"Shut()1111");
+   LogN(S+"Shut()");
     if(gServer) enet_host_destroy(gServer);
     enet_deinitialize();
 }
