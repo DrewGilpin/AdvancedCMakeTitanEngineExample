@@ -106,9 +106,10 @@ void Draw() // main drawing
     D.text (0, 0, "Hello to " ENGINE_NAME " Engine !");
     D.text (0, -0.1, S+ "FPS: " + Time.fps());
     D.text (0, -0.2, S+ " Arrow keys to move dot, Esc to Exit");
-    myObject.print(); // Display MyClass details
-    D.dot(BLUE, dot_pos, 0.02f); // draw moving dot
+    myObject.print();
+    D.dot(BLUE, dot_pos, 0.02f); // draw moving dot controlled by this client
 
+    // draw moving dots controlled by other clients
    for(const auto &p : gOtherDots)
        if(p.first!=gMyId) D.dot(RED, p.second, 0.02f);
 }

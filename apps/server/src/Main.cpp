@@ -72,13 +72,13 @@ bool Update()
 /******************************************************************************/
 void Draw()
 {
-    D.clear(BLACK); // clear screen to azure color
+    D.clear(BLACK);
     D.text (0, 0, "Hello to " ENGINE_NAME " Engine !");
     D.text (0, -0.1, S+ "FPS: " + Time.fps());
     D.text (0, -0.2, S+ " Arrow keys to move dot, Esc to Exit");
     D.text (0, -0.3, S+ "Clients: " + clientCount);
     D.text (0, -0.4, S+ "Packets: " + packetsRecv);
-    myObject.print(); // Display MyClass details
+    myObject.print();
     D.dot(BLUE, dot_pos, 0.02f); // draw moving dot controlled by server
     for(const auto &c : gClients)
         D.dot(RED, c.pos, 0.02f); // draw client dots
