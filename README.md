@@ -5,7 +5,7 @@ The project now builds two executables: a **client** sample and a **server** tha
 
 ## Preparing the engine files
 
-The large engine assets and libraries are stored in the repository as zip archives.  Extract them **in place** before configuring the build:
+The large engine assets and libraries are stored in the repository as zip archives.  If the extracted files are missing, CMake will unpack them automatically during configuration:
 
 ```
 assets/Engine.zip            -> assets/Engine.pak
@@ -14,6 +14,9 @@ third_party/EE/Engine64DX11.zip         -> third_party/EE/Engine64DX11.lib      
 third_party/EE/EngineDebug64DX11.zip    -> third_party/EE/EngineDebug64DX11.lib   (Windows debug library)
 third_party/EE/EngineDebug64DX11_pdb.zip-> third_party/EE/EngineDebug64DX11.pdb   (optional debug symbols)
 ```
+
+The configure step automatically unpacks these archives when the extracted
+files are missing, so you normally don't need to run any manual commands.
 
 ## Building
 
