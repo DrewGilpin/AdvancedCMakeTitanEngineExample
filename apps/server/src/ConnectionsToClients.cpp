@@ -51,7 +51,7 @@ void SetupEnet()
         return;
     }
 
-    LogN("ENet server setup complete, waiting for clients…");
+    LogN("ENet server setup complete, waiting for clients...");
 }
 
 void ServiceHost(ENetHost *host)

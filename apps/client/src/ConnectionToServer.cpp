@@ -52,7 +52,7 @@ void SetupEnet()
     // ── connect client to server on loopback ──
     enet_address_set_host(&addr, "127.0.0.1");
     gClientPeer = enet_host_connect(gClient, &addr, 2, 0);
-    LogN("ENet client setup complete, waiting for connect…");
+    LogN("ENet client setup complete, waiting for connect...");
 }
 
 void ServiceHost(ENetHost *host)
