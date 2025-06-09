@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cfloat>
+#include <nats.h>
 #include "ConnectionsToClients.h"
 #include "stdafx.h"
 #include "@@headers.h"
@@ -9,6 +10,7 @@
 
 Vec2 dot_pos(0, 0);
 MyClass myObject("ExampleObject", 42);
+static natsConnection *gNatsConn = nullptr;
 /******************************************************************************/
 void InitPre()
 {
@@ -31,6 +33,16 @@ bool Init()
 {
     LogN(S+"Init()");
     SetupEnet();
+    natsStatus s = natsConnection_ConnectTo(&gNatsConn, NATS_DEFAULT_URL);
+    if(s == NATS_OK)
+    {
+        natsConnection_PublishString(gNatsConn, "server.started", "Hello from server");
+        natsConnection_FlushTimeout(gNatsConn, 1000);
+    }
+    else
+    {
+        LogN(S+"NATS connect failed: " + natsStatus_GetText(s));
+    }
     return true;
 }
 /******************************************************************************/
@@ -38,6 +50,11 @@ void Shut()
 {
     LogN(S+"Shut()");
     if(gServer) enet_host_destroy(gServer);
+    if(gNatsConn)
+    {
+        natsConnection_Destroy(gNatsConn);
+        nats_Close();
+    }
     enet_deinitialize();
 }
 /******************************************************************************/
